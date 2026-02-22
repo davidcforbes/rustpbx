@@ -23,14 +23,12 @@ use chrono::Utc;
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration as StdDuration, Instant};
 use tokio::time::timeout;
 use toml_edit::{DocumentMut, Item, Table, value};
 use tracing::{info, warn};
-use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct TranscriptConfig {
@@ -225,8 +223,6 @@ pub async fn trigger_call_record_transcript(
             .into_response();
     }
 
-    let storage = cdr_data.as_ref().and_then(|cdr| cdr.storage.clone());
-
     let transcript_storage_path = if let Some(cdr_ref) = cdr_data.as_ref() {
         let mut path = PathBuf::from(&cdr_ref.cdr_path);
         path.set_extension("transcript.json");
@@ -237,20 +233,10 @@ pub async fn trigger_call_record_transcript(
         path.to_string_lossy().into_owned()
     };
 
-    let local_transcript_path = match storage.as_ref() {
-        Some(storage_ref) => storage_ref
-            .local_full_path(&transcript_storage_path)
-            .unwrap_or_else(|| {
-                let mut temp_path = env::temp_dir();
-                temp_path.push(format!(
-                    "rustpbx-{}-{}.transcript.json",
-                    record.call_id,
-                    Uuid::new_v4()
-                ));
-                temp_path
-            }),
-        None => PathBuf::from(&transcript_storage_path),
-    };
+    // transcript_storage_path already contains the full relative path from CWD
+    // (e.g., ./rustpbx-config/cdr/20260222/call_id.transcript.json)
+    // Do NOT pass through local_full_path() which would prepend the root again.
+    let local_transcript_path = PathBuf::from(&transcript_storage_path);
 
     if let Some(parent) = local_transcript_path.parent() {
         if let Err(err) = tokio::fs::create_dir_all(parent).await {
@@ -489,20 +475,10 @@ pub async fn trigger_call_record_transcript(
         }),
     };
 
-    // Save transcript
-    if let Some(storage_ref) = storage.as_ref() {
-        let json_content = serde_json::to_string_pretty(&stored_transcript).unwrap();
-        if let Err(e) = storage_ref
-            .write_bytes(&transcript_storage_path, json_content.as_bytes())
-            .await
-        {
-            warn!("Failed to upload transcript to storage: {}", e);
-        }
-    } else {
-        let json_content = serde_json::to_string_pretty(&stored_transcript).unwrap();
-        if let Err(e) = tokio::fs::write(&local_transcript_path, json_content).await {
-            warn!("Failed to save transcript to disk: {}", e);
-        }
+    // Save transcript to the local path (already the correct full path)
+    let json_content = serde_json::to_string_pretty(&stored_transcript).unwrap();
+    if let Err(e) = tokio::fs::write(&local_transcript_path, &json_content).await {
+        warn!("Failed to save transcript to disk: {}", e);
     }
 
     // Update record
@@ -575,17 +551,11 @@ fn resolve_models_path(cfg: &TranscriptConfig) -> Option<String> {
 }
 
 async fn read_transcript_file(
-    storage: Option<&CdrStorage>,
+    _storage: Option<&CdrStorage>,
     path: &str,
 ) -> AnyResult<StoredTranscript> {
-    if let Some(storage_ref) = storage {
-        if let Ok(content) = storage_ref.read_to_string(path).await {
-            let transcript: StoredTranscript = serde_json::from_str(&content)
-                .with_context(|| format!("parse transcript file {}", path))?;
-            return Ok(transcript);
-        }
-    }
-
+    // path is already the full relative path from CWD (e.g., ./rustpbx-config/cdr/...)
+    // Read directly from filesystem to avoid path doubling through storage layer.
     let content = tokio::fs::read_to_string(path)
         .await
         .with_context(|| format!("read transcript file {}", path))?;
