@@ -56,3 +56,18 @@ model.md
 *.raw
 *.db
 archive/
+
+# Beads issue tracker (local only)
+.beads/
+
+# Node modules (docs PDF generation)
+docs/node_modules/
+
+# Temp/debug files
+bd_*.txt
+*.wav
+
+# Test results (generated)
+tests/results/
+tests/__pycache__/
+tests/.pytest_cache/

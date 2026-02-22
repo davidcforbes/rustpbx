@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  rustpbx:
+    image: ghcr.io/restsend/rustpbx:latest
+    container_name: rustpbx-test
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "8080:8080/tcp"
+      - "20000-20100:20000-20100/udp"
+    volumes:
+      - ./config/test-config.toml:/app/config.toml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - rustpbx-test
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: rustpbx-test-postgres
+    environment:
+      POSTGRES_DB: rustpbx
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    expose:
+      - "5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d rustpbx"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - rustpbx-test
+
+  test-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-tools
+    container_name: rustpbx-test-tools
+    depends_on:
+      rustpbx:
+        condition: service_healthy
+    volumes:
+      - ../tests:/tests
+      - ./config:/config
+    networks:
+      - rustpbx-test
+    command: ["sleep", "infinity"]
+
+networks:
+  rustpbx-test:
+    driver: bridge
+
+volumes:
+  postgres-data:

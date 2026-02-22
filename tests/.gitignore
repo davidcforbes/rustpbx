@@ -1,0 +1,9 @@
+# Test results (generated)
+results/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Temporary test files
+*.tmp
+*.log

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="REGISTER with digest auth">
+
+  <!--
+    Full REGISTER flow with digest authentication.
+
+    1. Send initial REGISTER (no credentials)
+    2. Receive 401 with WWW-Authenticate challenge
+    3. Compute digest response and re-send REGISTER with Authorization
+    4. Receive 200 OK — registration successful
+
+    Usage:
+      sipp <host>:<port> -sf register_auth.xml \
+           -key username 1001 -key password test1001 -m 1
+
+    Or with CSV injection:
+      sipp <host>:<port> -sf register_auth.xml \
+           -inf users.csv -m 1
+      (CSV format: username;password)
+  -->
+
+  <!-- Step 1: Initial REGISTER without credentials -->
+  <send>
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[key_username]@[remote_ip]>;tag=[call_number]
+      To: <sip:[key_username]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:[key_username]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 2: Receive 401 with WWW-Authenticate -->
+  <recv response="401" auth="true"/>
+
+  <!-- Step 3: Re-REGISTER with computed digest Authorization header -->
+  <send>
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[key_username]@[remote_ip]>;tag=[call_number]
+      To: <sip:[key_username]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 REGISTER
+      Contact: <sip:[key_username]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      [authentication username=[key_username] password=[key_password]]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 4: Receive 200 OK — registration complete -->
+  <recv response="200"/>
+
+</scenario>

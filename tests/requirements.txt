@@ -1,0 +1,7 @@
+pytest>=8.0
+pytest-html>=4.0
+pytest-timeout>=2.2
+requests>=2.31
+websockets>=12.0
+pydub>=0.25.1
+docker>=7.0

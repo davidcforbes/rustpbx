@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="UAC — Outbound INVITE call">
+
+  <!--
+    UAC (User Agent Client) scenario:
+      1. Send INVITE with SDP offering PCMU (G.711u)
+      2. Handle provisional responses (100 Trying, 180 Ringing)
+      3. Receive 200 OK with SDP answer
+      4. Send ACK
+      5. Pause 3 seconds to simulate an active call
+      6. Send BYE to hang up
+      7. Receive 200 OK for BYE
+
+    Usage:
+      sipp <host>:<port> -sf uac_invite.xml -key to_user 1002 -m 1
+  -->
+
+  <!-- Step 1: Send INVITE with SDP -->
+  <send retrans="500">
+    <![CDATA[
+      INVITE sip:[key_to_user]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:sipp@[local_ip]>;tag=[call_number]
+      To: <sip:[key_to_user]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: <sip:sipp@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=sipp 1 1 IN IP[local_ip_type] [local_ip]
+      s=SIPp Call
+      c=IN IP[local_ip_type] [local_ip]
+      t=0 0
+      m=audio 6000 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <!-- Step 2: Handle provisional responses -->
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="183" optional="true"/>
+
+  <!-- Step 3: Receive 200 OK with SDP answer -->
+  <recv response="200" rtd="true" crlf="true"/>
+
+  <!-- Step 4: Send ACK -->
+  <send>
+    <![CDATA[
+      ACK sip:[key_to_user]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:sipp@[local_ip]>;tag=[call_number]
+      To: <sip:[key_to_user]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: <sip:sipp@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 5: Simulate 3-second call -->
+  <pause milliseconds="3000"/>
+
+  <!-- Step 6: Send BYE -->
+  <send retrans="500">
+    <![CDATA[
+      BYE sip:[key_to_user]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:sipp@[local_ip]>;tag=[call_number]
+      To: <sip:[key_to_user]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 BYE
+      Contact: <sip:sipp@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 7: Receive 200 OK for BYE -->
+  <recv response="200" crlf="true"/>
+
+</scenario>

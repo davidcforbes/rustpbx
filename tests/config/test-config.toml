@@ -1,0 +1,69 @@
+################################################################################
+# RustPBX Test Configuration
+#
+# This configuration is mounted into the rustpbx container at /app/config.toml
+# by docker-compose.test.yml. It provides a minimal but complete setup for
+# integration testing with pre-configured SIP users 1001-1004.
+################################################################################
+
+http_addr = "0.0.0.0:8080"
+log_level = "info"
+media_cache_path = "./config/mediacache"
+database_url = "postgres://test:test@postgres:5432/rustpbx"
+
+[console]
+base_path = "/console"
+allow_registration = false
+secure_cookie = false
+
+[ami]
+allows = ["*"]
+
+[proxy]
+modules = ["acl", "auth", "presence", "registrar", "call"]
+addr = "0.0.0.0"
+udp_port = 5060
+registrar_expires = 60
+ws_handler = "/ws"
+media_proxy = "auto"
+generated_dir = "./config"
+ensure_user = true
+
+acl_rules = [
+    "allow all",
+    "deny all"
+]
+
+[[proxy.user_backends]]
+type = "memory"
+users = [
+    { username = "1001", password = "test1001" },
+    { username = "1002", password = "test1002" },
+    { username = "1003", password = "test1003" },
+    { username = "1004", password = "test1004" },
+]
+
+[[proxy.user_backends]]
+type = "extension"
+
+[[proxy.routes]]
+name = "internal"
+priority = 100
+direction = "any"
+
+[proxy.routes.match]
+"to.user" = "^(100[0-9])$"
+
+[proxy.routes.action]
+type = "local"
+
+[proxy.routes.rewrite]
+"to.host" = "rustpbx"
+
+[recording]
+enabled = true
+auto_start = true
+
+[callrecord]
+type = "local"
+root = "./config/cdr"
