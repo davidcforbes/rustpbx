@@ -166,29 +166,23 @@ impl Recorder {
         let decoder_type = CodecType::try_from(frame.payload_type.unwrap_or(0))?;
         let mut decoder_samplerate = self.sample_rate;
 
-        let needs_gain = leg == Leg::B && self.gain != 1.0;
-        if decoder_type != self.codec || needs_gain {
+        if decoder_type != self.codec {
             let decoder = self
                 .decoders
                 .entry((leg, decoder_type.payload_type()))
                 .or_insert_with(|| create_decoder(decoder_type));
-            let mut pcm = decoder.decode(&encoded);
+            let pcm = decoder.decode(&encoded);
             decoder_samplerate = decoder.sample_rate();
-            if needs_gain {
-                crate::media::apply_gain(&mut pcm, self.gain);
-            }
-            if decoder_samplerate != self.sample_rate {
-                let resampler = self
-                    .resamplers
-                    .entry((leg, decoder_type.payload_type()))
-                    .or_insert_with(|| {
-                        audio_codec::Resampler::new(
-                            decoder_samplerate as usize,
-                            self.sample_rate as usize,
-                        )
-                    });
-                pcm = resampler.resample(&pcm);
-            }
+            let resampler = self
+                .resamplers
+                .entry((leg, decoder_type.payload_type()))
+                .or_insert_with(|| {
+                    audio_codec::Resampler::new(
+                        decoder.sample_rate() as usize,
+                        self.sample_rate as usize,
+                    )
+                });
+            let pcm = resampler.resample(&pcm);
             encoded = if let Some(enc) = self.encoder.as_mut() {
                 enc.encode(&pcm)
             } else {
