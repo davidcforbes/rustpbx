@@ -136,17 +136,28 @@ impl MessageInspector for NatInspector {
             );
 
             if is_target_forming {
-                for header in resp.headers.iter_mut() {
-                    match header {
-                        rsip::Header::Contact(contact) => {
-                            let mut val = contact.to_string();
-                            let old_val = val.clone();
-                            self.fix_contact_header(&mut val, &from.addr);
-                            if val != old_val {
-                                *contact = val.into();
+                // Don't modify Contact when Record-Route headers are present.
+                // Record-Route means a proxy chain handles routing; the Contact URI's
+                // private IP is internal to the provider (e.g., Telnyx media server)
+                // and must be preserved for correct ACK Request-URI construction.
+                let has_record_route = resp
+                    .headers
+                    .iter()
+                    .any(|h| matches!(h, rsip::Header::RecordRoute(_)));
+
+                if !has_record_route {
+                    for header in resp.headers.iter_mut() {
+                        match header {
+                            rsip::Header::Contact(contact) => {
+                                let mut val = contact.to_string();
+                                let old_val = val.clone();
+                                self.fix_contact_header(&mut val, &from.addr);
+                                if val != old_val {
+                                    *contact = val.into();
+                                }
                             }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
             }
