@@ -3648,7 +3648,6 @@ impl CallSession {
 
         let recorder_option = if context.dialplan.recording.enabled
             && context.dialplan.recording.auto_start
-            && !has_sipflow_backend
         {
             context.dialplan.recording.option.clone()
         } else {
