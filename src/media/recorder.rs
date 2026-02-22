@@ -61,7 +61,6 @@ pub struct Recorder {
     written_bytes: u32,
     sample_rate: u32,
     channels: u16,
-    gain: f32,
     dtmf_gen: DtmfGenerator,
     encoder: Option<Box<dyn Encoder>>,
 
@@ -89,7 +88,7 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    pub fn new(path: &str, codec: CodecType, gain: f32) -> Result<Self> {
+    pub fn new(path: &str, codec: CodecType, _gain: f32) -> Result<Self> {
         // ensure the directory exists
         if let Some(parent) = PathBuf::from(path).parent() {
             std::fs::create_dir_all(parent).ok();
@@ -122,7 +121,6 @@ impl Recorder {
             written_bytes: 0,
             sample_rate,
             channels,
-            gain,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
             decoders: HashMap::new(),
@@ -884,7 +882,6 @@ mod tests {
             written_bytes: 0,
             sample_rate,
             channels,
-            gain: 1.0,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
             decoders: HashMap::new(),
