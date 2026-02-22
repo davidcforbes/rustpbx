@@ -21,6 +21,7 @@ pub struct MediaBridge {
     pub dtmf_pt_b: Option<u8>,
     pub ssrc_a: Option<u32>,
     pub ssrc_b: Option<u32>,
+    input_gain: f32,
     started: AtomicBool,
     recorder: Arc<Mutex<Option<Recorder>>>,
     call_id: String,
@@ -43,8 +44,13 @@ impl MediaBridge {
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
     ) -> Self {
+        let input_gain = recorder_option
+            .as_ref()
+            .map(|o| o.input_gain)
+            .unwrap_or(1.0);
+
         let recorder = if let Some(option) = recorder_option {
-            match Recorder::new(&option.recorder_file, codec_a) {
+            match Recorder::new(&option.recorder_file, codec_a, option.input_gain) {
                 Ok(r) => Some(r),
                 Err(e) => {
                     warn!("Failed to create recorder: {:?}", e);
@@ -66,6 +72,7 @@ impl MediaBridge {
             dtmf_pt_b,
             ssrc_a,
             ssrc_b,
+            input_gain,
             started: AtomicBool::new(false),
             recorder: Arc::new(Mutex::new(recorder)),
             call_id,
@@ -115,6 +122,7 @@ impl MediaBridge {
             let leg_b = self.leg_b.clone();
             let call_id = self.call_id.clone();
             let sipflow_backend = self.sipflow_backend.clone();
+            let input_gain = self.input_gain;
 
             crate::utils::spawn(async move {
                 tokio::select! {
@@ -135,6 +143,7 @@ impl MediaBridge {
                         recorder,
                         call_id,
                         sipflow_backend,
+                        input_gain,
                     ) => {}
                 }
             });
@@ -158,6 +167,7 @@ impl MediaBridge {
         recorder: Arc<Mutex<Option<Recorder>>>,
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
+        input_gain: f32,
     ) {
         debug!(
             "bridge_pcs started: codec_a={:?} codec_b={:?} ssrc_a={:?} ssrc_b={:?}",
@@ -199,6 +209,7 @@ impl MediaBridge {
                         recorder.clone(),
                         call_id.clone(),
                         sipflow_backend.clone(),
+                        input_gain,
                     ));
                 } else {
                     debug!("Track A {} already started, skipping", track_id);
@@ -234,6 +245,7 @@ impl MediaBridge {
                         recorder.clone(),
                         call_id.clone(),
                         sipflow_backend.clone(),
+                        input_gain,
                     ));
                 } else {
                     debug!("Track B {} already started, skipping", track_id);
@@ -272,6 +284,7 @@ impl MediaBridge {
                                             recorder.clone(),
                                             call_id.clone(),
                                             sipflow_backend.clone(),
+                                            input_gain,
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg A track id={}, skipping", track_id);
@@ -312,6 +325,7 @@ impl MediaBridge {
                                             recorder.clone(),
                                             call_id.clone(),
                                             sipflow_backend.clone(),
+                                            input_gain,
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg B track id={}, skipping", track_id);
@@ -348,6 +362,7 @@ impl MediaBridge {
         recorder: Arc<Mutex<Option<Recorder>>>,
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
+        input_gain: f32,
     ) {
         let needs_transcoding = source_codec != target_codec;
         let track_id = track.id().to_string();
@@ -431,8 +446,12 @@ impl MediaBridge {
                 }
             }
         }
+        let leg_gain = if leg == Leg::B { input_gain } else { 1.0 };
         let mut transcoder = if needs_transcoding {
-            Some(crate::media::Transcoder::new(source_codec, target_codec))
+            Some(
+                crate::media::Transcoder::new(source_codec, target_codec)
+                    .with_gain(leg_gain),
+            )
         } else {
             None
         };

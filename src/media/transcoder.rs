@@ -8,6 +8,7 @@ pub struct Transcoder {
     source: CodecType,
     target: CodecType,
     resampler: Option<Resampler>,
+    gain: f32,
     first_input_timestamp: Option<u32>,
     first_input_sequence: Option<u16>,
     first_output_timestamp: u32,
@@ -40,6 +41,7 @@ impl Transcoder {
             source,
             target,
             resampler,
+            gain: 1.0,
             first_input_timestamp: None,
             first_input_sequence: None,
             first_output_timestamp,
@@ -47,8 +49,16 @@ impl Transcoder {
         }
     }
 
+    pub fn with_gain(mut self, gain: f32) -> Self {
+        self.gain = gain;
+        self
+    }
+
     pub fn transcode(&mut self, frame: &AudioFrame) -> AudioFrame {
         let mut pcmbuf = self.decoder.decode(&frame.data);
+        if self.gain != 1.0 {
+            crate::media::apply_gain(&mut pcmbuf, self.gain);
+        }
         if let Some(resampler) = &mut self.resampler {
             pcmbuf = resampler.resample(&pcmbuf);
         }

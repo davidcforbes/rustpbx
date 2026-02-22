@@ -21,6 +21,12 @@ pub struct RecorderOption {
     pub samplerate: u32,
     #[serde(default)]
     pub ptime: u32,
+    #[serde(default = "default_gain")]
+    pub input_gain: f32,
+}
+
+fn default_gain() -> f32 {
+    1.0
 }
 
 impl RecorderOption {
@@ -38,6 +44,7 @@ impl Default for RecorderOption {
             recorder_file: "".to_string(),
             samplerate: 16000,
             ptime: 200,
+            input_gain: 1.0,
         }
     }
 }
@@ -54,6 +61,7 @@ pub struct Recorder {
     written_bytes: u32,
     sample_rate: u32,
     channels: u16,
+    gain: f32,
     dtmf_gen: DtmfGenerator,
     encoder: Option<Box<dyn Encoder>>,
 
@@ -81,7 +89,7 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    pub fn new(path: &str, codec: CodecType) -> Result<Self> {
+    pub fn new(path: &str, codec: CodecType, gain: f32) -> Result<Self> {
         // ensure the directory exists
         if let Some(parent) = PathBuf::from(path).parent() {
             std::fs::create_dir_all(parent).ok();
@@ -114,6 +122,7 @@ impl Recorder {
             written_bytes: 0,
             sample_rate,
             channels,
+            gain,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
             decoders: HashMap::new(),
@@ -157,23 +166,29 @@ impl Recorder {
         let decoder_type = CodecType::try_from(frame.payload_type.unwrap_or(0))?;
         let mut decoder_samplerate = self.sample_rate;
 
-        if decoder_type != self.codec {
+        let needs_gain = leg == Leg::B && self.gain != 1.0;
+        if decoder_type != self.codec || needs_gain {
             let decoder = self
                 .decoders
                 .entry((leg, decoder_type.payload_type()))
                 .or_insert_with(|| create_decoder(decoder_type));
-            let pcm = decoder.decode(&encoded);
+            let mut pcm = decoder.decode(&encoded);
             decoder_samplerate = decoder.sample_rate();
-            let resampler = self
-                .resamplers
-                .entry((leg, decoder_type.payload_type()))
-                .or_insert_with(|| {
-                    audio_codec::Resampler::new(
-                        decoder.sample_rate() as usize,
-                        self.sample_rate as usize,
-                    )
-                });
-            let pcm = resampler.resample(&pcm);
+            if needs_gain {
+                crate::media::apply_gain(&mut pcm, self.gain);
+            }
+            if decoder_samplerate != self.sample_rate {
+                let resampler = self
+                    .resamplers
+                    .entry((leg, decoder_type.payload_type()))
+                    .or_insert_with(|| {
+                        audio_codec::Resampler::new(
+                            decoder_samplerate as usize,
+                            self.sample_rate as usize,
+                        )
+                    });
+                pcm = resampler.resample(&pcm);
+            }
             encoded = if let Some(enc) = self.encoder.as_mut() {
                 enc.encode(&pcm)
             } else {
@@ -875,6 +890,7 @@ mod tests {
             written_bytes: 0,
             sample_rate,
             channels,
+            gain: 1.0,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
             decoders: HashMap::new(),

@@ -99,7 +99,7 @@ mod recorder_advanced_tests {
         let path_str = temp_path.to_str().unwrap();
 
         // Create recorder with PCMU
-        let recorder = Recorder::new(path_str, CodecType::PCMU);
+        let recorder = Recorder::new(path_str, CodecType::PCMU, 1.0);
         assert!(recorder.is_ok(), "Should create PCMU recorder");
 
         // File should exist
@@ -126,7 +126,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_wav_header_pcma.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let recorder = Recorder::new(path_str, CodecType::PCMA);
+        let recorder = Recorder::new(path_str, CodecType::PCMA, 1.0);
         assert!(recorder.is_ok(), "Should create PCMA recorder");
 
         assert!(temp_path.exists(), "WAV file should be created");
@@ -140,7 +140,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_wav_header_g722.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let recorder = Recorder::new(path_str, CodecType::G722);
+        let recorder = Recorder::new(path_str, CodecType::G722, 1.0);
         assert!(recorder.is_ok(), "Should create G722 recorder");
 
         assert!(temp_path.exists(), "WAV file should be created");
@@ -156,7 +156,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_recorder_dual_leg.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Create mock audio frames for both legs
         let frame_a = AudioFrame {
@@ -209,7 +209,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_recorder_single_channel.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         let frame = AudioFrame {
             data: vec![0xFF; 160].into(),
@@ -242,7 +242,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_recorder_dtmf_event.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // DTMF payload: digit '5' (code 5), end bit set, duration 800 samples
         let dtmf_payload = vec![
@@ -270,7 +270,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_recorder_dtmf_all.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Test digits 0-9
         for digit in 0u8..=9u8 {
@@ -303,7 +303,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_dtmf_invalid.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Too short payload (should be ignored)
         let short_payload = vec![5, 0x80];
@@ -326,7 +326,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_empty.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Finalize without writing any samples
         recorder.finalize().expect("Should finalize empty recorder");
@@ -344,7 +344,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_multi_finalize.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Multiple finalize calls should be safe
         recorder.finalize().expect("First finalize should succeed");
@@ -361,7 +361,7 @@ mod recorder_advanced_tests {
         let path_str = temp_path.to_str().unwrap();
 
         // Test with 48kHz (Opus sample rate)
-        let recorder = Recorder::new(path_str, CodecType::PCMU);
+        let recorder = Recorder::new(path_str, CodecType::PCMU, 1.0);
         assert!(recorder.is_ok(), "Should support 48kHz sample rate");
 
         // Cleanup
@@ -373,7 +373,7 @@ mod recorder_advanced_tests {
         let path_str = temp_path.to_str().unwrap();
 
         // Recorder output is PCMU
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Input is PCMA (payload type 8)
         let frame = AudioFrame {
@@ -404,7 +404,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_alignment.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::PCMU, 1.0).unwrap();
 
         // Leg A starts at 0
         let frame_a = AudioFrame {
@@ -451,7 +451,7 @@ mod recorder_advanced_tests {
         let temp_path = std::env::temp_dir().join("test_g729_stereo.wav");
         let path_str = temp_path.to_str().unwrap();
 
-        let mut recorder = Recorder::new(path_str, CodecType::G729).unwrap();
+        let mut recorder = Recorder::new(path_str, CodecType::G729, 1.0).unwrap();
 
         let frame_a = AudioFrame {
             data: vec![0; 10].into(), // 10 bytes G.729
@@ -494,7 +494,7 @@ mod recorder_advanced_tests {
     #[test]
     fn test_opus_converts_to_pcmu() {
         let temp_path = "/tmp/test_opus_convert.wav";
-        let recorder = Recorder::new(temp_path, CodecType::Opus);
+        let recorder = Recorder::new(temp_path, CodecType::Opus, 1.0);
         assert!(recorder.is_ok());
 
         let mut rec = recorder.unwrap();
@@ -519,7 +519,7 @@ mod recorder_advanced_tests {
         ];
 
         for (codec, path) in codecs {
-            let recorder = Recorder::new(path, codec);
+            let recorder = Recorder::new(path, codec, 1.0);
             assert!(recorder.is_ok(), "Recorder should support {:?}", codec);
             recorder.unwrap().finalize().ok();
             let _ = std::fs::remove_file(path);
@@ -533,7 +533,7 @@ mod recorder_advanced_tests {
         use bytes::Bytes;
 
         let temp_path = "/tmp/test_dual_leg_stereo.wav";
-        let mut recorder = Recorder::new(temp_path, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(temp_path, CodecType::PCMU, 1.0).unwrap();
 
         // Generate test audio for both legs
         let mut encoder = create_encoder(CodecType::PCMU);
@@ -589,7 +589,7 @@ mod recorder_advanced_tests {
         use bytes::Bytes;
 
         let temp_path = "/tmp/test_dtmf_recording.wav";
-        let mut recorder = Recorder::new(temp_path, CodecType::PCMU).unwrap();
+        let mut recorder = Recorder::new(temp_path, CodecType::PCMU, 1.0).unwrap();
 
         // Create DTMF payload (RFC 4733)
         // Format: [digit, flags, duration_high, duration_low]

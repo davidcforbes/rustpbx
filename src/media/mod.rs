@@ -31,6 +31,16 @@ pub trait StreamWriter: Send + Sync {
     fn finalize(&mut self) -> Result<()>;
 }
 
+/// Apply gain multiplier to PCM samples with soft clipping.
+pub fn apply_gain(samples: &mut [i16], gain: f32) {
+    if gain == 1.0 {
+        return;
+    }
+    for sample in samples.iter_mut() {
+        *sample = (*sample as f32 * gain).clamp(-32768.0, 32767.0) as i16;
+    }
+}
+
 pub fn get_timestamp() -> u64 {
     let now = std::time::SystemTime::now();
     now.duration_since(std::time::UNIX_EPOCH)

@@ -604,6 +604,9 @@ impl CallModule {
             if let Some(ptime) = policy.ptime {
                 existing.ptime = ptime;
             }
+            if let Some(gain) = policy.input_gain {
+                existing.input_gain = gain;
+            }
         } else {
             dialplan.recording.option = Some(recorder_option);
         }
@@ -715,6 +718,9 @@ impl CallModule {
         }
         if let Some(ptime) = policy.ptime {
             option.ptime = ptime;
+        }
+        if let Some(gain) = policy.input_gain {
+            option.input_gain = gain;
         }
         Some(option)
     }
