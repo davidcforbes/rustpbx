@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ARCHITECTURE.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="legacy-architecture--current-state">Legacy Architecture — Current State</h1>
+<h2 id="document-purpose">Document Purpose</h2>
+<p>This document captures <strong>how the system works today</strong> — the complete call tracking
+and case management architecture built on CallTrackingMetrics (CTM), Twilio, Zoho,
+Flow Legal Management, Snowflake, and supporting systems. It serves as the baseline
+that any replacement must match or exceed before the legacy platform can be decommissioned.</p>
+<p><strong>Scope:</strong> Current state only. For identified inefficiencies and redesign
+opportunities, see <a href="./ARCHITECTURE_OPPORTUNITIES.md">ARCHITECTURE_OPPORTUNITIES.md</a>.
+For the target-state RustPBX platform design, see <a href="./ARCHITECTURE_VISION.md">ARCHITECTURE_VISION.md</a>.</p>
+<hr>
+<h2 id="1-system-overview">1. System Overview</h2>
+<p>The legacy architecture spans ten layers (A–J), from the customer's initial ad click through
+to case management in Flow Legal. CTM sits at the center as the integration hub — it
+receives calls from Twilio, routes them to agents, records and transcribes them, and
+pushes data downstream to Zoho CRM, Flow Legal Management, and Snowflake (the data
+warehouse for management reporting and financial analytics).</p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart 
+    direction TB
+    subgraph SAASCLOUD["SaaS Platforms"]
+        direction LR
+            TRANSCRIPTION
+            ZOHO
+            FLOW
+            MANAGEMENT
+            PAYMENTS
+    end
+    subgraph PAYMENTS["J. Payments Layer"]
+            J1["💳 Payments Platform (TBD)"]
+    end
+    subgraph MANAGEMENT["I. Management Layer"]
+            I1["❄️ Snowflake<br>(management reporting<br>&amp; financial analytics)"]
+    end
+    subgraph FLOW["H. Flow Legal SaaS"]
+            H1["⚖️ Flow Legal Management<br>(case &amp; call linking)"]
+    end
+    subgraph ZOHO["G. Zoho CRM SaaS"]
+            G1["📊 Zoho CRM<br>(contact &amp; call records)"]
+    end
+    subgraph TRANSCRIPTION["F. Transcription SaaS"]
+            F1["🗣️ Groq Whisper<br>Large v3 Turbo<br>(batch STT)"]
+    end
+    subgraph AGENTS["E. Call Center (PV Mexico)"]
+            E1["🎧 Agent Browser Softphone"]
+    end
+    subgraph TELEPHONY["D. Twilio PSTN"]
+            D2["☁️ Twilio SIP Trunk<br>(PSTN ingress)"]
+            D1["📞 Customer Purchased<br>Phone Number"]
+    end
+    subgraph CALLTRACKING["C. Call Tracking Metrics"]
+        direction TB
+        C6["📝 Call Transcriptions"]
+        C5["🎙️ Call Recording<br>(and voicemail)"]
+        C4["🏢 CTM Platform<br>(routing · recording · transcription)"]
+        C3["🖱️ Click Tracking<br>(Track client fingerprint)"]
+        C2["🔢 Dynamic Number Insertion<br>(DNI — source attribution)"]
+        C1["📜 CTM JavaScript Tag<br>(on landing page)"]
+    end
+    subgraph SEARCH_ADS["B. Search Ads"]
+        B2["📢 Ad Networks<br>Google Ads · Facebook · Instagram"]
+        B1["🔍 Google Search<br>(Google Cloud)"]
+    end
+    subgraph CUSTOMER["A. Customer Browser"]
+        A2["🍪 Browser Cookie<br>(client-side session ↔ tracking number)"]
+        A1["👤 Customer Phone/Browser"]
+    end
+
+    A1 -- client searches --> B1
+    B1 -- returns results --> A1
+    A1 <-- checks cookies --> A2
+    B2 <-- ad placements --> B1
+    A1 -- lands on page --> C1
+    C1 -- stores session --> A2
+    C1 -- assigns pool number --> C2
+    C1 -- tracks fingerprint --> C3
+    A1 -- customer calls --> D1
+    D1 -- Twilio routing --> D2
+    D2 -- SIP trunk --> C4
+    C4 -- routes call --> E1
+    C4 -- saves recording --> C5
+    C4 -- sends audio --> F1
+    C4 <-- shows payments --> J1
+    F1 -- returns transcript --> C6
+    C4 -- "auto-push call data" --> G1
+    C4 -- feeds call/case data --> H1
+    G1 -- ETL --> I1
+    C4 -- ETL --> I1
+</div></code></pre>
+<h2 id="2-customer-acquisition-layers-a%E2%80%93b">2. Customer Acquisition (Layers A–B)</h2>
+<h3 id="21-customer-phonebrowser-layer-a">2.1 Customer Phone/Browser (Layer A)</h3>
+<p>The customer journey begins on a mobile phone or desktop browser. The prospective
+customer — typically someone seeking legal services — initiates a search that
+eventually leads to a phone call with our call center.</p>
+<p><strong>Customer profiles:</strong></p>
+<ul>
+<li>Mobile (majority): searching on iPhone/Android, may click-to-call directly from ad</li>
+<li>Desktop: searching on laptop/desktop, calls from cell phone after viewing landing page</li>
+<li>Returning visitor: may have previously visited the site, cookie may or may not persist</li>
+</ul>
+<h3 id="22-google-search-layer-b">2.2 Google Search (Layer B)</h3>
+<p>Customers discover our services through search engines, predominantly Google Search.
+The typical query pattern is service + location (e.g., &quot;personal injury lawyer near me&quot;,
+&quot;car accident attorney Houston&quot;). These searches trigger paid ads from the ad networks
+described below, as well as organic search results pointing to our landing pages.</p>
+<h3 id="23-ad-networks-layer-b">2.3 Ad Networks (Layer B)</h3>
+<p>Paid advertising across three platforms drives the majority of inbound call volume:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Ad Format</th>
+<th>Tracking Parameter</th>
+<th>Click ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Google Ads</td>
+<td>Search ads, display ads, call-only ads</td>
+<td><code>utm_source=google&amp;utm_medium=cpc</code></td>
+<td><code>gclid</code> (auto-appended)</td>
+</tr>
+<tr>
+<td>Facebook Ads</td>
+<td>News feed ads, story ads, lead forms</td>
+<td><code>utm_source=facebook&amp;utm_medium=paid</code></td>
+<td><code>fbclid</code> (auto-appended)</td>
+</tr>
+<tr>
+<td>Instagram Ads</td>
+<td>Feed ads, story ads, reels ads</td>
+<td><code>utm_source=instagram&amp;utm_medium=paid</code></td>
+<td><code>fbclid</code> (shared with Facebook)</td>
+</tr>
+</tbody>
+</table>
+<p>Each platform appends its own click identifier to the landing page URL. CTM's JavaScript
+captures these parameters to attribute the eventual phone call back to the originating
+ad click, campaign, and keyword.</p>
+<p><strong>Google Ads call-only ads</strong> are a special case: the customer taps to call directly from
+the search results page without ever visiting a landing page. In this flow, Google
+forwards the call to a Google forwarding number, which routes to CTM. Attribution
+relies on Google's own call conversion tracking rather than CTM's DNI JavaScript.</p>
+<hr>
+<h2 id="3-click-tracking--source-attribution-layer-c">3. Click Tracking &amp; Source Attribution (Layer C)</h2>
+<h3 id="31-ctm-javascript-tag-layer-c">3.1 CTM JavaScript Tag (Layer C)</h3>
+<p>Every landing page includes a CTM-provided JavaScript snippet that loads on page render.
+This script performs two functions: tracking the visit and swapping the phone number.</p>
+<p><strong>How it works today:</strong></p>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant Browser as Customer Browser
+    participant Page as Landing Page
+    participant CTM_JS as CTM JavaScript
+    participant CTM_API as CTM DNI API
+    participant Cookie as Browser Cookie
+
+    Browser->>Page: Loads landing page with UTM params
+    Page->>CTM_JS: Script tag executes on DOMContentLoaded
+    CTM_JS->>CTM_API: POST /api/v1/numbers/pool<br/>account_id, source, referrer, UTMs
+    Note over CTM_JS,CTM_API: 100–300ms round-trip to CTM servers
+    CTM_API-->>CTM_JS: Returns tracking number for this session
+    CTM_JS->>Page: Swaps displayed phone number in DOM
+    CTM_JS->>Cookie: Stores session_id + tracking_number
+</div></code></pre>
+<p><strong>CTM JavaScript snippet (typical):</strong></p>
+<pre class="hljs"><code><div><span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text/javascript"</span>&gt;</span><span class="javascript">
+  <span class="hljs-keyword">var</span> __ctm_loaded = <span class="hljs-literal">false</span>;
+  (<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">var</span> s = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'script'</span>);
+    s.type = <span class="hljs-string">'text/javascript'</span>;
+    s.async = <span class="hljs-literal">true</span>;
+    s.src = (<span class="hljs-string">'https:'</span> == <span class="hljs-built_in">document</span>.location.protocol ? <span class="hljs-string">'https://'</span> : <span class="hljs-string">'http://'</span>)
+            + <span class="hljs-string">'ACCOUNT_ID.ctm.com/t.js'</span>;
+    <span class="hljs-keyword">var</span> p = <span class="hljs-built_in">document</span>.getElementsByTagName(<span class="hljs-string">'script'</span>)[<span class="hljs-number">0</span>];
+    p.parentNode.insertBefore(s, p);
+  })();
+</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+</div></code></pre>
+<p>The script identifies phone number elements on the page (by CSS class, data attribute,
+or content matching) and replaces the static business number with a dynamically
+assigned tracking number unique to that visitor session.</p>
+<h3 id="32-dynamic-number-insertion--dni-layer-c">3.2 Dynamic Number Insertion — DNI (Layer C)</h3>
+<p>DNI is the mechanism that ties an ad click to a phone call. CTM maintains a pool of
+phone numbers and assigns one to each visitor session. When the customer eventually
+calls that number, CTM knows which ad, campaign, keyword, and landing page drove the
+call.</p>
+<p><strong>Number pool management:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pool size</td>
+<td>CTM manages the pool; numbers are provisioned through Twilio</td>
+</tr>
+<tr>
+<td>Assignment</td>
+<td>One tracking number per visitor session</td>
+</tr>
+<tr>
+<td>Recycling</td>
+<td>Number returns to pool after session expires (configurable timeout)</td>
+</tr>
+<tr>
+<td>Shortage handling</td>
+<td>If pool is exhausted, falls back to default business number (no attribution)</td>
+</tr>
+<tr>
+<td>Number format</td>
+<td>US local numbers matching the area code of the landing page's target market</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attribution chain:</strong></p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    A["Ad Click<br/>gclid=abc123<br/>utm_campaign=PI_National"] -->|"lands on page"| B["CTM JS assigns<br/>+1-555-0147<br/>to this session"]
+    B -->|"stored in cookie"| C["Cookie:<br/>session_id=xyz<br/>tracking_num=+15550147"]
+    C -->|"customer calls later"| D["CTM receives call<br/>on +1-555-0147"]
+    D -->|"looks up session"| E["Attribution:<br/>Google Ads<br/>PI_National campaign<br/>'injury lawyer' keyword"]
+</div></code></pre>
+<p><strong>Cookie dependency:</strong> The entire attribution chain relies on the browser cookie
+persisting between the page visit and the phone call. This is fragile — cookies
+can be cleared, blocked by Safari ITP, stripped by ad blockers, or absent entirely
+in incognito mode. When the cookie is lost, the call still arrives at CTM but
+without source attribution, appearing as an &quot;unattributed&quot; or &quot;direct&quot; call.</p>
+<hr>
+<h2 id="4-pstn-call-path-layer-d">4. PSTN Call Path (Layer D)</h2>
+<p>When the customer dials the tracking number, the call traverses the public telephone
+network (PSTN) through Twilio's infrastructure before reaching CTM.</p>
+<h3 id="41-call-flow-customer-to-ctm">4.1 Call Flow: Customer to CTM</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant Customer as Customer Phone
+    participant PSTN as PSTN / SS7
+    participant Twilio as Twilio SIP Trunk
+    participant CTM as CTM Platform
+
+    Customer->>PSTN: Dials tracking number +1-555-0147
+    Note over Customer,PSTN: PSTN call setup: 2–5 seconds
+    PSTN->>Twilio: Routes to Twilio (number owner)
+    Twilio->>Twilio: Transcodes to SIP<br/>PSTN codec → G.711μ
+    Twilio->>CTM: SIP INVITE over trunk
+    Note over Twilio,CTM: Additional 50–200ms SIP signaling
+    CTM-->>Twilio: 200 OK (call connected)
+    CTM->>CTM: Matches DID to session<br/>Starts recording<br/>Initiates routing logic
+</div></code></pre>
+<h3 id="42-twilio-sip-trunking">4.2 Twilio SIP Trunking</h3>
+<p>Twilio serves as the PSTN-to-SIP bridge. CTM uses Twilio SIP trunking to receive
+inbound calls and make outbound calls.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service</td>
+<td>Twilio Elastic SIP Trunking</td>
+</tr>
+<tr>
+<td>Inbound</td>
+<td>Twilio owns the tracking numbers, routes to CTM via SIP trunk</td>
+</tr>
+<tr>
+<td>Outbound</td>
+<td>CTM sends SIP to Twilio for PSTN termination</td>
+</tr>
+<tr>
+<td>Codec</td>
+<td>G.711μ (PCMU) — Twilio transcodes from PSTN as needed</td>
+</tr>
+<tr>
+<td>Recording</td>
+<td>CTM handles recording (not Twilio)</td>
+</tr>
+<tr>
+<td>Billing model</td>
+<td>Per-minute: ~$0.0085/min inbound PSTN + ~$0.005/min SIP trunk</td>
+</tr>
+<tr>
+<td>Combined cost</td>
+<td>~$0.0135/min (double billing — PSTN leg + SIP leg)</td>
+</tr>
+<tr>
+<td>Number porting</td>
+<td>2–4 weeks to port numbers away from Twilio</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-ctm-platform-layer-c">5. CTM Platform (Layer C)</h2>
+<p>CallTrackingMetrics (CTM) is the central hub of the legacy architecture. It receives
+calls from Twilio, routes them to agents, records conversations, provides basic
+transcription, and pushes data to downstream systems.</p>
+<h3 id="51-core-ctm-functions">5.1 Core CTM Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>How It Works Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Call routing</strong></td>
+<td>GUI-configured routing rules: time-of-day, geo, round-robin, sequential ring</td>
+</tr>
+<tr>
+<td><strong>IVR</strong></td>
+<td>Basic auto-attendant with DTMF menu trees</td>
+</tr>
+<tr>
+<td><strong>Call recording</strong></td>
+<td>Automatic recording of all calls; stored in CTM cloud</td>
+</tr>
+<tr>
+<td><strong>Transcription</strong></td>
+<td>CTM's built-in transcription (provider unknown, likely third-party ASR)</td>
+</tr>
+<tr>
+<td><strong>Call scoring</strong></td>
+<td>Manual agent scoring via CTM interface</td>
+</tr>
+<tr>
+<td><strong>Reporting</strong></td>
+<td>Web dashboard with call volume, duration, source attribution, agent performance</td>
+</tr>
+<tr>
+<td><strong>Number management</strong></td>
+<td>CTM manages tracking number pools provisioned via Twilio</td>
+</tr>
+<tr>
+<td><strong>Whisper/announce</strong></td>
+<td>Pre-connect message to agent (&quot;This call is from Google Ads - PI campaign&quot;)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-ctm-call-routing">5.2 CTM Call Routing</h3>
+<p>When a call arrives from Twilio, CTM's routing engine determines which agent or
+group should receive it.</p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TB
+    A["Inbound SIP INVITE<br/>from Twilio"] --> B{"CTM Routing Rules"}
+    B -->|"Business hours<br/>(CST/Puerto Vallarta time)"| C["Route to<br/>Agent Group"]
+    B -->|"After hours"| D["Voicemail<br/>or IVR menu"]
+    B -->|"Overflow<br/>(all agents busy)"| E["Queue with<br/>hold music"]
+    C --> F{"Distribution<br/>Method"}
+    F -->|"Round-robin"| G["Next agent<br/>in rotation"]
+    F -->|"Sequential"| H["Ring agents<br/>in fixed order"]
+    F -->|"Simultaneous"| I["Ring all<br/>available agents"]
+    G --> J["Agent Softphone<br/>(Puerto Vallarta)"]
+    H --> J
+    I --> J
+</div></code></pre>
+<h3 id="53-call-recording--storage">5.3 Call Recording &amp; Storage</h3>
+<p>CTM records all calls automatically. Recordings are stored in CTM's cloud
+infrastructure with no direct access to raw files.</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Format</td>
+<td>Proprietary; accessible via CTM dashboard and API</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>CTM cloud (vendor-controlled)</td>
+</tr>
+<tr>
+<td>Retention</td>
+<td>Per CTM account settings</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>Manual download through CTM UI; API access with rate limits</td>
+</tr>
+<tr>
+<td>Bulk export</td>
+<td>Limited; subject to API rate limiting</td>
+</tr>
+<tr>
+<td>Ownership</td>
+<td>Recordings are in CTM's infrastructure — portability is a concern</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54-ctm-billing">5.4 CTM Billing</h3>
+<p>CTM adds its own per-minute charges on top of Twilio's charges, creating a
+two-layer billing structure:</p>
+<table>
+<thead>
+<tr>
+<th>Cost Layer</th>
+<th>Rate</th>
+<th>Monthly (50K min)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Twilio PSTN + SIP</td>
+<td>~$0.0135/min</td>
+<td>~$675</td>
+</tr>
+<tr>
+<td>CTM platform fee</td>
+<td>Per-minute + subscription</td>
+<td>Varies by plan</td>
+</tr>
+<tr>
+<td><strong>Total carrier + platform</strong></td>
+<td>~$0.02+/min</td>
+<td><strong>~$1,000+</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="6-call-center-agents-layer-e">6. Call Center Agents (Layer E)</h2>
+<h3 id="61-agent-location-puerto-vallarta-mexico">6.1 Agent Location: Puerto Vallarta, Mexico</h3>
+<p>The call center operates from <strong>Puerto Vallarta, Jalisco, Mexico</strong>. All agents
+connect to CTM from this location, which introduces cross-border networking
+considerations.</p>
+<p><strong>Network topology:</strong></p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    subgraph PV ["Puerto Vallarta, MX"]
+        AG["🎧 Agent Workstation<br/>(browser)"]
+        ISP["🌐 Mexican ISP<br/>Telmex/Izzi/TotalPlay"]
+    end
+
+    subgraph US ["United States"]
+        IX["🔗 US-MX Border<br/>Internet Exchange"]
+        CTM_DC["🏢 CTM Cloud<br/>Servers"]
+        TWILIO["☁️ Twilio<br/>SIP Edge"]
+    end
+
+    AG -->|"consumer broadband<br/>5–15ms"| ISP
+    ISP -->|"GDL/CDMX IX → McAllen/Laredo<br/>15–30ms"| IX
+    IX -->|"US backbone<br/>10–25ms"| CTM_DC
+    CTM_DC <-->|"SIP/RTP"| TWILIO
+</div></code></pre>
+<p><strong>Latency profile (Puerto Vallarta → CTM):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Segment</th>
+<th>Typical RTT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent → Mexican ISP PoP</td>
+<td>5–15ms</td>
+</tr>
+<tr>
+<td>Mexican ISP → US border crossing</td>
+<td>15–30ms</td>
+</tr>
+<tr>
+<td>US border → CTM cloud</td>
+<td>10–25ms</td>
+</tr>
+<tr>
+<td><strong>Total round-trip</strong></td>
+<td><strong>30–70ms</strong></td>
+</tr>
+</tbody>
+</table>
+<p>This is within acceptable limits for voice (ITU-T G.114 recommends &lt; 150ms one-way),
+but leaves limited headroom for packet loss and jitter on consumer-grade ISPs.</p>
+<h3 id="62-agent-experience">6.2 Agent Experience</h3>
+<p>Agents interact with CTM through a browser-based interface. The current agent
+experience has several limitations that affect productivity.</p>
+<p><strong>What agents have today:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Browser softphone</td>
+<td>✅</td>
+<td>CTM's built-in WebRTC softphone</td>
+</tr>
+<tr>
+<td>Call controls (answer, hold, transfer, hangup)</td>
+<td>✅</td>
+<td>Standard CTM interface</td>
+</tr>
+<tr>
+<td>Caller ID / source display</td>
+<td>✅</td>
+<td>CTM shows tracking source before connect</td>
+</tr>
+<tr>
+<td>Whisper message</td>
+<td>✅</td>
+<td>Pre-connect audio: &quot;Google Ads - PI National&quot;</td>
+</tr>
+<tr>
+<td>Call recording indicator</td>
+<td>✅</td>
+<td>Visible in CTM dashboard</td>
+</tr>
+<tr>
+<td>Queue visibility</td>
+<td>⚠️ Limited</td>
+<td>Basic queue stats, no real-time agent dashboard</td>
+</tr>
+<tr>
+<td>Live transcription</td>
+<td>❌</td>
+<td>Not available during calls</td>
+</tr>
+<tr>
+<td>AI coaching / suggestions</td>
+<td>❌</td>
+<td>Not available</td>
+</tr>
+<tr>
+<td>Real-time sentiment</td>
+<td>❌</td>
+<td>Not available</td>
+</tr>
+<tr>
+<td>Dynamic call scripts</td>
+<td>❌</td>
+<td>Static scripts only (no context adaptation)</td>
+</tr>
+<tr>
+<td>Supervisor live monitoring</td>
+<td>⚠️ Limited</td>
+<td>Listen-only; no whisper or barge</td>
+</tr>
+<tr>
+<td>Post-call disposition</td>
+<td>✅</td>
+<td>Manual entry after each call</td>
+</tr>
+<tr>
+<td>CRM screen pop</td>
+<td>⚠️ Limited</td>
+<td>Basic integration; no form pre-fill</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-internet-reliability-concerns">6.3 Internet Reliability Concerns</h3>
+<p>Agents rely on consumer-grade Mexican ISPs with no dedicated circuits. This
+creates reliability risks:</p>
+<table>
+<thead>
+<tr>
+<th>ISP</th>
+<th>Service</th>
+<th>Known Issues</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Telmex/Infinitum</td>
+<td>DSL/Fiber</td>
+<td>Frequent micro-outages, congestion during peak hours</td>
+</tr>
+<tr>
+<td>Izzi</td>
+<td>Cable</td>
+<td>Speed fluctuations, regional outages</td>
+</tr>
+<tr>
+<td>TotalPlay</td>
+<td>Fiber</td>
+<td>Better reliability but limited availability</td>
+</tr>
+<tr>
+<td><strong>Failover</strong></td>
+<td>Telcel 4G/5G mobile hotspot</td>
+<td>Manual switch; adequate for voice but variable latency</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Current failover strategy:</strong> Largely manual. If an agent's internet drops during
+a call, the call is lost. There is no automatic device failover, no ICE restart
+capability, and no secondary ISP auto-switching at the network level.</p>
+<hr>
+<h2 id="7-call-transcription-layer-f">7. Call Transcription (Layer F)</h2>
+<p>Call transcription operates in two tiers: CTM's built-in transcription and a
+supplemental Groq Whisper pipeline for higher-accuracy results.</p>
+<h3 id="71-ctm-native-transcription">7.1 CTM Native Transcription</h3>
+<p>CTM provides post-call transcription as a platform feature. Transcripts appear in
+the CTM dashboard after call completion.</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Current State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timing</td>
+<td>Post-call only (no live transcription)</td>
+</tr>
+<tr>
+<td>Latency</td>
+<td>1–15 minutes after call ends</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>Moderate — CTM's ASR provider is not disclosed</td>
+</tr>
+<tr>
+<td>Speaker diarization</td>
+<td>Basic (caller vs. agent)</td>
+</tr>
+<tr>
+<td>Searchability</td>
+<td>Within CTM dashboard only</td>
+</tr>
+<tr>
+<td>Export</td>
+<td>Via CTM API (rate-limited)</td>
+</tr>
+<tr>
+<td>Custom vocabulary</td>
+<td>Not available</td>
+</tr>
+<tr>
+<td>Languages</td>
+<td>English primarily</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-groq-whisper-large-v3-turbo-supplemental">7.2 Groq Whisper Large v3 Turbo (Supplemental)</h3>
+<p>For higher-accuracy transcription, call recordings are processed through
+<strong>Groq Whisper Large v3 Turbo</strong> — a hosted inference endpoint running
+OpenAI's Whisper Large v3 Turbo model on Groq's LPU hardware.</p>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant CTM as CTM Platform
+    participant Export as Recording Export
+    participant Groq as Groq Whisper API
+    participant Store as Transcript Storage
+
+    CTM->>Export: Call recording available<br/>(post-call)
+    Export->>Export: Download WAV from CTM<br/>(API or manual)
+    Export->>Groq: POST /openai/v1/audio/transcriptions<br/>model=whisper-large-v3-turbo<br/>file=recording.wav
+    Note over Groq: Processing: 228× real-time<br/>(1 hour audio ≈ 16 seconds)
+    Groq-->>Store: Returns transcript JSON<br/>(text + word timestamps)
+</div></code></pre>
+<p><strong>Groq Whisper specs:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td><code>whisper-large-v3-turbo</code></td>
+</tr>
+<tr>
+<td>API endpoint</td>
+<td><code>https://api.groq.com/openai/v1/audio/transcriptions</code></td>
+</tr>
+<tr>
+<td>API compatibility</td>
+<td>OpenAI-compatible (drop-in replacement)</td>
+</tr>
+<tr>
+<td>Processing speed</td>
+<td>228× real-time</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>$0.04/hour ($0.00067/min)</td>
+</tr>
+<tr>
+<td>Monthly cost (50K min/mo)</td>
+<td>~$33</td>
+</tr>
+<tr>
+<td>Max file size</td>
+<td>25 MB per request</td>
+</tr>
+<tr>
+<td>Word-level timestamps</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Speaker diarization</td>
+<td>❌ Not built-in (Whisper limitation)</td>
+</tr>
+<tr>
+<td>Languages</td>
+<td>100+ (Whisper multilingual)</td>
+</tr>
+<tr>
+<td>Custom vocabulary</td>
+<td>Prompt-only (224 token limit)</td>
+</tr>
+<tr>
+<td>Accuracy (WER)</td>
+<td>~10–12% (Whisper v3 Turbo baseline)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Current workflow limitations:</strong></p>
+<ul>
+<li>Recordings must be exported from CTM before Groq processing (manual or scripted)</li>
+<li>No real-time / streaming transcription (batch only)</li>
+<li>No automatic pipeline — requires orchestration outside CTM</li>
+<li>Two transcripts exist (CTM's and Groq's) with no single source of truth</li>
+<li>No speaker diarization without additional post-processing</li>
+</ul>
+<hr>
+<h2 id="8-zoho-crm-integration-layer-g">8. Zoho CRM Integration (Layer G)</h2>
+<p>CTM auto-pushes call data to Zoho CRM after each call completes. This is the
+primary CRM where contact records, call history, and lead information are maintained.</p>
+<h3 id="81-integration-flow">8.1 Integration Flow</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant CTM as CTM Platform
+    participant Zoho as Zoho CRM
+
+    Note over CTM: Call ends, disposition set
+    CTM->>Zoho: Auto-push via Zoho REST API<br/>POST /crm/v2/Calls
+    Note over CTM,Zoho: Payload includes:<br/>• Caller ID<br/>• Call duration<br/>• Disposition<br/>• Recording URL (CTM-hosted)<br/>• Source attribution<br/>• Agent name
+    Zoho-->>CTM: 200 OK (record created)
+    Zoho->>Zoho: Links call to Contact<br/>(phone number match)
+</div></code></pre>
+<h3 id="82-data-pushed-to-zoho">8.2 Data Pushed to Zoho</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Source</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caller phone number</td>
+<td>CTM call record</td>
+<td>Used to match/create Contact</td>
+</tr>
+<tr>
+<td>Call duration</td>
+<td>CTM call record</td>
+<td></td>
+</tr>
+<tr>
+<td>Call type</td>
+<td>CTM</td>
+<td>Inbound / Outbound</td>
+</tr>
+<tr>
+<td>Disposition</td>
+<td>Agent (manual)</td>
+<td>Set by agent post-call</td>
+</tr>
+<tr>
+<td>Recording URL</td>
+<td>CTM-hosted link</td>
+<td>Plays back through CTM; breaks if CTM is decommissioned</td>
+</tr>
+<tr>
+<td>Source / campaign</td>
+<td>CTM attribution</td>
+<td>From DNI session tracking</td>
+</tr>
+<tr>
+<td>Agent name</td>
+<td>CTM</td>
+<td>Who handled the call</td>
+</tr>
+<tr>
+<td>Call timestamp</td>
+<td>CTM</td>
+<td>When the call occurred</td>
+</tr>
+<tr>
+<td>CTM transcript</td>
+<td>CTM (if enabled)</td>
+<td>CTM's native transcription text</td>
+</tr>
+</tbody>
+</table>
+<h3 id="83-zoho-crm-role">8.3 Zoho CRM Role</h3>
+<p>Zoho serves as the contact and lead management system:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>How It's Used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contact records</td>
+<td>Phone number, name, email, lead source</td>
+</tr>
+<tr>
+<td>Call history</td>
+<td>Log of all calls associated with a contact</td>
+</tr>
+<tr>
+<td>Lead tracking</td>
+<td>New callers create leads; repeat callers link to existing contacts</td>
+</tr>
+<tr>
+<td>Pipeline management</td>
+<td>Move leads through stages (New → Qualified → Retained → Closed)</td>
+</tr>
+<tr>
+<td>Reporting</td>
+<td>Call volume by source, conversion rates, agent performance</td>
+</tr>
+<tr>
+<td>Team access</td>
+<td>Agents and managers access Zoho for contact context</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Critical dependency:</strong> Recording URLs in Zoho point to CTM-hosted files. If CTM
+is decommissioned, all historical recording links in Zoho will break unless recordings
+are migrated and URLs are updated.</p>
+</blockquote>
+<hr>
+<h2 id="9-flow-legal-management-integration-layer-h">9. Flow Legal Management Integration (Layer H)</h2>
+<p>CTM feeds call and case data to Flow Legal Management, the system used to manage
+legal cases and client matters. This integration connects incoming calls to active
+cases, enabling case managers to track client communication history.</p>
+<h3 id="91-integration-flow">9.1 Integration Flow</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant CTM as CTM Platform
+    participant Flow as Flow Legal Management
+
+    Note over CTM: Call ends, data available
+    CTM->>Flow: Push call data<br/>(API or webhook)
+    Note over CTM,Flow: Payload includes:<br/>• Caller ID<br/>• Call duration<br/>• Recording URL (CTM-hosted)<br/>• Disposition<br/>• Source attribution
+    Flow->>Flow: Match caller to case<br/>(by phone number)
+    Flow->>Flow: Attach call record<br/>to case timeline
+</div></code></pre>
+<h3 id="92-data-pushed-to-flow-legal">9.2 Data Pushed to Flow Legal</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Source</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caller phone number</td>
+<td>CTM</td>
+<td>Used to match to existing case/client</td>
+</tr>
+<tr>
+<td>Call duration</td>
+<td>CTM</td>
+<td></td>
+</tr>
+<tr>
+<td>Recording URL</td>
+<td>CTM-hosted</td>
+<td>Same CTM dependency as Zoho</td>
+</tr>
+<tr>
+<td>Disposition</td>
+<td>Agent (manual)</td>
+<td></td>
+</tr>
+<tr>
+<td>Call timestamp</td>
+<td>CTM</td>
+<td></td>
+</tr>
+<tr>
+<td>Source attribution</td>
+<td>CTM</td>
+<td>Ad source that drove the call</td>
+</tr>
+</tbody>
+</table>
+<h3 id="93-flow-legals-role">9.3 Flow Legal's Role</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>How It's Used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Case management</td>
+<td>Track legal matters from intake through resolution</td>
+</tr>
+<tr>
+<td>Client communication log</td>
+<td>All calls linked to the relevant case</td>
+</tr>
+<tr>
+<td>Document management</td>
+<td>Case files, correspondence, recordings</td>
+</tr>
+<tr>
+<td>Task management</td>
+<td>Follow-ups, deadlines, assignments</td>
+</tr>
+<tr>
+<td>Intake workflow</td>
+<td>New callers can trigger intake case creation</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Critical dependency:</strong> Like Zoho, recording links in Flow Legal point to CTM.
+CTM decommissioning requires recording migration and URL rewriting for both
+downstream systems.</p>
+</blockquote>
+<hr>
+<h2 id="10-snowflake--management-reporting--analytics-layer-i">10. Snowflake — Management Reporting &amp; Analytics (Layer I)</h2>
+<h3 id="101-role-in-the-legacy-architecture">10.1 Role in the Legacy Architecture</h3>
+<p>Snowflake serves as the data warehouse for management reporting, aggregating data
+from multiple upstream systems into a single analytics layer.</p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    CTM["CTM<br/>(call data, attribution,<br/>recording metadata)"] -->|"ETL/export"| SF["❄️ Snowflake<br/>Data Warehouse"]
+    ZOHO["Zoho CRM<br/>(contacts, leads,<br/>pipeline)"] -->|"ETL/export"| SF
+    FIN["Financial Systems<br/>(payments, debts,<br/>collections)"] -->|"ETL/export"| SF
+    SF --> R1["📊 Management<br/>Reports"]
+    SF --> R2["📈 KPI<br/>Dashboards"]
+    SF --> R3["💰 Financial<br/>Analytics"]
+
+    style SF fill:#e3f2fd,stroke:#1565c0
+</div></code></pre>
+<h3 id="102-data-sources">10.2 Data Sources</h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Data Fed to Snowflake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CTM</td>
+<td>Call volumes, duration, disposition, source attribution, agent performance</td>
+</tr>
+<tr>
+<td>Zoho CRM</td>
+<td>Lead pipeline, contact history, conversion rates</td>
+</tr>
+<tr>
+<td>Financial/payments</td>
+<td>Client payments, outstanding debts, collections status</td>
+</tr>
+</tbody>
+</table>
+<h3 id="103-reporting-capabilities">10.3 Reporting Capabilities</h3>
+<p>Snowflake enables cross-system queries that no individual vendor can provide on its
+own — for example, correlating ad spend attribution (CTM) with case conversion rates
+(Zoho) and revenue collected (financial data).</p>
+<table>
+<thead>
+<tr>
+<th>Report Category</th>
+<th>Example Queries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Call center performance</td>
+<td>Calls per agent, average handle time, disposition rates</td>
+</tr>
+<tr>
+<td>Marketing attribution</td>
+<td>Cost per lead by campaign, conversion rate by ad source</td>
+</tr>
+<tr>
+<td>Financial</td>
+<td>Revenue per case type, outstanding debt aging, collection rates</td>
+</tr>
+<tr>
+<td>Cross-system</td>
+<td>Ad spend → call → case → payment (full funnel ROI)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Vendor dependency:</strong> Snowflake queries depend on data exports from CTM and Zoho.
+Replacing CTM requires redirecting the call data ETL pipeline. Replacing Zoho
+requires redirecting the CRM data pipeline. Both pipelines must be replicated
+or replaced before Snowflake (or its successor) can produce accurate reports.</p>
+</blockquote>
+<hr>
+<h2 id="11-payments-layer-j">11. Payments (Layer J)</h2>
+<p>The payments layer is planned but not yet implemented. The specific platform (e.g.,
+LawPay, Stripe, or a custom integration) is TBD. This layer will handle client
+payments, billing, and collections data — feeding into the management reporting
+layer (Snowflake / Layer I) for full-funnel ROI analysis from ad spend through
+to revenue collected.</p>
+<hr>
+<h2 id="12-end-to-end-data-flow-summary">12. End-to-End Data Flow Summary</h2>
+<p>The complete legacy data flow, showing how information moves through all ten layers (A–J):</p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TB
+    subgraph LAYER_A ["A. Customer Browser"]
+        LA["Customer<br/>Phone/Browser"]
+    end
+
+    subgraph LAYER_B ["B. Search Ads"]
+        LB1["Google<br/>Search"]
+        LB2["Ad Networks<br/>Google · Facebook · Instagram"]
+    end
+
+    subgraph LAYER_C ["C. Call Tracking Metrics"]
+        LC1["CTM JavaScript<br/>(click tracking)"]
+        LC2["DNI<br/>(number swap + browser cookie)"]
+        LC3["CTM Platform<br/>(routing · recording)"]
+        LC4["Call Recording<br/>(and voicemail)"]
+        LC5["Call Transcriptions"]
+    end
+
+    subgraph LAYER_D ["D. Twilio PSTN"]
+        LD["Twilio<br/>SIP Trunk"]
+    end
+
+    subgraph LAYER_E ["E. Call Center (PV Mexico)"]
+        LE["Agent<br/>Browser Softphone"]
+    end
+
+    subgraph LAYER_F ["F. Transcription SaaS"]
+        LF["Groq Whisper<br/>Large v3 Turbo<br/>(batch STT)"]
+    end
+
+    subgraph LAYER_G ["G. Zoho CRM SaaS"]
+        LG["Zoho CRM<br/>(contacts · calls · pipeline)"]
+    end
+
+    subgraph LAYER_H ["H. Flow Legal SaaS"]
+        LH["Flow Legal<br/>Management<br/>(cases · intake)"]
+    end
+
+    subgraph LAYER_I ["I. Management Layer"]
+        LI["❄️ Snowflake<br/>(management reporting<br/>· financial analytics)"]
+    end
+
+    subgraph LAYER_J ["J. Payments Layer"]
+        LJ["💳 Payments<br/>Platform (TBD)"]
+    end
+
+    LA -->|"searches"| LB1
+    LB1 -->|"returns results"| LA
+    LA -->|"clicks ad"| LB2
+    LB2 -->|"lands on page"| LC1
+    LC1 --> LC2
+    LC2 -->|"customer calls<br/>tracking number"| LD
+    LD -->|"SIP trunk"| LC3
+    LC3 -->|"routes to agent"| LE
+    LC3 -->|"saves recording"| LC4
+    LC3 -->|"sends audio"| LF
+    LF -->|"returns transcript"| LC5
+    LC3 -->|"auto-push"| LG
+    LC3 -->|"data feed"| LH
+    LC3 -->|"ETL"| LI
+    LG -->|"ETL"| LI
+
+    style LC3 fill:#f9e0e0,stroke:#c0392b
+    style LD fill:#f9e0e0,stroke:#c0392b
+</div></code></pre>
+<blockquote>
+<p><strong>The red nodes (CTM + Twilio) are the components targeted for replacement.</strong>
+CTM is the single point of failure for routing, recording, transcription, and
+all downstream integrations. Twilio is the sole PSTN carrier with 2–4 week
+number porting timelines.</p>
+</blockquote>
+<hr>
+<h2 id="13-technology-stack-legacy">13. Technology Stack (Legacy)</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. Customer Browser</strong></td>
+<td>Mobile/desktop browser</td>
+<td>Customer search, ad click, page visit</td>
+</tr>
+<tr>
+<td><strong>B. Search Ads</strong></td>
+<td>Google Ads, Facebook Ads, Instagram Ads</td>
+<td>Customer acquisition, paid search/social</td>
+</tr>
+<tr>
+<td><strong>C. Call Tracking</strong></td>
+<td>CTM JavaScript tag, CTM Platform</td>
+<td>DNI, session tracking, source attribution, routing, recording</td>
+</tr>
+<tr>
+<td><strong>C. Session Storage</strong></td>
+<td>Browser cookies (via CTM JS)</td>
+<td>Links page visit to phone call</td>
+</tr>
+<tr>
+<td><strong>D. PSTN Carrier</strong></td>
+<td>Twilio Elastic SIP Trunking</td>
+<td>Inbound/outbound PSTN ↔ SIP bridge</td>
+</tr>
+<tr>
+<td><strong>E. Call Center</strong></td>
+<td>CTM browser softphone (WebRTC)</td>
+<td>Call handling, disposition, basic CRM view</td>
+</tr>
+<tr>
+<td><strong>E. Agent Location</strong></td>
+<td>Puerto Vallarta, Jalisco, Mexico</td>
+<td>Consumer ISPs (Telmex/Izzi/TotalPlay)</td>
+</tr>
+<tr>
+<td><strong>F. Transcription</strong></td>
+<td>Groq Whisper Large v3 Turbo</td>
+<td>Batch post-call, high accuracy, $0.04/hr</td>
+</tr>
+<tr>
+<td><strong>F. Transcription (native)</strong></td>
+<td>CTM built-in ASR</td>
+<td>Post-call, moderate accuracy</td>
+</tr>
+<tr>
+<td><strong>G. CRM</strong></td>
+<td>Zoho CRM</td>
+<td>Contact records, call history, lead pipeline</td>
+</tr>
+<tr>
+<td><strong>H. Case Management</strong></td>
+<td>Flow Legal Management</td>
+<td>Legal case tracking, intake, call-case linking</td>
+</tr>
+<tr>
+<td><strong>I. Data Warehouse</strong></td>
+<td>Snowflake</td>
+<td>Management reporting from CTM, Zoho, and financial/payments data</td>
+</tr>
+<tr>
+<td><strong>J. Payments</strong></td>
+<td>TBD</td>
+<td>Client payments, billing, collections</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-vendor-dependencies--decommissioning-risks">14. Vendor Dependencies &amp; Decommissioning Risks</h2>
+<p>CTM is the hub that all other systems depend on. Removing it requires replacing
+every integration it provides.</p>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TB
+    CTM["🏢 CTM Platform<br/>(integration hub)"]
+
+    CTM -->|"provides"| R1["📞 Call routing<br/>to agents"]
+    CTM -->|"provides"| R2["🎙️ Call recording<br/>& storage"]
+    CTM -->|"provides"| R3["📝 Transcription<br/>(native ASR)"]
+    CTM -->|"provides"| R4["🔢 DNI & tracking<br/>number management"]
+    CTM -->|"provides"| R5["📊 Reporting &<br/>attribution analytics"]
+    CTM -->|"feeds"| R6["📊 Zoho CRM<br/>(auto-push)"]
+    CTM -->|"feeds"| R7["⚖️ Flow Legal<br/>(data feed)"]
+    CTM -->|"feeds"| R9["❄️ Snowflake<br/>(ETL for reporting)"]
+    CTM -->|"depends on"| R8["☁️ Twilio<br/>(SIP trunking + numbers)"]
+    R6 -->|"feeds"| R9
+
+    style CTM fill:#f9e0e0,stroke:#c0392b
+    style R8 fill:#f9e0e0,stroke:#c0392b
+</div></code></pre>
+<p><strong>Decommissioning prerequisites (CTM cannot be removed until all are met):</strong></p>
+<ol>
+<li>✅ Alternative call routing operational (agent calls connect without CTM)</li>
+<li>✅ Call recording with accessible storage (not vendor-locked)</li>
+<li>✅ Transcription pipeline producing searchable transcripts</li>
+<li>✅ DNI / click tracking / source attribution operational</li>
+<li>✅ Zoho CRM receiving call data via new integration</li>
+<li>✅ Flow Legal Management receiving call/case data via new integration</li>
+<li>✅ Historical recordings migrated from CTM (or acceptance of data loss)</li>
+<li>✅ Twilio numbers ported to new carrier (Telnyx) or new numbers provisioned</li>
+<li>✅ Snowflake ETL pipelines redirected from CTM/Zoho to new data sources</li>
+</ol>
+<hr>
+<h2 id="15-cross-references">15. Cross-References</h2>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="./ARCHITECTURE_OPPORTUNITIES.md">ARCHITECTURE_OPPORTUNITIES.md</a></td>
+<td>Inefficiency analysis and five redesign opportunities</td>
+</tr>
+<tr>
+<td>ARCHITECTURE_VISION.md <em>(forthcoming)</em></td>
+<td>Target-state RustPBX platform design, technology decisions, and implementation stages</td>
+</tr>
+<tr>
+<td><a href="./TESTING_PLAN_OF_ACTION.md">TESTING_PLAN_OF_ACTION.md</a></td>
+<td>Nine-stage testing strategy for the replacement platform</td>
+</tr>
+<tr>
+<td><a href="./PROJECT_OVERVIEW.md">PROJECT_OVERVIEW.md</a></td>
+<td>High-level project summary and RustPBX capabilities</td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>

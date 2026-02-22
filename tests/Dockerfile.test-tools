@@ -1,0 +1,36 @@
+###############################################################################
+# RustPBX Test Tools Image
+#
+# Provides SIPp, Python test framework, and network diagnostic utilities
+# for integration and load testing of the RustPBX platform.
+###############################################################################
+
+FROM python:3.12-slim AS base
+
+# Install system packages:
+#   sip-tester  - SIPp for SIP protocol testing
+#   curl        - HTTP endpoint testing
+#   netcat-openbsd - TCP/UDP connectivity checks
+#   dnsutils    - DNS resolution debugging (dig, nslookup)
+#   iproute2    - Network diagnostics (ip, ss)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        sip-tester \
+        curl \
+        netcat-openbsd \
+        dnsutils \
+        iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python test dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
+
+# Copy test suite into the image
+COPY . /tests
+
+WORKDIR /tests
+
+# Default: run the full pytest suite
+CMD ["pytest", "--timeout=120", "-v", "--html=/tests/report.html", "--self-contained-html"]

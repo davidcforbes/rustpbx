@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="REGISTER without auth">
+
+  <!--
+    Send a bare REGISTER request (no credentials).
+    The server MUST challenge with 401 Unauthorized and a WWW-Authenticate header.
+
+    Usage:
+      sipp <host>:<port> -sf register.xml -s 1001 -m 1
+  -->
+
+  <send>
+    <![CDATA[
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[call_number]
+      To: <sip:[field0]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Expect 401 Unauthorized with a WWW-Authenticate challenge -->
+  <recv response="401" rtd="true">
+    <action>
+      <ereg regexp="WWW-Authenticate:.*"
+            header="WWW-Authenticate:"
+            search_in="msg"
+            assign_to="www_auth"/>
+    </action>
+  </recv>
+
+</scenario>

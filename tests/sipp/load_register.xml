@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="Load test — Concurrent REGISTER with auth">
+
+  <!--
+    Load-testing variant of register_auth.xml.
+    Designed for use with SIPp rate/limit parameters and CSV injection.
+
+    The CSV file must contain lines in the format:
+      SEQUENTIAL
+      username;password
+      1001;test1001
+      1002;test1002
+      ...
+
+    Usage:
+      sipp <host>:<port> -sf load_register.xml \
+           -inf users.csv \
+           -r 10 -l 50 -m 200 \
+           -timeout 60 -timeout_error
+
+    Parameters:
+      -r 10     : 10 new registrations per second
+      -l 50     : Up to 50 concurrent registrations
+      -m 200    : Stop after 200 total registrations
+  -->
+
+  <!-- Step 1: Initial REGISTER (no credentials) — uses field0 from CSV -->
+  <send>
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[call_number]
+      To: <sip:[field0]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 2: Receive 401 challenge -->
+  <recv response="401" auth="true"/>
+
+  <!-- Step 3: Re-REGISTER with digest auth — field0=username, field1=password -->
+  <send>
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[call_number]
+      To: <sip:[field0]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 REGISTER
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      [authentication username=[field0] password=[field1]]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <!-- Step 4: Expect 200 OK -->
+  <recv response="200" rtd="true"/>
+
+</scenario>
