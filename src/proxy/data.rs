@@ -848,6 +848,8 @@ fn convert_trunk(model: sip_trunk::Model) -> Option<(String, TrunkConfig)> {
         incoming_to_user_prefix: model.incoming_to_user_prefix,
         country: None,
         policy: None,
+        register: None,
+        register_expires: None,
         origin: ConfigOrigin::embedded(),
     };
 
