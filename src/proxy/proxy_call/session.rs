@@ -3083,6 +3083,31 @@ impl CallSession {
                 }
             } else {
                 invite_option.destination = locations[0].destination.clone();
+
+                // If the located endpoint is WebRTC but the SDP was generated for plain RTP
+                // (e.g. inbound trunk call where supports_webrtc was unknown at offer time),
+                // regenerate the SDP offer in WebRTC mode.
+                let target_is_webrtc = locations.iter().any(|l| l.supports_webrtc);
+                if target_is_webrtc && self.use_media_proxy {
+                    info!(
+                        session_id = %self.context.session_id,
+                        "Locator found WebRTC endpoint, regenerating SDP offer in WebRTC mode"
+                    );
+                    // Remove the existing RTP-mode callee track so it gets recreated
+                    self.callee_peer.remove_track(Self::CALLEE_TRACK_ID, true).await;
+                    match self.create_callee_track(true).await {
+                        Ok(sdp) if !sdp.trim().is_empty() => {
+                            invite_option.offer = Some(sdp.into_bytes());
+                            invite_option.content_type = Some("application/sdp".to_string());
+                        }
+                        Ok(_) => {
+                            warn!(session_id = %self.context.session_id, "Regenerated empty WebRTC SDP");
+                        }
+                        Err(e) => {
+                            warn!(session_id = %self.context.session_id, error = %e, "Failed to regenerate WebRTC SDP");
+                        }
+                    }
+                }
             }
         }
 
