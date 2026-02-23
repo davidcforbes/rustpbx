@@ -67,6 +67,10 @@ pub struct Recorder {
     dtmf_gen: DtmfGenerator,
     encoder: Option<Box<dyn Encoder>>,
 
+    // Gain multipliers: input_gain for Leg B (PSTN), output_gain for Leg A (browser)
+    input_gain: f32,
+    output_gain: f32,
+
     // Dynamic decoders and resamplers per leg and payload type
     decoders: HashMap<(Leg, u8), Box<dyn Decoder>>,
     resamplers: HashMap<(Leg, u8), audio_codec::Resampler>,
@@ -91,7 +95,7 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    pub fn new(path: &str, codec: CodecType, _gain: f32) -> Result<Self> {
+    pub fn new(path: &str, codec: CodecType, input_gain: f32, output_gain: f32) -> Result<Self> {
         // ensure the directory exists
         if let Some(parent) = PathBuf::from(path).parent() {
             std::fs::create_dir_all(parent).ok();
@@ -126,6 +130,8 @@ impl Recorder {
             channels,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
+            input_gain,
+            output_gain,
             decoders: HashMap::new(),
             resamplers: HashMap::new(),
             buffer_a: BTreeMap::new(),
@@ -165,15 +171,25 @@ impl Recorder {
             _ => return Ok(()),
         };
         let decoder_type = CodecType::try_from(frame.payload_type.unwrap_or(0))?;
-        let mut decoder_samplerate = self.sample_rate;
+        // Use codec's RTP clock_rate for timestamp scaling (NOT decoder sample_rate).
+        // G722 has clock_rate=8000 but sample_rate=16000; using sample_rate would
+        // halve the recording duration.
+        let rtp_clock_rate = decoder_type.clock_rate();
+
+        let gain = match leg {
+            Leg::A => self.output_gain,
+            Leg::B => self.input_gain,
+        };
 
         if decoder_type != self.codec {
             let decoder = self
                 .decoders
                 .entry((leg, decoder_type.payload_type()))
                 .or_insert_with(|| create_decoder(decoder_type));
-            let pcm = decoder.decode(&encoded);
-            decoder_samplerate = decoder.sample_rate();
+            let mut pcm = decoder.decode(&encoded);
+            if gain != 1.0 {
+                crate::media::apply_gain(&mut pcm, gain);
+            }
             let resampler = self
                 .resamplers
                 .entry((leg, decoder_type.payload_type()))
@@ -199,15 +215,15 @@ impl Recorder {
                         * self.sample_rate as u64
                         / 1000) as u32;
                     debug!(
-                        "Recorder Leg A: base_timestamp={} offset={}",
-                        frame.rtp_timestamp, self.start_offset_a
+                        "Recorder Leg A: base_timestamp={} offset={} rtp_clock_rate={}",
+                        frame.rtp_timestamp, self.start_offset_a, rtp_clock_rate
                     );
                 }
                 let relative = frame
                     .rtp_timestamp
                     .wrapping_sub(self.base_timestamp_a.unwrap());
                 let scaled_relative =
-                    (relative as u64 * self.sample_rate as u64 / decoder_samplerate as u64) as u32;
+                    (relative as u64 * self.sample_rate as u64 / rtp_clock_rate as u64) as u32;
                 self.start_offset_a.wrapping_add(scaled_relative)
             }
             Leg::B => {
@@ -217,15 +233,15 @@ impl Recorder {
                         * self.sample_rate as u64
                         / 1000) as u32;
                     debug!(
-                        "Recorder Leg B: base_timestamp={} offset={}",
-                        frame.rtp_timestamp, self.start_offset_b
+                        "Recorder Leg B: base_timestamp={} offset={} rtp_clock_rate={}",
+                        frame.rtp_timestamp, self.start_offset_b, rtp_clock_rate
                     );
                 }
                 let relative = frame
                     .rtp_timestamp
                     .wrapping_sub(self.base_timestamp_b.unwrap());
                 let scaled_relative =
-                    (relative as u64 * self.sample_rate as u64 / decoder_samplerate as u64) as u32;
+                    (relative as u64 * self.sample_rate as u64 / rtp_clock_rate as u64) as u32;
                 self.start_offset_b.wrapping_add(scaled_relative)
             }
         };

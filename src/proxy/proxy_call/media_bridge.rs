@@ -55,7 +55,7 @@ impl MediaBridge {
             .unwrap_or(1.0);
 
         let recorder = if let Some(option) = recorder_option {
-            match Recorder::new(&option.recorder_file, codec_a, option.input_gain) {
+            match Recorder::new(&option.recorder_file, codec_a, option.input_gain, option.output_gain) {
                 Ok(r) => Some(r),
                 Err(e) => {
                     warn!("Failed to create recorder: {:?}", e);
