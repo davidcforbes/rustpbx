@@ -176,87 +176,47 @@ impl MediaBridge {
         let mut forwarders = FuturesUnordered::new();
         let mut started_track_ids = std::collections::HashSet::new();
 
-        // Check for existing transceivers (important for RTP endpoints where tracks are pre-created)
-        // This handles the case where tracks exist before bridging starts
+        // Log pre-existing transceivers but don't start forward_tracks from them.
+        // Track events from pc.recv() carry the live track instances and fire immediately,
+        // so we rely on those instead. Pre-existing transceiver tracks can become stale
+        // when the PeerConnection processes events internally.
         let transceivers_a = pc_a.get_transceivers();
         let transceivers_b = pc_b.get_transceivers();
 
-        for transceiver in transceivers_a {
+        for transceiver in &transceivers_a {
             if let Some(receiver) = transceiver.receiver() {
                 let track = receiver.track();
-                let track_id = track.id().to_string();
-                let track_kind = track.kind();
                 debug!(
                     "Pre-existing transceiver Leg A: track_id={} kind={:?}",
-                    track_id, track_kind
+                    track.id(), track.kind()
                 );
-                if started_track_ids.insert(format!("A-{}", track_id)) {
-                    debug!(
-                        "Starting pre-existing track forwarder: Leg A track_id={}",
-                        track_id
-                    );
-                    forwarders.push(Self::forward_track(
-                        leg_a.clone(),
-                        track,
-                        pc_b.clone(),
-                        params_b.clone(),
-                        codec_a,
-                        codec_b,
-                        Leg::A,
-                        dtmf_pt_a,
-                        dtmf_pt_b,
-                        None, // Don't use remote SSRC for outgoing stream
-                        recorder.clone(),
-                        call_id.clone(),
-                        sipflow_backend.clone(),
-                        input_gain,
-                    ));
-                } else {
-                    debug!("Track A {} already started, skipping", track_id);
-                }
             }
         }
 
-        for transceiver in transceivers_b {
+        for transceiver in &transceivers_b {
             if let Some(receiver) = transceiver.receiver() {
                 let track = receiver.track();
-                let track_id = track.id().to_string();
-                let track_kind = track.kind();
                 debug!(
                     "Pre-existing transceiver Leg B: track_id={} kind={:?}",
-                    track_id, track_kind
+                    track.id(), track.kind()
                 );
-                if started_track_ids.insert(format!("B-{}", track_id)) {
-                    debug!(
-                        "Starting pre-existing track forwarder: Leg B track_id={}",
-                        track_id
-                    );
-                    forwarders.push(Self::forward_track(
-                        leg_b.clone(),
-                        track,
-                        pc_a.clone(),
-                        params_a.clone(),
-                        codec_b,
-                        codec_a,
-                        Leg::B,
-                        dtmf_pt_b,
-                        dtmf_pt_a,
-                        None, // Don't use remote SSRC for outgoing stream
-                        recorder.clone(),
-                        call_id.clone(),
-                        sipflow_backend.clone(),
-                        input_gain,
-                    ));
-                } else {
-                    debug!("Track B {} already started, skipping", track_id);
-                }
             }
         }
+
+        let has_preexisting_a = transceivers_a.iter().any(|t| t.receiver().is_some());
+        let has_preexisting_b = transceivers_b.iter().any(|t| t.receiver().is_some());
 
         let mut pc_a_recv = Box::pin(pc_a.recv());
         let mut pc_b_recv = Box::pin(pc_b.recv());
         let mut pc_a_closed = false;
         let mut pc_b_closed = false;
+
+        // Wait briefly for Track events before falling back to pre-existing transceivers.
+        // Track events carry live track instances, while pre-existing transceiver tracks
+        // can become stale after the PeerConnection processes internal events.
+        let fallback_delay = tokio::time::sleep(std::time::Duration::from_millis(200));
+        tokio::pin!(fallback_delay);
+        let mut fallback_fired = false;
 
         loop {
             tokio::select! {
@@ -268,8 +228,9 @@ impl MediaBridge {
                                     let track = receiver.track();
                                     let track_id = track.id().to_string();
                                     let track_kind = track.kind();
-                                    debug!("New Track event Leg A: track_id={} kind={:?}", track_id, track_kind);
+                                    info!("Track event Leg A: track_id={} kind={:?}", track_id, track_kind);
                                     if started_track_ids.insert(format!("A-{}", track_id)) {
+                                        info!("Starting track forwarder from event: Leg A track_id={}", track_id);
                                         forwarders.push(Self::forward_track(
                                             leg_a.clone(),
                                             track,
@@ -308,9 +269,9 @@ impl MediaBridge {
                                     let track = receiver.track();
                                     let track_id = track.id().to_string();
                                     let track_kind = track.kind();
-                                    info!("New Track event Leg B: track_id={} kind={:?}", track_id, track_kind);
+                                    info!("Track event Leg B: track_id={} kind={:?}", track_id, track_kind);
                                     if started_track_ids.insert(format!("B-{}", track_id)) {
-                                        info!("Starting new track forwarder: Leg B track_id={}", track_id);
+                                        info!("Starting track forwarder from event: Leg B track_id={}", track_id);
                                         forwarders.push(Self::forward_track(
                                             leg_b.clone(),
                                             track,
@@ -341,6 +302,64 @@ impl MediaBridge {
                     }
                 }
                 Some(_) = forwarders.next(), if !forwarders.is_empty() => {}
+                _ = &mut fallback_delay, if !fallback_fired => {
+                    fallback_fired = true;
+                    // Fall back to pre-existing transceivers if Track events didn't fire
+                    if !started_track_ids.iter().any(|id| id.starts_with("A-")) && has_preexisting_a {
+                        warn!("No Track events for Leg A after 200ms, using pre-existing transceiver");
+                        for transceiver in &transceivers_a {
+                            if let Some(receiver) = transceiver.receiver() {
+                                let track = receiver.track();
+                                let track_id = track.id().to_string();
+                                if started_track_ids.insert(format!("A-{}", track_id)) {
+                                    forwarders.push(Self::forward_track(
+                                        leg_a.clone(),
+                                        track,
+                                        pc_b.clone(),
+                                        params_b.clone(),
+                                        codec_a,
+                                        codec_b,
+                                        Leg::A,
+                                        dtmf_pt_a,
+                                        dtmf_pt_b,
+                                        None,
+                                        recorder.clone(),
+                                        call_id.clone(),
+                                        sipflow_backend.clone(),
+                                        input_gain,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    if !started_track_ids.iter().any(|id| id.starts_with("B-")) && has_preexisting_b {
+                        warn!("No Track events for Leg B after 200ms, using pre-existing transceiver");
+                        for transceiver in &transceivers_b {
+                            if let Some(receiver) = transceiver.receiver() {
+                                let track = receiver.track();
+                                let track_id = track.id().to_string();
+                                if started_track_ids.insert(format!("B-{}", track_id)) {
+                                    forwarders.push(Self::forward_track(
+                                        leg_b.clone(),
+                                        track,
+                                        pc_a.clone(),
+                                        params_a.clone(),
+                                        codec_b,
+                                        codec_a,
+                                        Leg::B,
+                                        dtmf_pt_b,
+                                        dtmf_pt_a,
+                                        None,
+                                        recorder.clone(),
+                                        call_id.clone(),
+                                        sipflow_backend.clone(),
+                                        input_gain,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
             }
             if pc_a_closed && pc_b_closed && forwarders.is_empty() {
                 break;
