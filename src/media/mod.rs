@@ -17,6 +17,7 @@ pub use transcoder::Transcoder;
 use crate::media::recorder::RecorderOption;
 
 pub mod audio_source;
+pub mod call_quality;
 #[cfg(test)]
 mod file_track_tests;
 pub mod negotiate;

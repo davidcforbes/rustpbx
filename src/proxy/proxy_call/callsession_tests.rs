@@ -74,6 +74,7 @@ mod callsession_b2bua_tests {
             None,
             "test_simple_forward_pcmu_to_pcmu".to_string(),
             None,
+            None,
         );
 
         // Should NOT require transcoding
@@ -112,6 +113,7 @@ mod callsession_b2bua_tests {
             None,
             None,
             "test_forward_opus_to_pcmu_transcoding".to_string(),
+            None,
             None,
         );
 
@@ -152,6 +154,7 @@ mod callsession_b2bua_tests {
             None,
             None,
             "test_pcma_to_pcmu_transcoding".to_string(),
+            None,
             None,
         );
 
@@ -356,6 +359,7 @@ mod callsession_b2bua_tests {
             None,
             "test_bridge_supports_suppress_and_resume".to_string(),
             None,
+            None,
         );
 
         bridge.start().await.expect("Bridge should start");
@@ -391,6 +395,7 @@ mod callsession_b2bua_tests {
             None,
             None,
             "test_bridge_multiple_start_is_idempotent".to_string(),
+            None,
             None,
         );
 
@@ -445,6 +450,7 @@ mod callsession_b2bua_tests {
             None,
             None,
             "test_bridge_with_dtmf_payload_types".to_string(),
+            None,
             None,
         );
 
@@ -505,6 +511,7 @@ mod callsession_b2bua_tests {
             None,
             None,
             "test_bridge_without_recorder".to_string(),
+            None,
             None,
         );
 

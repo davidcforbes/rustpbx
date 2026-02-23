@@ -158,6 +158,7 @@ pub(crate) struct CallSessionRecordSnapshot {
     pub callee_dialogs: Vec<DialogId>,
     pub server_dialog_id: DialogId,
     pub extensions: http::Extensions,
+    pub quality: Option<crate::media::call_quality::CallQualitySnapshot>,
 }
 
 pub(crate) struct CallSession {
@@ -428,6 +429,7 @@ impl CallSession {
     }
 
     pub fn record_snapshot(&mut self) -> CallSessionRecordSnapshot {
+        let quality = self.media_bridge.as_ref().map(|b| b.quality_snapshot());
         CallSessionRecordSnapshot {
             ring_time: self.ring_time,
             answer_time: self.answer_time,
@@ -451,6 +453,7 @@ impl CallSession {
                 .collect(),
             server_dialog_id: self.server_dialog.id(),
             extensions: self.context.dialplan.extensions.clone(),
+            quality,
         }
     }
 
@@ -1426,6 +1429,7 @@ impl CallSession {
                                     .clone()
                                     .unwrap_or_else(|| self.context.session_id.clone()),
                                 self.server.sip_flow.as_ref().and_then(|sf| sf.backend()),
+                                self.server.quality_config.clone(),
                             );
 
                             self.media_bridge = Some(bridge);
@@ -1841,6 +1845,7 @@ impl CallSession {
                         .clone()
                         .unwrap_or_else(|| self.context.session_id.clone()),
                     self.server.sip_flow.as_ref().and_then(|sf| sf.backend()),
+                    self.server.quality_config.clone(),
                 );
                 self.media_bridge = Some(bridge);
             }
@@ -1948,6 +1953,7 @@ impl CallSession {
             callee_dialogs: vec![],
             server_dialog_id,
             extensions: self.context.dialplan.extensions.clone(),
+            quality: None, // No media bridge for early failures
         };
 
         reporter.report(snapshot);

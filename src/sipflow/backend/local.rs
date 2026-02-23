@@ -84,6 +84,7 @@ impl LocalBackend {
                                 let msg_type = match item.msg_type {
                                     SipFlowMsgType::Sip => MsgType::Sip,
                                     SipFlowMsgType::Rtp => MsgType::Rtp,
+                                    SipFlowMsgType::Quality => MsgType::Sip, // Quality events stored as text like SIP
                                 };
 
                                 let packet = Packet {

@@ -1,3 +1,5 @@
+use crate::config::QualityConfig;
+use crate::media::call_quality::{self, CallQuality, CallQualitySnapshot, QualityThresholds};
 use crate::media::recorder::{Leg, Recorder, RecorderOption};
 use crate::proxy::proxy_call::media_peer::MediaPeer;
 use crate::sipflow::{SipFlowBackend, SipFlowItem, SipFlowMsgType};
@@ -27,6 +29,8 @@ pub struct MediaBridge {
     recorder: Arc<Mutex<Option<Recorder>>>,
     call_id: String,
     sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
+    quality: Arc<CallQuality>,
+    quality_config: Option<QualityConfig>,
 }
 
 impl MediaBridge {
@@ -44,6 +48,7 @@ impl MediaBridge {
         recorder_option: Option<RecorderOption>,
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
+        quality_config: Option<QualityConfig>,
     ) -> Self {
         let input_gain = recorder_option
             .as_ref()
@@ -83,6 +88,8 @@ impl MediaBridge {
             recorder: Arc::new(Mutex::new(recorder)),
             call_id,
             sipflow_backend,
+            quality: Arc::new(CallQuality::new()),
+            quality_config,
         }
     }
 
@@ -90,6 +97,7 @@ impl MediaBridge {
         if self.started.swap(true, Ordering::SeqCst) {
             return Ok(());
         }
+        self.quality.set_media_state(call_quality::MediaLayerState::Established);
         let needs_transcoding = self.codec_a != self.codec_b;
         debug!(
             codec_a = ?self.codec_a,
@@ -130,8 +138,43 @@ impl MediaBridge {
             let sipflow_backend = self.sipflow_backend.clone();
             let input_gain = self.input_gain;
             let output_gain = self.output_gain;
+            let quality = self.quality.clone();
+
+            // Prepare watchdog config
+            let watchdog_quality = self.quality.clone();
+            let watchdog_call_id = self.call_id.clone();
+            let watchdog_cancel = self.leg_a.cancel_token();
+            let watchdog_sipflow = self.sipflow_backend.clone();
+            let watchdog_config = self.quality_config.clone();
 
             crate::utils::spawn(async move {
+                // Spawn quality watchdog if enabled
+                let watchdog_enabled = watchdog_config
+                    .as_ref()
+                    .map(|c| c.enabled)
+                    .unwrap_or(true);
+
+                if watchdog_enabled {
+                    let thresholds = watchdog_config
+                        .as_ref()
+                        .map(|c| QualityThresholds::from_config(c))
+                        .unwrap_or_default();
+                    let interval = watchdog_config
+                        .as_ref()
+                        .map(|c| c.watchdog_interval_secs)
+                        .unwrap_or(2);
+                    let cancel = watchdog_cancel;
+
+                    tokio::spawn(call_quality::quality_watchdog(
+                        watchdog_quality,
+                        watchdog_call_id,
+                        cancel,
+                        watchdog_sipflow,
+                        thresholds,
+                        interval,
+                    ));
+                }
+
                 tokio::select! {
                     _ = cancel_token.cancelled() => {},
                     _ = Self::bridge_pcs(
@@ -152,6 +195,7 @@ impl MediaBridge {
                         sipflow_backend,
                         input_gain,
                         output_gain,
+                        quality,
                     ) => {}
                 }
             });
@@ -177,6 +221,7 @@ impl MediaBridge {
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
         input_gain: f32,
         output_gain: f32,
+        quality: Arc<CallQuality>,
     ) {
         debug!(
             "bridge_pcs started: codec_a={:?} codec_b={:?} ssrc_a={:?} ssrc_b={:?}",
@@ -256,6 +301,7 @@ impl MediaBridge {
                                             sipflow_backend.clone(),
                                             input_gain,
                                             output_gain,
+                                            quality.clone(),
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg A track id={}, skipping", track_id);
@@ -298,6 +344,7 @@ impl MediaBridge {
                                             sipflow_backend.clone(),
                                             input_gain,
                                             output_gain,
+                                            quality.clone(),
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg B track id={}, skipping", track_id);
@@ -339,6 +386,7 @@ impl MediaBridge {
                                         sipflow_backend.clone(),
                                         input_gain,
                                         output_gain,
+                                        quality.clone(),
                                     ));
                                 }
                             }
@@ -367,6 +415,7 @@ impl MediaBridge {
                                         sipflow_backend.clone(),
                                         input_gain,
                                         output_gain,
+                                        quality.clone(),
                                     ));
                                 }
                             }
@@ -396,6 +445,7 @@ impl MediaBridge {
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
         input_gain: f32,
         output_gain: f32,
+        quality: Arc<CallQuality>,
     ) {
         let needs_transcoding = source_codec != target_codec;
         let track_id = track.id().to_string();
@@ -489,9 +539,13 @@ impl MediaBridge {
             None
         };
 
-        let mut last_seq: Option<u16> = None;
         let mut packet_count: u64 = 0;
         let target_pt = target_params.payload_type;
+        let source_clock_rate = source_codec.clock_rate();
+        let leg_quality = match leg {
+            Leg::A => &quality.leg_a,
+            Leg::B => &quality.leg_b,
+        };
 
         // Stats tracking
         let mut last_stats_time = std::time::Instant::now();
@@ -517,12 +571,15 @@ impl MediaBridge {
                 let bitrate_kbps = (bytes_since_last_stat as f64 * 8.0) / duration / 1000.0;
                 let pps = packets_since_last_stat as f64 / duration;
 
+                let leg_snap = leg_quality.snapshot();
                 info!(
                    ?leg,
                    %track_id,
                    pps,
                    bitrate_kbps,
                    total_packets = packet_count,
+                   loss_pct = leg_snap.loss_percent,
+                   jitter_ms = leg_snap.avg_jitter_ms,
                    "Media Stream Stats"
                 );
                 last_stats_time = std::time::Instant::now();
@@ -532,6 +589,9 @@ impl MediaBridge {
 
             if let MediaSample::Audio(ref mut frame) = sample {
                 packet_count += 1;
+                if packet_count == 1 {
+                    quality.set_media_state(call_quality::MediaLayerState::Flowing);
+                }
                 if packet_count % 250 == 1 {
                     // 5 seconds at 50pps
                     debug!(
@@ -548,12 +608,10 @@ impl MediaBridge {
                 }
 
                 if let Some(seq) = frame.sequence_number {
-                    if let Some(last) = last_seq {
-                        if seq == last {
-                            continue;
-                        }
+                    if !leg_quality.record_seq(seq) {
+                        continue; // duplicate
                     }
-                    last_seq = Some(seq);
+                    leg_quality.record_packet(seq, frame.rtp_timestamp, source_clock_rate);
                 }
                 // Send RTP packet to sipflow backend if configured (only when raw_packet is available)
                 if let Some(backend) = &sipflow_backend {
@@ -629,13 +687,26 @@ impl MediaBridge {
             }
         }
 
-        debug!(
+        let final_snap = leg_quality.snapshot();
+        info!(
             call_id,
             track_id,
             ?leg,
             packet_count,
+            loss_pct = final_snap.loss_percent,
+            lost_packets = final_snap.lost_packets,
+            jitter_ms = final_snap.avg_jitter_ms,
+            max_jitter_ms = final_snap.max_jitter_ms,
             "forward_track finished",
         );
+    }
+
+    pub fn quality(&self) -> &Arc<CallQuality> {
+        &self.quality
+    }
+
+    pub fn quality_snapshot(&self) -> CallQualitySnapshot {
+        self.quality.snapshot()
     }
 
     pub fn stop(&self) {
@@ -684,6 +755,7 @@ mod tests {
             None,
             "test-call-id".to_string(),
             None,
+            None,
         );
 
         bridge.start().await.unwrap();
@@ -711,6 +783,7 @@ mod tests {
             None,
             None,
             "test-call-id".to_string(),
+            None,
             None,
         );
 

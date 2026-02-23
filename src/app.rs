@@ -297,6 +297,7 @@ impl AppStateBuilder {
                     .with_call_record_hooks(call_record_hooks)
                     .with_storage(core.storage.clone())
                     .with_sipflow_config(config.sipflow.clone())
+                    .with_quality_config(config.quality.clone())
                     .with_no_bind(self.skip_sip_bind)
                     .register_module("acl", AclModule::create)
                     .register_module("auth", AuthModule::create)

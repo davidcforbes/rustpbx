@@ -184,6 +184,7 @@ impl CallSessionBuilder {
                 remote_tag: "".into(),
             },
             extensions: dialplan.extensions.clone(),
+            quality: None,
         };
 
         reporter.report(snapshot);

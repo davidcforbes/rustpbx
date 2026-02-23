@@ -903,6 +903,8 @@ mod tests {
             channels,
             dtmf_gen: DtmfGenerator::new(sample_rate),
             encoder,
+            input_gain: 1.0,
+            output_gain: 1.0,
             decoders: HashMap::new(),
             resamplers: HashMap::new(),
             buffer_a: BTreeMap::new(),

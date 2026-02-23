@@ -10,7 +10,7 @@ use crate::{
         CallRecordSender,
         sipflow::{SipFlow, SipFlowBuilder},
     },
-    config::{ProxyConfig, RtpConfig, SipFlowConfig},
+    config::{ProxyConfig, QualityConfig, RtpConfig, SipFlowConfig},
     proxy::{
         FnCreateRouteInvite,
         active_call_registry::ActiveProxyCallRegistry,
@@ -75,6 +75,7 @@ pub struct SipServerInner {
     pub runnings_tx: Arc<AtomicUsize>,
     pub storage: Option<crate::storage::Storage>,
     pub presence_manager: Arc<PresenceManager>,
+    pub quality_config: Option<QualityConfig>,
 }
 
 pub type SipServerRef = Arc<SipServerInner>;
@@ -106,6 +107,7 @@ pub struct SipServerBuilder {
     call_record_hooks: Vec<Box<dyn crate::callrecord::CallRecordHook>>,
     storage: Option<crate::storage::Storage>,
     sipflow_config: Option<SipFlowConfig>,
+    quality_config: Option<QualityConfig>,
     no_bind: bool,
 }
 
@@ -132,12 +134,18 @@ impl SipServerBuilder {
             call_record_hooks: Vec::new(),
             storage: None,
             sipflow_config: None,
+            quality_config: None,
             no_bind: false,
         }
     }
 
     pub fn with_sipflow_config(mut self, config: Option<SipFlowConfig>) -> Self {
         self.sipflow_config = config;
+        self
+    }
+
+    pub fn with_quality_config(mut self, config: Option<QualityConfig>) -> Self {
+        self.quality_config = config;
         self
     }
 
@@ -524,6 +532,7 @@ impl SipServerBuilder {
             runnings_tx: Arc::new(AtomicUsize::new(0)),
             storage: self.storage,
             presence_manager,
+            quality_config: self.quality_config,
         });
 
         let inner_weak = Arc::downgrade(&inner);

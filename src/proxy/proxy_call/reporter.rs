@@ -204,6 +204,13 @@ impl CallReporter {
         details.rewrite = rewrite;
         details.last_error = last_error;
 
+        if let Some(ref quality) = snapshot.quality {
+            details.quality_score = Some(quality.mos_estimate());
+            details.packet_loss_pct = Some(quality.combined_loss_percent());
+            details.avg_jitter_ms = Some(quality.combined_avg_jitter_ms());
+            details.total_rtp_packets = Some(quality.total_rtp_packets());
+        }
+
         let record = CallRecord {
             call_id: self.context.session_id.clone(),
             start_time,

@@ -80,6 +80,11 @@ pub struct CallDetails {
     pub transcript_language: Option<String>,
     pub tags: Option<Value>,
 
+    pub quality_score: Option<f32>,
+    pub packet_loss_pct: Option<f32>,
+    pub avg_jitter_ms: Option<f32>,
+    pub total_rtp_packets: Option<u64>,
+
     #[serde(default)]
     pub rewrite: CallRecordRewrite,
     pub last_error: Option<CallRecordLastError>,

@@ -68,6 +68,10 @@ pub async fn persist_call_record(
     let transcript_status = details.transcript_status.clone();
     let transcript_language = details.transcript_language.clone();
     let tags = details.tags.clone();
+    let quality_score = details.quality_score.map(|v| v as f64);
+    let packet_loss_pct = details.packet_loss_pct.map(|v| v as f64);
+    let avg_jitter_ms = details.avg_jitter_ms.map(|v| v as f64);
+    let total_rtp_packets = details.total_rtp_packets.map(|v| v as i64);
     let duration_secs = (record.end_time - record.start_time).num_seconds().max(0) as i32;
 
     let caller_uri = normalize_endpoint_uri(&record.caller);
@@ -105,6 +109,10 @@ pub async fn persist_call_record(
         transcript_status: Set(transcript_status_str),
         transcript_language: Set(transcript_language.clone()),
         tags: Set(tags.clone()),
+        quality_score: Set(quality_score),
+        packet_loss_pct: Set(packet_loss_pct),
+        avg_jitter_ms: Set(avg_jitter_ms),
+        total_rtp_packets: Set(total_rtp_packets),
         created_at: Set(record.start_time),
         updated_at: Set(record.end_time),
         archived_at: Set(None),
@@ -141,6 +149,10 @@ pub async fn persist_call_record(
                     Column::TranscriptStatus,
                     Column::TranscriptLanguage,
                     Column::Tags,
+                    Column::QualityScore,
+                    Column::PacketLossPct,
+                    Column::AvgJitterMs,
+                    Column::TotalRtpPackets,
                     Column::UpdatedAt,
                 ])
                 .to_owned(),
@@ -236,6 +248,10 @@ pub struct Model {
     pub transcript_status: String,
     pub transcript_language: Option<String>,
     pub tags: Option<Json>,
+    pub quality_score: Option<f64>,
+    pub packet_loss_pct: Option<f64>,
+    pub avg_jitter_ms: Option<f64>,
+    pub total_rtp_packets: Option<i64>,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
     pub archived_at: Option<DateTimeUtc>,
@@ -327,6 +343,10 @@ impl MigrationTrait for Migration {
                     )
                     .col(string_null(Column::TranscriptLanguage).char_len(16))
                     .col(json_null(Column::Tags))
+                    .col(ColumnDef::new(Column::QualityScore).double().null())
+                    .col(ColumnDef::new(Column::PacketLossPct).double().null())
+                    .col(ColumnDef::new(Column::AvgJitterMs).double().null())
+                    .col(ColumnDef::new(Column::TotalRtpPackets).big_integer().null())
                     .col(timestamp(Column::CreatedAt).default(Expr::current_timestamp()))
                     .col(timestamp(Column::UpdatedAt).default(Expr::current_timestamp()))
                     .col(timestamp_null(Column::ArchivedAt))
@@ -440,6 +460,10 @@ impl Into<CallRecord> for Model {
             transcript_status: Some(self.transcript_status),
             transcript_language: self.transcript_language,
             tags: self.tags,
+            quality_score: self.quality_score.map(|v| v as f32),
+            packet_loss_pct: self.packet_loss_pct.map(|v| v as f32),
+            avg_jitter_ms: self.avg_jitter_ms.map(|v| v as f32),
+            total_rtp_packets: self.total_rtp_packets.map(|v| v as u64),
             rewrite: crate::callrecord::CallRecordRewrite {
                 caller_original: self.rewrite_original_from.unwrap_or_default(),
                 caller_final: String::new(),

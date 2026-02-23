@@ -205,6 +205,8 @@ pub struct Config {
     pub storage: Option<StorageConfig>,
     #[serde(default)]
     pub sipflow: Option<SipFlowConfig>,
+    #[serde(default)]
+    pub quality: Option<QualityConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -380,6 +382,43 @@ fn default_sipflow_timeout() -> u64 {
 
 fn default_sipflow_id_cache_size() -> usize {
     8192
+}
+
+fn default_quality_enabled() -> bool {
+    true
+}
+
+fn default_quality_watchdog_interval() -> u64 {
+    2
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct QualityConfig {
+    #[serde(default = "default_quality_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_quality_watchdog_interval")]
+    pub watchdog_interval_secs: u64,
+    #[serde(default)]
+    pub loss_warning_pct: Option<f32>,
+    #[serde(default)]
+    pub loss_critical_pct: Option<f32>,
+    #[serde(default)]
+    pub jitter_warning_ms: Option<f32>,
+    #[serde(default)]
+    pub jitter_critical_ms: Option<f32>,
+}
+
+impl Default for QualityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            watchdog_interval_secs: 2,
+            loss_warning_pct: None,
+            loss_critical_pct: None,
+            jitter_warning_ms: None,
+            jitter_critical_ms: None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone, Copy, Serialize)]
@@ -739,6 +778,7 @@ impl Default for Config {
             storage: None,
             addons: HashMap::new(),
             sipflow: None,
+            quality: None,
         }
     }
 }

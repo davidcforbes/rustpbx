@@ -70,6 +70,7 @@ impl RemoteBackend {
                                 let msg_type = match item.msg_type {
                                     SipFlowMsgType::Sip => MsgType::Sip,
                                     SipFlowMsgType::Rtp => MsgType::Rtp,
+                                    SipFlowMsgType::Quality => MsgType::Sip,
                                 };
 
                                 let packet = Packet {

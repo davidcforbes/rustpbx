@@ -17,6 +17,7 @@ pub use sdp_utils::{extract_call_id, extract_rtp_addr, extract_sdp};
 pub enum SipFlowMsgType {
     Sip,
     Rtp,
+    Quality,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,7 +40,9 @@ fn default_msg_type() -> SipFlowMsgType {
 
 impl SipFlowItem {
     pub fn message_text(&self) -> Option<String> {
-        if self.msg_type == SipFlowMsgType::Sip && !self.payload.is_empty() {
+        if (self.msg_type == SipFlowMsgType::Sip || self.msg_type == SipFlowMsgType::Quality)
+            && !self.payload.is_empty()
+        {
             Some(String::from_utf8_lossy(&self.payload).to_string())
         } else {
             None
