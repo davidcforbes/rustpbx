@@ -22,6 +22,7 @@ pub struct MediaBridge {
     pub ssrc_a: Option<u32>,
     pub ssrc_b: Option<u32>,
     input_gain: f32,
+    output_gain: f32,
     started: AtomicBool,
     recorder: Arc<Mutex<Option<Recorder>>>,
     call_id: String,
@@ -48,6 +49,10 @@ impl MediaBridge {
             .as_ref()
             .map(|o| o.input_gain)
             .unwrap_or(1.0);
+        let output_gain = recorder_option
+            .as_ref()
+            .map(|o| o.output_gain)
+            .unwrap_or(1.0);
 
         let recorder = if let Some(option) = recorder_option {
             match Recorder::new(&option.recorder_file, codec_a, option.input_gain) {
@@ -73,6 +78,7 @@ impl MediaBridge {
             ssrc_a,
             ssrc_b,
             input_gain,
+            output_gain,
             started: AtomicBool::new(false),
             recorder: Arc::new(Mutex::new(recorder)),
             call_id,
@@ -123,6 +129,7 @@ impl MediaBridge {
             let call_id = self.call_id.clone();
             let sipflow_backend = self.sipflow_backend.clone();
             let input_gain = self.input_gain;
+            let output_gain = self.output_gain;
 
             crate::utils::spawn(async move {
                 tokio::select! {
@@ -144,6 +151,7 @@ impl MediaBridge {
                         call_id,
                         sipflow_backend,
                         input_gain,
+                        output_gain,
                     ) => {}
                 }
             });
@@ -168,6 +176,7 @@ impl MediaBridge {
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
         input_gain: f32,
+        output_gain: f32,
     ) {
         debug!(
             "bridge_pcs started: codec_a={:?} codec_b={:?} ssrc_a={:?} ssrc_b={:?}",
@@ -246,6 +255,7 @@ impl MediaBridge {
                                             call_id.clone(),
                                             sipflow_backend.clone(),
                                             input_gain,
+                                            output_gain,
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg A track id={}, skipping", track_id);
@@ -287,6 +297,7 @@ impl MediaBridge {
                                             call_id.clone(),
                                             sipflow_backend.clone(),
                                             input_gain,
+                                            output_gain,
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg B track id={}, skipping", track_id);
@@ -327,6 +338,7 @@ impl MediaBridge {
                                         call_id.clone(),
                                         sipflow_backend.clone(),
                                         input_gain,
+                                        output_gain,
                                     ));
                                 }
                             }
@@ -354,6 +366,7 @@ impl MediaBridge {
                                         call_id.clone(),
                                         sipflow_backend.clone(),
                                         input_gain,
+                                        output_gain,
                                     ));
                                 }
                             }
@@ -382,6 +395,7 @@ impl MediaBridge {
         call_id: String,
         sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
         input_gain: f32,
+        output_gain: f32,
     ) {
         let needs_transcoding = source_codec != target_codec;
         let track_id = track.id().to_string();
@@ -465,7 +479,7 @@ impl MediaBridge {
                 }
             }
         }
-        let leg_gain = if leg == Leg::B { input_gain } else { 1.0 };
+        let leg_gain = if leg == Leg::B { input_gain } else { output_gain };
         let mut transcoder = if needs_transcoding {
             Some(
                 crate::media::Transcoder::new(source_codec, target_codec)

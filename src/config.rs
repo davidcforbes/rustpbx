@@ -123,6 +123,8 @@ pub struct RecordingPolicy {
     pub path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub input_gain: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_gain: Option<f32>,
 }
 
 impl RecordingPolicy {

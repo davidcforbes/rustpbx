@@ -23,6 +23,8 @@ pub struct RecorderOption {
     pub ptime: u32,
     #[serde(default = "default_gain")]
     pub input_gain: f32,
+    #[serde(default = "default_gain")]
+    pub output_gain: f32,
 }
 
 fn default_gain() -> f32 {
@@ -45,6 +47,7 @@ impl Default for RecorderOption {
             samplerate: 16000,
             ptime: 200,
             input_gain: 1.0,
+            output_gain: 1.0,
         }
     }
 }
