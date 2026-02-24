@@ -23,6 +23,7 @@ impl MigratorTrait for Migrator {
             Box::new(super::add_quality_columns::Migration),
             Box::new(super::add_transcript_text_column::Migration),
             Box::new(super::create_voicemail_tables::Migration),
+            Box::new(super::monitoring_event::Migration),
         ]
     }
 }

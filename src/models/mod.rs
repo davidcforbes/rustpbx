@@ -25,6 +25,7 @@ pub mod user;
 pub mod voicemail;
 pub mod voicemail_greeting;
 pub mod create_voicemail_tables;
+pub mod monitoring_event;
 
 pub fn prepare_sqlite_database(database_url: &str) -> Result<()> {
     let Some(path_part) = database_url.strip_prefix("sqlite://") else {

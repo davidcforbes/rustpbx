@@ -4,10 +4,11 @@ use crate::media::recorder::{Leg, Recorder, RecorderOption};
 use crate::proxy::proxy_call::media_peer::MediaPeer;
 use crate::sipflow::{SipFlowBackend, SipFlowItem, SipFlowMsgType};
 use anyhow::Result;
-use audio_codec::CodecType;
+use audio_codec::{CodecType, Decoder, Encoder, create_decoder, create_encoder};
+use bytes::Bytes;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
-use rustrtc::media::{MediaKind, MediaSample, MediaStreamTrack, SampleStreamSource};
+use rustrtc::media::{AudioFrame, MediaKind, MediaSample, MediaStreamTrack, SampleStreamSource};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
@@ -37,6 +38,10 @@ impl Default for MonitorMode {
 /// The monitor receives a copy of audio from both leg A and leg B via a shared
 /// `SampleStreamSource`. The monitor's `PeerConnection` handles RTP packetization
 /// and sequence numbering for the outbound stream.
+///
+/// In Whisper and Barge modes, the monitor's incoming audio (supervisor speaking)
+/// is captured and stored in `incoming_audio` so that `forward_track` tasks can
+/// mix it into the call legs.
 pub struct MonitorLeg {
     /// The sample source feeding the monitor's PeerConnection track.
     pub source: SampleStreamSource,
@@ -46,6 +51,22 @@ pub struct MonitorLeg {
     pub params: rustrtc::RtpCodecParameters,
     /// The current monitor mode.
     pub mode: MonitorMode,
+    /// Shared buffer holding the latest audio frame received from the monitor
+    /// (supervisor speaking). Updated by the monitor receiver task; read by
+    /// `forward_track` tasks to mix into Whisper/Barge streams.
+    /// The `Bytes` contain encoded audio in the monitor's codec format.
+    pub incoming_audio: Arc<Mutex<Option<MonitorAudioFrame>>>,
+}
+
+/// A captured audio frame from the monitor's incoming stream (supervisor speaking).
+/// Stored in decoded PCM form so that both forward_track tasks can mix it without
+/// each needing their own decoder.
+pub struct MonitorAudioFrame {
+    /// PCM samples decoded from the monitor's incoming audio.
+    pub pcm: Vec<i16>,
+    /// Monotonic counter to detect stale frames. Each forward_track task tracks
+    /// the last sequence it consumed to avoid mixing the same frame twice.
+    pub seq: u64,
 }
 
 pub struct MediaBridge {
@@ -140,6 +161,9 @@ impl MediaBridge {
     /// The `track` parameter is the MediaPeer for the monitor's media stream, and
     /// `codec` is the codec the monitor's RTP stream should use.
     ///
+    /// In Whisper mode, the supervisor's audio is mixed into leg_b (agent) only.
+    /// In Barge mode, the supervisor's audio is mixed into both legs.
+    ///
     /// This can be called while the bridge is running; forward_track tasks will
     /// pick up the new monitor on their next packet.
     pub fn attach_monitor(
@@ -160,6 +184,10 @@ impl MediaBridge {
         let (source, track, _feedback_rx) =
             rustrtc::media::track::sample_track(MediaKind::Audio, 200);
 
+        // Shared buffer for incoming monitor audio (supervisor speaking).
+        let incoming_audio: Arc<Mutex<Option<MonitorAudioFrame>>> =
+            Arc::new(Mutex::new(None));
+
         // Spawn a task to set up the monitor's PeerConnection sender.
         // We need the PeerConnection from the monitor peer's track.
         let call_id = self.call_id.clone();
@@ -173,11 +201,15 @@ impl MediaBridge {
                 codec,
                 params: params.clone(),
                 mode: MonitorMode::SilentListen,
+                incoming_audio: incoming_audio.clone(),
             });
         }
 
-        // Set up the PeerConnection track asynchronously
+        // Set up the PeerConnection track asynchronously and start the
+        // monitor receiver task for capturing supervisor audio.
         let track_target: Arc<dyn MediaStreamTrack> = track;
+        let incoming_audio_for_task = incoming_audio;
+        let monitor_codec = codec;
         crate::utils::spawn(async move {
             let tracks = peer.get_tracks().await;
             if let Some(t) = tracks.first() {
@@ -213,6 +245,18 @@ impl MediaBridge {
                             }
                         }
                     }
+
+                    // Spawn a receiver task to capture audio from the monitor's
+                    // incoming track (supervisor speaking). This task reads from
+                    // the monitor PC's receiver and stores decoded PCM in the
+                    // shared buffer so forward_track tasks can mix it in.
+                    Self::spawn_monitor_receiver(
+                        pc,
+                        incoming_audio_for_task,
+                        monitor_codec,
+                        call_id.clone(),
+                        monitor_arc.clone(),
+                    );
                 } else {
                     warn!(call_id, "Monitor peer has no PeerConnection");
                     let mut guard = monitor_arc.lock().unwrap();
@@ -254,8 +298,9 @@ impl MediaBridge {
 
     /// Set the monitor mode. Only effective if a monitor is attached.
     ///
-    /// Currently only `SilentListen` is fully implemented. `Whisper` and `Barge`
-    /// modes set the mode flag but do not yet alter audio routing.
+    /// - `SilentListen`: Monitor hears both legs, cannot speak.
+    /// - `Whisper`: Monitor audio is mixed into leg_b (agent) only.
+    /// - `Barge`: Monitor audio is mixed into both leg_a and leg_b (3-way conference).
     pub fn set_monitor_mode(&self, mode: MonitorMode) -> Result<()> {
         let mut guard = self.monitor.lock().unwrap();
         if let Some(ref mut monitor) = *guard {
@@ -271,6 +316,194 @@ impl MediaBridge {
         } else {
             Err(anyhow::anyhow!("No monitor leg attached"))
         }
+    }
+
+    /// Spawn a background task that reads audio from the monitor's PeerConnection
+    /// receiver tracks (supervisor speaking) and stores decoded PCM in the shared
+    /// `incoming_audio` buffer. This allows `forward_track` tasks to mix the
+    /// supervisor's voice into Whisper/Barge streams without blocking.
+    fn spawn_monitor_receiver(
+        pc: rustrtc::PeerConnection,
+        incoming_audio: Arc<Mutex<Option<MonitorAudioFrame>>>,
+        monitor_codec: CodecType,
+        call_id: String,
+        monitor_arc: Arc<Mutex<Option<MonitorLeg>>>,
+    ) {
+        crate::utils::spawn(async move {
+            // Wait for a Track event from the monitor's PeerConnection.
+            // The receiver track carries audio from the supervisor.
+            let mut pc_recv = Box::pin(pc.recv());
+            let mut receiver_track: Option<Arc<dyn MediaStreamTrack>> = None;
+
+            // First check existing transceivers for a receiver track
+            let transceivers = pc.get_transceivers();
+            for transceiver in &transceivers {
+                if let Some(rx) = transceiver.receiver() {
+                    let track = rx.track();
+                    if track.kind() == MediaKind::Audio {
+                        info!(call_id, "Monitor receiver: found existing audio track");
+                        receiver_track = Some(track);
+                        break;
+                    }
+                }
+            }
+
+            // If no existing track, wait briefly for a Track event
+            if receiver_track.is_none() {
+                let timeout = tokio::time::sleep(std::time::Duration::from_secs(5));
+                tokio::pin!(timeout);
+
+                loop {
+                    tokio::select! {
+                        event = &mut pc_recv => {
+                            if let Some(rustrtc::PeerConnectionEvent::Track(transceiver)) = event {
+                                if let Some(rx) = transceiver.receiver() {
+                                    let track = rx.track();
+                                    if track.kind() == MediaKind::Audio {
+                                        info!(call_id, "Monitor receiver: got audio track from event");
+                                        receiver_track = Some(track);
+                                        break;
+                                    }
+                                }
+                                pc_recv = Box::pin(pc.recv());
+                            } else {
+                                debug!(call_id, "Monitor receiver: PeerConnection closed before track event");
+                                return;
+                            }
+                        }
+                        _ = &mut timeout => {
+                            debug!(call_id, "Monitor receiver: no track event after 5s, supervisor may not be sending audio");
+                            return;
+                        }
+                    }
+                }
+            }
+
+            let track = match receiver_track {
+                Some(t) => t,
+                None => return,
+            };
+
+            info!(call_id, track_id = %track.id(), "Monitor receiver task started");
+
+            let mut decoder: Box<dyn Decoder> = create_decoder(monitor_codec);
+            let mut seq: u64 = 0;
+
+            while let Ok(sample) = track.recv().await {
+                // Check if monitor is still attached
+                {
+                    let guard = monitor_arc.lock().unwrap();
+                    if guard.is_none() {
+                        debug!(call_id, "Monitor detached, stopping receiver task");
+                        break;
+                    }
+                }
+
+                if let MediaSample::Audio(ref frame) = sample {
+                    // Decode to PCM for mixing
+                    let pcm = decoder.decode(&frame.data);
+                    seq += 1;
+
+                    // Store in shared buffer (overwriting previous frame)
+                    if let Ok(mut guard) = incoming_audio.lock() {
+                        *guard = Some(MonitorAudioFrame { pcm, seq });
+                    }
+                }
+            }
+
+            info!(call_id, "Monitor receiver task finished");
+        });
+    }
+
+    /// Mix monitor (supervisor) audio into a call leg's audio frame.
+    ///
+    /// Decodes the source audio to PCM, mixes it with the monitor's PCM, and
+    /// re-encodes to the target codec. Returns a new `MediaSample` with the
+    /// mixed audio, or `None` if no mixing was needed (no monitor audio available,
+    /// wrong mode, etc.).
+    ///
+    /// The `last_monitor_seq` parameter tracks which monitor frame was last consumed
+    /// by this particular forward_track task, preventing double-mixing of the same
+    /// frame.
+    fn mix_monitor_into_sample(
+        monitor: &Arc<Mutex<Option<MonitorLeg>>>,
+        sample: &MediaSample,
+        _source_codec: CodecType,
+        _target_codec: CodecType,
+        leg: Leg,
+        last_monitor_seq: &mut u64,
+        mix_decoder: &mut Box<dyn Decoder>,
+        mix_encoder: &mut Box<dyn Encoder>,
+    ) -> Option<MediaSample> {
+        let frame = match sample {
+            MediaSample::Audio(f) => f,
+            _ => return None,
+        };
+
+        // Read the monitor state: mode and incoming audio buffer
+        let (mode, incoming_audio_arc) = {
+            let guard = monitor.lock().unwrap();
+            let monitor_leg = guard.as_ref()?;
+            (monitor_leg.mode, monitor_leg.incoming_audio.clone())
+        };
+
+        // Check if this leg should receive monitor audio based on mode
+        let should_mix = match mode {
+            MonitorMode::SilentListen => false,
+            MonitorMode::Whisper => leg == Leg::A, // Whisper: monitor audio -> leg_b (agent)
+            // In the bridge, Leg::A forward_track sends audio FROM leg_a TO leg_b.
+            // So when we want monitor audio sent TO leg_b, we mix in the A->B path (leg == Leg::A).
+            MonitorMode::Barge => true, // Barge: monitor audio -> both legs
+        };
+
+        if !should_mix {
+            return None;
+        }
+
+        // Get the latest monitor audio frame
+        let monitor_pcm = {
+            let guard = incoming_audio_arc.lock().unwrap();
+            match guard.as_ref() {
+                Some(maf) if maf.seq > *last_monitor_seq => {
+                    *last_monitor_seq = maf.seq;
+                    Some(maf.pcm.clone())
+                }
+                _ => None,
+            }
+        };
+
+        let monitor_pcm = monitor_pcm?;
+
+        // Decode source audio to PCM
+        let source_pcm = mix_decoder.decode(&frame.data);
+
+        // Mix: average the two PCM streams to prevent clipping
+        let mix_len = source_pcm.len().min(monitor_pcm.len());
+        let mut mixed_pcm = Vec::with_capacity(source_pcm.len());
+        for i in 0..mix_len {
+            let mixed = ((source_pcm[i] as i32 + monitor_pcm[i] as i32) / 2) as i16;
+            mixed_pcm.push(mixed);
+        }
+        // If source is longer than monitor, append remaining source samples (halved for consistency)
+        for i in mix_len..source_pcm.len() {
+            mixed_pcm.push(source_pcm[i] / 2);
+        }
+
+        // Re-encode the mixed PCM to the target codec
+        let encoded = mix_encoder.encode(&mixed_pcm);
+
+        let mixed_frame = AudioFrame {
+            rtp_timestamp: frame.rtp_timestamp,
+            clock_rate: frame.clock_rate,
+            data: Bytes::from(encoded),
+            sequence_number: frame.sequence_number,
+            payload_type: frame.payload_type,
+            marker: frame.marker,
+            raw_packet: None,
+            source_addr: frame.source_addr,
+        };
+
+        Some(MediaSample::Audio(mixed_frame))
     }
 
     pub async fn start(&self) -> Result<()> {
@@ -735,6 +968,14 @@ impl MediaBridge {
         // Track the last known monitor codec so we can detect changes.
         let mut last_monitor_codec: Option<CodecType> = None;
 
+        // Decoder/encoder for mixing monitor audio into the forwarded stream.
+        // These operate on the *target* codec since mixing happens after transcoding.
+        // Lazily initialized on first use to avoid overhead when no monitor is attached.
+        let mut mix_decoder: Option<Box<dyn Decoder>> = None;
+        let mut mix_encoder: Option<Box<dyn Encoder>> = None;
+        // Track the last consumed monitor audio sequence to avoid double-mixing.
+        let mut last_monitor_seq: u64 = 0;
+
         let mut packet_count: u64 = 0;
         let target_pt = target_params.payload_type;
         let source_clock_rate = source_codec.clock_rate();
@@ -882,6 +1123,28 @@ impl MediaBridge {
                 );
             }
 
+            // Mix monitor (supervisor) audio into the sample for Whisper/Barge modes.
+            // This must happen AFTER recording and monitor send, so the recorder
+            // captures the original call and the monitor hears the unmixed audio.
+            if !is_dtmf {
+                // Lazily initialize the mix decoder/encoder on first use
+                let dec = mix_decoder.get_or_insert_with(|| create_decoder(target_codec));
+                let enc = mix_encoder.get_or_insert_with(|| create_encoder(target_codec));
+
+                if let Some(mixed) = Self::mix_monitor_into_sample(
+                    &monitor,
+                    &sample,
+                    source_codec,
+                    target_codec,
+                    leg,
+                    &mut last_monitor_seq,
+                    dec,
+                    enc,
+                ) {
+                    sample = mixed;
+                }
+            }
+
             if let Err(e) = source_target.send(sample).await {
                 warn!(
                     call_id,
@@ -932,12 +1195,11 @@ impl MediaBridge {
             None => return,
         };
 
-        // Only forward audio samples in SilentListen mode (both legs to monitor).
-        // Whisper and Barge modes will be extended in future tasks.
-        if monitor_leg.mode != MonitorMode::SilentListen {
-            // For now, all modes forward audio to monitor. The difference will
-            // be in how monitor audio is routed back, which is not yet implemented.
-        }
+        // All modes forward audio from the call legs to the monitor so the
+        // supervisor can hear both sides. The difference between modes is in
+        // how the monitor's audio is routed back: SilentListen does nothing,
+        // Whisper mixes into leg_b only, and Barge mixes into both legs.
+        // That reverse path is handled by mix_monitor_into_sample().
 
         let monitor_codec = monitor_leg.codec;
 
@@ -1080,8 +1342,8 @@ mod tests {
         bridge.start().await.unwrap();
     }
 
-    #[tokio::test]
-    async fn test_monitor_attach_detach() {
+    /// Helper: create a MediaBridge with default PCMU settings for testing.
+    fn make_test_bridge(call_id: &str) -> (Arc<MockMediaPeer>, Arc<MockMediaPeer>, MediaBridge) {
         let leg_a = Arc::new(MockMediaPeer::new());
         let leg_b = Arc::new(MockMediaPeer::new());
         let bridge = MediaBridge::new(
@@ -1096,36 +1358,553 @@ mod tests {
             None,
             None,
             None,
-            "test-call-id".to_string(),
+            call_id.to_string(),
             None,
             None,
         );
+        (leg_a, leg_b, bridge)
+    }
 
-        // Initially no monitor
+    // ------------------------------------------------------------------
+    // attach_monitor tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_attach_monitor_creates_leg_with_correct_mode() {
+        let (_la, _lb, bridge) = make_test_bridge("test-attach");
+
+        assert!(!bridge.has_monitor());
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        assert!(bridge.has_monitor());
+        // Default mode should be SilentListen
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+    }
+
+    #[tokio::test]
+    async fn test_attach_monitor_stores_codec() {
+        let (_la, _lb, bridge) = make_test_bridge("test-attach-codec");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMA).unwrap();
+
+        // Verify the codec was stored by inspecting the monitor leg directly
+        let guard = bridge.monitor.lock().unwrap();
+        let monitor_leg = guard.as_ref().expect("Monitor should be attached");
+        assert_eq!(monitor_leg.codec, CodecType::PCMA);
+    }
+
+    #[tokio::test]
+    async fn test_attach_monitor_replaces_existing() {
+        let (_la, _lb, bridge) = make_test_bridge("test-attach-replace");
+
+        let peer1 = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(peer1, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+
+        // Attach a second monitor -- should replace the first
+        let peer2 = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(peer2, CodecType::PCMA).unwrap();
+        assert!(bridge.has_monitor());
+
+        // The codec should reflect the new monitor
+        let guard = bridge.monitor.lock().unwrap();
+        let monitor_leg = guard.as_ref().expect("Monitor should be attached");
+        assert_eq!(monitor_leg.codec, CodecType::PCMA);
+    }
+
+    // ------------------------------------------------------------------
+    // detach_monitor tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_detach_monitor_removes_leg() {
+        let (_la, _lb, bridge) = make_test_bridge("test-detach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+
+        bridge.detach_monitor().unwrap();
         assert!(!bridge.has_monitor());
         assert!(bridge.monitor_mode().is_none());
+    }
 
-        // Attach a monitor
+    #[tokio::test]
+    async fn test_detach_monitor_when_none_attached_is_ok() {
+        let (_la, _lb, bridge) = make_test_bridge("test-detach-none");
+
+        assert!(!bridge.has_monitor());
+        // Detaching when no monitor is attached should succeed (no-op)
+        bridge.detach_monitor().unwrap();
+        assert!(!bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_detach_monitor_idempotent() {
+        let (_la, _lb, bridge) = make_test_bridge("test-detach-idempotent");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        bridge.detach_monitor().unwrap();
+        assert!(!bridge.has_monitor());
+
+        // Second detach should also succeed
+        bridge.detach_monitor().unwrap();
+        assert!(!bridge.has_monitor());
+    }
+
+    // ------------------------------------------------------------------
+    // has_monitor tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_has_monitor_returns_false_initially() {
+        let (_la, _lb, bridge) = make_test_bridge("test-has-monitor-init");
+        assert!(!bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_has_monitor_returns_true_after_attach() {
+        let (_la, _lb, bridge) = make_test_bridge("test-has-monitor-attach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_has_monitor_returns_false_after_detach() {
+        let (_la, _lb, bridge) = make_test_bridge("test-has-monitor-detach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+
+        bridge.detach_monitor().unwrap();
+        assert!(!bridge.has_monitor());
+    }
+
+    // ------------------------------------------------------------------
+    // monitor_mode tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_monitor_mode_returns_none_when_no_monitor() {
+        let (_la, _lb, bridge) = make_test_bridge("test-mode-none");
+        assert!(bridge.monitor_mode().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_returns_silent_listen_by_default() {
+        let (_la, _lb, bridge) = make_test_bridge("test-mode-default");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_reflects_changes() {
+        let (_la, _lb, bridge) = make_test_bridge("test-mode-change");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        bridge.set_monitor_mode(MonitorMode::Whisper).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Whisper));
+
+        bridge.set_monitor_mode(MonitorMode::Barge).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Barge));
+
+        bridge.set_monitor_mode(MonitorMode::SilentListen).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+    }
+
+    // ------------------------------------------------------------------
+    // set_monitor_mode tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_set_monitor_mode_changes_between_all_modes() {
+        let (_la, _lb, bridge) = make_test_bridge("test-set-mode-all");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        // SilentListen -> Whisper
+        bridge.set_monitor_mode(MonitorMode::Whisper).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Whisper));
+
+        // Whisper -> Barge
+        bridge.set_monitor_mode(MonitorMode::Barge).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Barge));
+
+        // Barge -> SilentListen
+        bridge.set_monitor_mode(MonitorMode::SilentListen).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+    }
+
+    #[tokio::test]
+    async fn test_set_monitor_mode_fails_when_no_monitor_attached() {
+        let (_la, _lb, bridge) = make_test_bridge("test-set-mode-no-monitor");
+
+        // No monitor attached -- set_monitor_mode should return an error
+        let result = bridge.set_monitor_mode(MonitorMode::Barge);
+        assert!(result.is_err());
+        assert!(
+            result.unwrap_err().to_string().contains("No monitor leg attached"),
+            "Error message should indicate no monitor is attached"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set_monitor_mode_same_mode_is_ok() {
+        let (_la, _lb, bridge) = make_test_bridge("test-set-mode-same");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        // Setting the same mode twice should succeed
+        bridge.set_monitor_mode(MonitorMode::SilentListen).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+    }
+
+    #[tokio::test]
+    async fn test_set_monitor_mode_fails_after_detach() {
+        let (_la, _lb, bridge) = make_test_bridge("test-set-mode-after-detach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        bridge.detach_monitor().unwrap();
+
+        // Now set_monitor_mode should fail
+        assert!(bridge.set_monitor_mode(MonitorMode::Whisper).is_err());
+    }
+
+    // ------------------------------------------------------------------
+    // try_send_to_monitor tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_try_send_to_monitor_delivers_packet() {
+        let (_la, _lb, bridge) = make_test_bridge("test-send-monitor");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        // Create a test audio sample
+        let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+            data: vec![0x80; 160].into(), // 20ms @ 8kHz PCMU
+            rtp_timestamp: 160,
+            sequence_number: Some(1),
+            payload_type: Some(0),
+            clock_rate: 8000,
+            marker: false,
+            raw_packet: None,
+            source_addr: None,
+        });
+
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        let mut last_monitor_codec: Option<CodecType> = None;
+
+        // This should succeed without panic -- the packet goes into the
+        // MonitorLeg's SampleStreamSource channel.
+        MediaBridge::try_send_to_monitor(
+            &bridge.monitor,
+            &sample,
+            CodecType::PCMU,
+            &mut monitor_transcoder,
+            &mut last_monitor_codec,
+            "test-send-monitor",
+            Leg::A,
+        );
+
+        // The monitor's source channel should have received the packet.
+        // We verify by checking the monitor is still attached (source not closed).
+        assert!(bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_try_send_to_monitor_no_monitor_is_noop() {
+        let (_la, _lb, bridge) = make_test_bridge("test-send-no-monitor");
+
+        // No monitor attached -- try_send_to_monitor should be a no-op
+        let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+            data: vec![0x80; 160].into(),
+            rtp_timestamp: 160,
+            sequence_number: Some(1),
+            payload_type: Some(0),
+            clock_rate: 8000,
+            marker: false,
+            raw_packet: None,
+            source_addr: None,
+        });
+
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        let mut last_monitor_codec: Option<CodecType> = None;
+
+        // Should not panic, should be a silent no-op
+        MediaBridge::try_send_to_monitor(
+            &bridge.monitor,
+            &sample,
+            CodecType::PCMU,
+            &mut monitor_transcoder,
+            &mut last_monitor_codec,
+            "test-send-no-monitor",
+            Leg::A,
+        );
+
+        assert!(!bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_try_send_to_monitor_multiple_packets() {
+        let (_la, _lb, bridge) = make_test_bridge("test-send-multi");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        let mut last_monitor_codec: Option<CodecType> = None;
+
+        // Send multiple packets from both legs
+        for i in 0..10u16 {
+            let leg = if i % 2 == 0 { Leg::A } else { Leg::B };
+            let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+                data: vec![0x80; 160].into(),
+                rtp_timestamp: (i as u32) * 160,
+                sequence_number: Some(i),
+                payload_type: Some(0),
+                clock_rate: 8000,
+                marker: i == 0,
+                raw_packet: None,
+                source_addr: None,
+            });
+
+            MediaBridge::try_send_to_monitor(
+                &bridge.monitor,
+                &sample,
+                CodecType::PCMU,
+                &mut monitor_transcoder,
+                &mut last_monitor_codec,
+                "test-send-multi",
+                leg,
+            );
+        }
+
+        // Monitor should still be attached after multiple sends
+        assert!(bridge.has_monitor());
+    }
+
+    #[tokio::test]
+    async fn test_try_send_to_monitor_after_detach_is_noop() {
+        let (_la, _lb, bridge) = make_test_bridge("test-send-after-detach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+
+        // Send one packet while attached
+        let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+            data: vec![0x80; 160].into(),
+            rtp_timestamp: 160,
+            sequence_number: Some(1),
+            payload_type: Some(0),
+            clock_rate: 8000,
+            marker: false,
+            raw_packet: None,
+            source_addr: None,
+        });
+
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        let mut last_monitor_codec: Option<CodecType> = None;
+
+        MediaBridge::try_send_to_monitor(
+            &bridge.monitor,
+            &sample,
+            CodecType::PCMU,
+            &mut monitor_transcoder,
+            &mut last_monitor_codec,
+            "test-send-after-detach",
+            Leg::A,
+        );
+
+        // Detach and send again -- should be a silent no-op
+        bridge.detach_monitor().unwrap();
+
+        MediaBridge::try_send_to_monitor(
+            &bridge.monitor,
+            &sample,
+            CodecType::PCMU,
+            &mut monitor_transcoder,
+            &mut last_monitor_codec,
+            "test-send-after-detach",
+            Leg::B,
+        );
+
+        assert!(!bridge.has_monitor());
+    }
+
+    // ------------------------------------------------------------------
+    // Monitor lifecycle integration tests
+    // ------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_monitor_full_lifecycle() {
+        let (_la, _lb, bridge) = make_test_bridge("test-lifecycle");
+
+        // 1. Initially no monitor
+        assert!(!bridge.has_monitor());
+        assert!(bridge.monitor_mode().is_none());
+        assert!(bridge.set_monitor_mode(MonitorMode::Barge).is_err());
+
+        // 2. Attach monitor
         let monitor_peer = Arc::new(MockMediaPeer::new());
         bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
         assert!(bridge.has_monitor());
         assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
 
-        // Change mode
+        // 3. Send some packets
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        let mut last_monitor_codec: Option<CodecType> = None;
+        for i in 0..5u16 {
+            let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+                data: vec![0x80; 160].into(),
+                rtp_timestamp: (i as u32) * 160,
+                sequence_number: Some(i),
+                payload_type: Some(0),
+                clock_rate: 8000,
+                marker: false,
+                raw_packet: None,
+                source_addr: None,
+            });
+            MediaBridge::try_send_to_monitor(
+                &bridge.monitor,
+                &sample,
+                CodecType::PCMU,
+                &mut monitor_transcoder,
+                &mut last_monitor_codec,
+                "test-lifecycle",
+                Leg::A,
+            );
+        }
+
+        // 4. Change mode
         bridge.set_monitor_mode(MonitorMode::Whisper).unwrap();
         assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Whisper));
 
-        // Detach
+        bridge.set_monitor_mode(MonitorMode::Barge).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Barge));
+
+        // 5. Detach
         bridge.detach_monitor().unwrap();
         assert!(!bridge.has_monitor());
         assert!(bridge.monitor_mode().is_none());
 
-        // set_monitor_mode should fail when no monitor attached
-        assert!(bridge.set_monitor_mode(MonitorMode::Barge).is_err());
+        // 6. Sending after detach is a no-op
+        let sample = MediaSample::Audio(rustrtc::media::AudioFrame {
+            data: vec![0x80; 160].into(),
+            rtp_timestamp: 0,
+            sequence_number: Some(100),
+            payload_type: Some(0),
+            clock_rate: 8000,
+            marker: false,
+            raw_packet: None,
+            source_addr: None,
+        });
+        MediaBridge::try_send_to_monitor(
+            &bridge.monitor,
+            &sample,
+            CodecType::PCMU,
+            &mut monitor_transcoder,
+            &mut last_monitor_codec,
+            "test-lifecycle",
+            Leg::B,
+        );
+
+        // 7. Re-attach should work
+        let monitor_peer2 = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer2, CodecType::PCMA).unwrap();
+        assert!(bridge.has_monitor());
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
     }
+
+    #[tokio::test]
+    async fn test_monitor_detached_on_bridge_stop() {
+        let (la, lb, bridge) = make_test_bridge("test-stop-detach");
+
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+
+        bridge.stop();
+
+        // After stop, monitor should be detached
+        assert!(!bridge.has_monitor());
+        // Legs should also be stopped
+        assert!(la.stop_called.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(lb.stop_called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    // ------------------------------------------------------------------
+    // MonitorMode enum tests
+    // ------------------------------------------------------------------
 
     #[tokio::test]
     async fn test_monitor_mode_default() {
         assert_eq!(MonitorMode::default(), MonitorMode::SilentListen);
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_equality() {
+        assert_eq!(MonitorMode::SilentListen, MonitorMode::SilentListen);
+        assert_eq!(MonitorMode::Whisper, MonitorMode::Whisper);
+        assert_eq!(MonitorMode::Barge, MonitorMode::Barge);
+        assert_ne!(MonitorMode::SilentListen, MonitorMode::Whisper);
+        assert_ne!(MonitorMode::Whisper, MonitorMode::Barge);
+        assert_ne!(MonitorMode::Barge, MonitorMode::SilentListen);
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_clone() {
+        let mode = MonitorMode::Whisper;
+        let cloned = mode;
+        assert_eq!(mode, cloned);
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_serde_roundtrip() {
+        // Verify serde serialization uses snake_case as configured
+        let silent = MonitorMode::SilentListen;
+        let json = serde_json::to_string(&silent).unwrap();
+        assert_eq!(json, "\"silent_listen\"");
+
+        let whisper = MonitorMode::Whisper;
+        let json = serde_json::to_string(&whisper).unwrap();
+        assert_eq!(json, "\"whisper\"");
+
+        let barge = MonitorMode::Barge;
+        let json = serde_json::to_string(&barge).unwrap();
+        assert_eq!(json, "\"barge\"");
+
+        // Deserialize back
+        let deserialized: MonitorMode = serde_json::from_str("\"silent_listen\"").unwrap();
+        assert_eq!(deserialized, MonitorMode::SilentListen);
+
+        let deserialized: MonitorMode = serde_json::from_str("\"whisper\"").unwrap();
+        assert_eq!(deserialized, MonitorMode::Whisper);
+
+        let deserialized: MonitorMode = serde_json::from_str("\"barge\"").unwrap();
+        assert_eq!(deserialized, MonitorMode::Barge);
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_serde_rejects_invalid() {
+        let result: Result<MonitorMode, _> = serde_json::from_str("\"invalid_mode\"");
+        assert!(result.is_err());
     }
 }

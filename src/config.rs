@@ -211,6 +211,8 @@ pub struct Config {
     pub voicemail: Option<VoicemailConfig>,
     #[serde(default)]
     pub backup: Option<BackupConfig>,
+    #[serde(default)]
+    pub monitoring: Option<MonitoringConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -550,6 +552,26 @@ impl Default for BackupConfig {
             include_recordings: false,
             notify_on_failure: default_backup_notify_on_failure(),
             alert_webhook_url: None,
+        }
+    }
+}
+
+fn default_monitoring_notify_agent() -> bool {
+    false
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MonitoringConfig {
+    /// When true, log that monitoring is active on the call (actual SIP notification
+    /// to the agent is future work).
+    #[serde(default = "default_monitoring_notify_agent")]
+    pub notify_agent_on_monitor: bool,
+}
+
+impl Default for MonitoringConfig {
+    fn default() -> Self {
+        Self {
+            notify_agent_on_monitor: default_monitoring_notify_agent(),
         }
     }
 }
@@ -932,6 +954,7 @@ impl Default for Config {
             quality: None,
             voicemail: None,
             backup: None,
+            monitoring: None,
         }
     }
 }

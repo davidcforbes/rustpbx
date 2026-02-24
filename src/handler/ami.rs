@@ -8,12 +8,14 @@ use crate::{
 };
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{FromRequest, Path, Query, State},
     http::StatusCode,
     middleware,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use chrono::Utc;
+use sea_orm::{ActiveModelTrait, ActiveValue::Set};
 use serde::Deserialize;
 use std::sync::{Arc, atomic::Ordering};
 use tokio::time::{Duration, sleep};
@@ -631,13 +633,183 @@ async fn backup_history_handler(
 #[derive(Debug, Deserialize)]
 struct MonitorModePayload {
     mode: MonitorMode,
+    /// Optional identifier for the agent being monitored (for audit trail).
+    #[serde(default)]
+    agent_extension: Option<String>,
+}
+
+/// Convert a `MonitorMode` to its string representation for the audit log.
+fn monitor_mode_name(mode: MonitorMode) -> &'static str {
+    match mode {
+        MonitorMode::SilentListen => "silent_listen",
+        MonitorMode::Whisper => "whisper",
+        MonitorMode::Barge => "barge",
+    }
+}
+
+/// Check whether the request is authorized for call monitoring operations.
+///
+/// Monitoring requires *supervisor-level* access:
+/// - When the console feature is enabled and a session cookie is present,
+///   the user must be a superuser or staff member (i.e., have a supervisor
+///   or manager role).
+/// - When access is granted purely through the AMI IP allow-list (no session
+///   cookie), the caller is treated as an administrator and is permitted.
+///
+/// Returns `Ok(user_identifier)` on success or an error `Response` on failure.
+#[allow(unused_variables)]
+async fn check_monitor_permission(
+    state: &AppState,
+    headers: &axum::http::HeaderMap,
+    client_ip: &ClientAddr,
+) -> Result<String, Response> {
+    // When the console feature is compiled in, try to resolve the authenticated user.
+    #[cfg(feature = "console")]
+    {
+        if let Some(console_state) = &state.console {
+            if let Some(cookie_value) =
+                crate::console::middleware::extract_session_cookie(headers)
+            {
+                match console_state.current_user(Some(&cookie_value)).await {
+                    Ok(Some(user)) => {
+                        // Monitoring requires supervisor/manager privileges:
+                        // is_superuser or is_staff.
+                        if user.is_superuser || user.is_staff {
+                            return Ok(format!("{}(id:{})", user.username, user.id));
+                        }
+                        warn!(
+                            %client_ip,
+                            username = %user.username,
+                            "Monitoring access denied: user lacks supervisor/manager role"
+                        );
+                        return Err((
+                            StatusCode::FORBIDDEN,
+                            Json(serde_json::json!({
+                                "error": "Forbidden",
+                                "message": "Supervisor or manager role required to use call monitoring",
+                            })),
+                        )
+                            .into_response());
+                    }
+                    Ok(None) => {
+                        // Cookie present but no valid/active user.
+                        warn!(%client_ip, "Monitoring access denied: invalid or expired session");
+                        return Err((
+                            StatusCode::FORBIDDEN,
+                            Json(serde_json::json!({
+                                "error": "Forbidden",
+                                "message": "Valid supervisor or manager session required to use call monitoring",
+                            })),
+                        )
+                            .into_response());
+                    }
+                    Err(err) => {
+                        warn!(%client_ip, error = %err, "Monitoring access denied: failed to resolve user");
+                        return Err((
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(serde_json::json!({
+                                "error": "Internal error",
+                                "message": "Failed to verify user session",
+                            })),
+                        )
+                            .into_response());
+                    }
+                }
+            }
+        }
+    }
+
+    // No console session - access was granted via AMI IP allow-list, which
+    // implies administrative / supervisor access.
+    Ok(format!("ami_ip:{}", client_ip.ip()))
+}
+
+/// Insert a monitoring audit event into the database.
+///
+/// This is fire-and-forget: failures are logged but do not block the API response.
+async fn record_monitoring_event(
+    state: &AppState,
+    session_id: &str,
+    monitor_user_id: &str,
+    agent_extension: &str,
+    event_type: &str,
+    monitor_mode: &str,
+    details: Option<String>,
+) {
+    use crate::models::monitoring_event::ActiveModel;
+
+    let now = Utc::now();
+    let model = ActiveModel {
+        id: Default::default(),
+        session_id: Set(session_id.to_string()),
+        monitor_user_id: Set(monitor_user_id.to_string()),
+        agent_extension: Set(agent_extension.to_string()),
+        event_type: Set(event_type.to_string()),
+        monitor_mode: Set(monitor_mode.to_string()),
+        timestamp: Set(now),
+        details: Set(details),
+    };
+
+    if let Err(err) = model.insert(state.db()).await {
+        warn!(
+            session_id = %session_id,
+            event_type = %event_type,
+            error = %err,
+            "Failed to persist monitoring audit event"
+        );
+    }
+}
+
+/// If notify_agent_on_monitor is enabled, log that monitoring is active.
+fn maybe_log_agent_notification(state: &AppState, session_id: &str, mode: MonitorMode) {
+    let notify = state
+        .config()
+        .monitoring
+        .as_ref()
+        .map(|m| m.notify_agent_on_monitor)
+        .unwrap_or(false);
+
+    if notify {
+        info!(
+            session_id = %session_id,
+            mode = %monitor_mode_name(mode),
+            "Agent notification: call monitoring is active (SIP notification is future work)"
+        );
+    }
 }
 
 async fn monitor_start_handler(
     Path(session_id): Path<String>,
     State(state): State<AppState>,
-    Json(payload): Json<MonitorModePayload>,
+    client_ip: ClientAddr,
+    request: axum::extract::Request,
 ) -> Response {
+    // Extract headers before consuming the request body.
+    let headers = request.headers().clone();
+
+    // Permission check
+    let monitor_user = match check_monitor_permission(&state, &headers, &client_ip).await {
+        Ok(user) => user,
+        Err(resp) => return resp,
+    };
+
+    // Parse the JSON body
+    let payload: MonitorModePayload = match axum::Json::from_request(request, &state).await {
+        Ok(axum::Json(p)) => p,
+        Err(err) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "status": "error",
+                    "message": format!("Invalid request body: {}", err),
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let agent_ext = payload.agent_extension.clone().unwrap_or_default();
+
     let registry = state.sip_server().inner.active_call_registry.clone();
     let Some(handle) = registry.get_handle(&session_id) else {
         return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -646,8 +818,35 @@ async fn monitor_start_handler(
     };
     match handle.send_command(SessionAction::MonitorStart { mode: payload.mode }) {
         Ok(_) => {
-            info!(session_id = %session_id, mode = ?payload.mode, "Monitor start dispatched");
-            Json(serde_json::json!({ "status": "ok", "session_id": session_id, "mode": payload.mode })).into_response()
+            let mode_str = monitor_mode_name(payload.mode);
+            info!(
+                session_id = %session_id,
+                mode = %mode_str,
+                monitor_user = %monitor_user,
+                "Monitor start dispatched"
+            );
+
+            // Audit log
+            record_monitoring_event(
+                &state,
+                &session_id,
+                &monitor_user,
+                &agent_ext,
+                "monitor_start",
+                mode_str,
+                None,
+            )
+            .await;
+
+            // Agent notification
+            maybe_log_agent_notification(&state, &session_id, payload.mode);
+
+            Json(serde_json::json!({
+                "status": "ok",
+                "session_id": session_id,
+                "mode": payload.mode,
+                "monitor_user": monitor_user,
+            })).into_response()
         }
         Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
             "status": "error", "message": format!("Failed: {}", err),
@@ -658,7 +857,18 @@ async fn monitor_start_handler(
 async fn monitor_stop_handler(
     Path(session_id): Path<String>,
     State(state): State<AppState>,
+    client_ip: ClientAddr,
+    request: axum::extract::Request,
 ) -> Response {
+    // Extract headers before consuming the request.
+    let headers = request.headers().clone();
+
+    // Permission check
+    let monitor_user = match check_monitor_permission(&state, &headers, &client_ip).await {
+        Ok(user) => user,
+        Err(resp) => return resp,
+    };
+
     let registry = state.sip_server().inner.active_call_registry.clone();
     let Some(handle) = registry.get_handle(&session_id) else {
         return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -667,8 +877,29 @@ async fn monitor_stop_handler(
     };
     match handle.send_command(SessionAction::MonitorStop) {
         Ok(_) => {
-            info!(session_id = %session_id, "Monitor stop dispatched");
-            Json(serde_json::json!({ "status": "ok", "session_id": session_id })).into_response()
+            info!(
+                session_id = %session_id,
+                monitor_user = %monitor_user,
+                "Monitor stop dispatched"
+            );
+
+            // Audit log
+            record_monitoring_event(
+                &state,
+                &session_id,
+                &monitor_user,
+                "",
+                "monitor_stop",
+                "",
+                None,
+            )
+            .await;
+
+            Json(serde_json::json!({
+                "status": "ok",
+                "session_id": session_id,
+                "monitor_user": monitor_user,
+            })).into_response()
         }
         Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
             "status": "error", "message": format!("Failed: {}", err),
@@ -679,8 +910,35 @@ async fn monitor_stop_handler(
 async fn monitor_set_mode_handler(
     Path(session_id): Path<String>,
     State(state): State<AppState>,
-    Json(payload): Json<MonitorModePayload>,
+    client_ip: ClientAddr,
+    request: axum::extract::Request,
 ) -> Response {
+    // Extract headers before consuming the request body.
+    let headers = request.headers().clone();
+
+    // Permission check
+    let monitor_user = match check_monitor_permission(&state, &headers, &client_ip).await {
+        Ok(user) => user,
+        Err(resp) => return resp,
+    };
+
+    // Parse the JSON body
+    let payload: MonitorModePayload = match axum::Json::from_request(request, &state).await {
+        Ok(axum::Json(p)) => p,
+        Err(err) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "status": "error",
+                    "message": format!("Invalid request body: {}", err),
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let agent_ext = payload.agent_extension.clone().unwrap_or_default();
+
     let registry = state.sip_server().inner.active_call_registry.clone();
     let Some(handle) = registry.get_handle(&session_id) else {
         return (StatusCode::NOT_FOUND, Json(serde_json::json!({
@@ -689,8 +947,32 @@ async fn monitor_set_mode_handler(
     };
     match handle.send_command(SessionAction::MonitorSetMode { mode: payload.mode }) {
         Ok(_) => {
-            info!(session_id = %session_id, mode = ?payload.mode, "Monitor mode change dispatched");
-            Json(serde_json::json!({ "status": "ok", "session_id": session_id, "mode": payload.mode })).into_response()
+            let mode_str = monitor_mode_name(payload.mode);
+            info!(
+                session_id = %session_id,
+                mode = %mode_str,
+                monitor_user = %monitor_user,
+                "Monitor mode change dispatched"
+            );
+
+            // Audit log
+            record_monitoring_event(
+                &state,
+                &session_id,
+                &monitor_user,
+                &agent_ext,
+                "mode_change",
+                mode_str,
+                None,
+            )
+            .await;
+
+            Json(serde_json::json!({
+                "status": "ok",
+                "session_id": session_id,
+                "mode": payload.mode,
+                "monitor_user": monitor_user,
+            })).into_response()
         }
         Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
             "status": "error", "message": format!("Failed: {}", err),
