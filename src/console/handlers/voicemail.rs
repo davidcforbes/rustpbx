@@ -12,8 +12,9 @@ use crate::models::{
 };
 use axum::{
     Json, Router,
+    body::Body,
     extract::{Multipart, Path as AxumPath, State},
-    http::StatusCode,
+    http::{self, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post},
 };
@@ -24,7 +25,10 @@ use sea_orm::{
 };
 use sea_orm::sea_query::Order;
 use serde_json::json;
+use std::path::Path;
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio_util::io::ReaderStream;
 use tracing::warn;
 
 fn voicemail_config(state: &ConsoleState) -> VoicemailConfig {
@@ -49,8 +53,11 @@ pub fn urls() -> Router<Arc<ConsoleState>> {
             post(activate_greeting),
         )
         .route("/voicemail/greetings/{id}", delete(delete_greeting))
+        .route("/voicemail/greetings/{id}/audio", get(greeting_audio))
         .route("/voicemail/messages", get(list_messages))
+        .route("/voicemail/messages/mark-all-read", post(mark_all_read))
         .route("/voicemail/messages/{id}/read", post(mark_message_read))
+        .route("/voicemail/messages/{id}/audio", get(message_audio))
         .route("/voicemail/messages/{id}", delete(delete_message))
 }
 
@@ -514,4 +521,302 @@ async fn delete_message(
     }
 
     Json(json!({"status": "ok"})).into_response()
+}
+
+// ---------------------------------------------------------------------------
+// Bulk operations
+// ---------------------------------------------------------------------------
+
+async fn mark_all_read(
+    State(state): State<Arc<ConsoleState>>,
+    AuthRequired(user): AuthRequired,
+) -> Response {
+    let mailbox_id = mailbox_for_user(&user);
+    let db = state.db();
+
+    let unread = match VoicemailEntity::find()
+        .filter(VoicemailColumn::MailboxId.eq(&mailbox_id))
+        .filter(VoicemailColumn::IsRead.eq(false))
+        .filter(VoicemailColumn::DeletedAt.is_null())
+        .all(db)
+        .await
+    {
+        Ok(items) => items,
+        Err(err) => {
+            warn!("failed to list unread voicemails for {}: {}", mailbox_id, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": err.to_string()})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut count = 0u64;
+    for msg in unread {
+        let mut active: VoicemailActiveModel = msg.into();
+        active.is_read = Set(true);
+        active.updated_at = Set(Utc::now());
+        if active.update(db).await.is_ok() {
+            count += 1;
+        }
+    }
+
+    Json(json!({"status": "ok", "marked_count": count})).into_response()
+}
+
+// ---------------------------------------------------------------------------
+// Audio streaming
+// ---------------------------------------------------------------------------
+
+async fn message_audio(
+    AxumPath(id): AxumPath<i64>,
+    State(state): State<Arc<ConsoleState>>,
+    AuthRequired(user): AuthRequired,
+    headers: HeaderMap,
+) -> Response {
+    let mailbox_id = mailbox_for_user(&user);
+    let db = state.db();
+
+    let msg = match VoicemailEntity::find_by_id(id).one(db).await {
+        Ok(Some(m)) => m,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"message": "Message not found"})),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            warn!("failed to load voicemail {} for audio: {}", id, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": err.to_string()})),
+            )
+                .into_response();
+        }
+    };
+
+    if msg.mailbox_id != mailbox_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"message": "Message does not belong to your mailbox"})),
+        )
+            .into_response();
+    }
+
+    let recording_path = &msg.recording_path;
+    match tokio::fs::metadata(recording_path).await {
+        Ok(meta) if meta.is_file() && meta.len() > 0 => {
+            stream_file_with_range(recording_path, meta.len(), &headers).await
+        }
+        _ => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"message": "Recording file not found"})),
+        )
+            .into_response(),
+    }
+}
+
+async fn greeting_audio(
+    AxumPath(id): AxumPath<i64>,
+    State(state): State<Arc<ConsoleState>>,
+    AuthRequired(user): AuthRequired,
+    headers: HeaderMap,
+) -> Response {
+    let mailbox_id = mailbox_for_user(&user);
+    let db = state.db();
+
+    let greeting = match GreetingEntity::find_by_id(id).one(db).await {
+        Ok(Some(g)) => g,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"message": "Greeting not found"})),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            warn!("failed to load greeting {} for audio: {}", id, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": err.to_string()})),
+            )
+                .into_response();
+        }
+    };
+
+    if greeting.mailbox_id != mailbox_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"message": "Greeting does not belong to your mailbox"})),
+        )
+            .into_response();
+    }
+
+    let recording_path = &greeting.recording_path;
+    match tokio::fs::metadata(recording_path).await {
+        Ok(meta) if meta.is_file() && meta.len() > 0 => {
+            stream_file_with_range(recording_path, meta.len(), &headers).await
+        }
+        _ => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"message": "Greeting file not found"})),
+        )
+            .into_response(),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// File streaming helpers (mirrors call_record.rs pattern)
+// ---------------------------------------------------------------------------
+
+async fn stream_file_with_range(
+    recording_path: &str,
+    file_len: u64,
+    headers: &HeaderMap,
+) -> Response {
+    let range_header = headers
+        .get(http::header::RANGE)
+        .and_then(|value| value.to_str().ok());
+    let (status, start, end) =
+        match range_header.and_then(|value| parse_range_header(value, file_len)) {
+            Some((start, end)) => (StatusCode::PARTIAL_CONTENT, start, end),
+            None if range_header.is_some() => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::RANGE_NOT_SATISFIABLE;
+                response.headers_mut().insert(
+                    http::header::CONTENT_RANGE,
+                    HeaderValue::from_str(&format!("bytes */{}", file_len))
+                        .unwrap_or_else(|_| HeaderValue::from_static("bytes */0")),
+                );
+                return response;
+            }
+            _ => (StatusCode::OK, 0, file_len.saturating_sub(1)),
+        };
+
+    let mut file = match tokio::fs::File::open(&recording_path).await {
+        Ok(file) => file,
+        Err(err) => {
+            warn!(path = %recording_path, "failed to open audio file: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": "Failed to open audio file"})),
+            )
+                .into_response();
+        }
+    };
+
+    if start > 0 {
+        if let Err(err) = file.seek(std::io::SeekFrom::Start(start)).await {
+            warn!(path = %recording_path, "failed to seek audio file: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": "Failed to read audio file"})),
+            )
+                .into_response();
+        }
+    }
+
+    let bytes_to_send = end.saturating_sub(start) + 1;
+    let stream = ReaderStream::new(file.take(bytes_to_send));
+
+    let body = Body::from_stream(stream);
+    let mut response = Response::new(body);
+    *response.status_mut() = status;
+    let headers_mut = response.headers_mut();
+    headers_mut.insert(
+        http::header::ACCEPT_RANGES,
+        HeaderValue::from_static("bytes"),
+    );
+    headers_mut.insert(
+        http::header::CONTENT_LENGTH,
+        HeaderValue::from_str(&bytes_to_send.to_string())
+            .unwrap_or_else(|_| HeaderValue::from_static("0")),
+    );
+
+    if status == StatusCode::PARTIAL_CONTENT {
+        headers_mut.insert(
+            http::header::CONTENT_RANGE,
+            HeaderValue::from_str(&format!("bytes {}-{}/{}", start, end, file_len))
+                .unwrap_or_else(|_| HeaderValue::from_static("bytes */0")),
+        );
+    }
+
+    let file_name = Path::new(&recording_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("recording");
+    let mime = guess_audio_mime(file_name);
+    let safe_file_name = file_name.replace('"', "'");
+    if let Ok(mime_value) = HeaderValue::from_str(mime) {
+        headers_mut.insert(http::header::CONTENT_TYPE, mime_value);
+    }
+
+    if let Ok(disposition) =
+        HeaderValue::from_str(&format!("inline; filename=\"{}\"", safe_file_name))
+    {
+        headers_mut.insert(http::header::CONTENT_DISPOSITION, disposition);
+    }
+
+    response
+}
+
+fn parse_range_header(range: &str, file_len: u64) -> Option<(u64, u64)> {
+    let value = range.strip_prefix("bytes=")?;
+    let range_value = value.split(',').next()?.trim();
+    if range_value.is_empty() {
+        return None;
+    }
+
+    let mut parts = range_value.splitn(2, '-');
+    let start_part = parts.next().unwrap_or("");
+    let end_part = parts.next().unwrap_or("");
+
+    if start_part.is_empty() {
+        let suffix_len = end_part.parse::<u64>().ok()?;
+        if suffix_len == 0 {
+            return None;
+        }
+        if suffix_len >= file_len {
+            return Some((0, file_len.saturating_sub(1)));
+        }
+        let start_pos = file_len - suffix_len;
+        return Some((start_pos, file_len.saturating_sub(1)));
+    }
+
+    let start_pos = start_part.parse::<u64>().ok()?;
+    if start_pos >= file_len {
+        return None;
+    }
+
+    let end_pos = if end_part.is_empty() {
+        file_len.saturating_sub(1)
+    } else {
+        end_part
+            .parse::<u64>()
+            .ok()?
+            .min(file_len.saturating_sub(1))
+    };
+
+    if end_pos < start_pos {
+        return None;
+    }
+
+    Some((start_pos, end_pos))
+}
+
+fn guess_audio_mime(file_name: &str) -> &'static str {
+    let ext = Path::new(file_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("wav") => "audio/wav",
+        Some("mp3") => "audio/mpeg",
+        Some("ogg") | Some("oga") | Some("opus") => "audio/ogg",
+        Some("webm") => "audio/webm",
+        Some("flac") => "audio/flac",
+        _ => "application/octet-stream",
+    }
 }

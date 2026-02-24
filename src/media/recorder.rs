@@ -96,6 +96,16 @@ pub struct Recorder {
 
 impl Recorder {
     pub fn new(path: &str, codec: CodecType, input_gain: f32, output_gain: f32) -> Result<Self> {
+        Self::with_channels(path, codec, input_gain, output_gain, 2)
+    }
+
+    /// Create a mono recorder that mixes both legs into a single channel.
+    /// Useful for recording what a monitor/supervisor hears (both sides mixed).
+    pub fn new_mono(path: &str, codec: CodecType, gain: f32) -> Result<Self> {
+        Self::with_channels(path, codec, gain, gain, 1)
+    }
+
+    fn with_channels(path: &str, codec: CodecType, input_gain: f32, output_gain: f32, channels: u16) -> Result<Self> {
         // ensure the directory exists
         if let Some(parent) = PathBuf::from(path).parent() {
             std::fs::create_dir_all(parent).ok();
@@ -113,12 +123,9 @@ impl Recorder {
         let sample_rate = codec.samplerate();
         let encoder = Some(create_encoder(codec));
         debug!(
-            "Creating recorder: path={}, src_codec={:?} codec={:?}",
-            path, src_codec, codec
+            "Creating recorder: path={}, src_codec={:?} codec={:?} channels={}",
+            path, src_codec, codec, channels
         );
-        // PCMU/PCMA are mono codecs (1 channel), we force stereo (2 channels) for better separation
-        // of leg A and leg B audio in the recording.
-        let channels = 2;
         let mut writer = Box::new(WavWriter::new(file, sample_rate, channels, Some(codec)));
         writer.write_header()?;
 

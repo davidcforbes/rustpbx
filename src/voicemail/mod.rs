@@ -1,3 +1,7 @@
+pub mod email;
+pub mod menu;
+pub mod mwi;
+
 use crate::config::VoicemailConfig;
 use crate::media::recorder::RecorderOption;
 use crate::models::voicemail;
@@ -259,5 +263,56 @@ impl VoicemailService {
 
         info!(message_id, "Voicemail message soft-deleted");
         Ok(())
+    }
+
+    /// Send an email notification for a new voicemail.
+    ///
+    /// This should be called after `save_voicemail_record()`. The
+    /// `recipient_email` is typically obtained from the callee's `SipUser`
+    /// record. If no email config is present or no recipient email is
+    /// provided, this is a silent no-op.
+    pub async fn send_email_notification(
+        &self,
+        recipient_email: Option<&str>,
+        mailbox_id: &str,
+        caller_id: &str,
+        caller_name: Option<String>,
+        recording_path: &str,
+        duration_secs: i32,
+    ) {
+        let email_config = match &self.config.email_notifications {
+            Some(cfg) => cfg.clone(),
+            None => return,
+        };
+
+        let recipient = match recipient_email {
+            Some(em) if !em.is_empty() => em.to_string(),
+            _ => {
+                info!(
+                    mailbox_id,
+                    "No email address for mailbox owner, skipping voicemail email notification"
+                );
+                return;
+            }
+        };
+
+        let notification = email::VoicemailNotification {
+            recipient_email: recipient,
+            caller_id: caller_id.to_string(),
+            caller_name,
+            mailbox_id: mailbox_id.to_string(),
+            duration_secs,
+            recording_path: recording_path.to_string(),
+            timestamp: Utc::now(),
+        };
+
+        let notifier = email::VoicemailEmailNotifier::new(email_config);
+        if let Err(e) = notifier.send_notification(&notification).await {
+            warn!(
+                mailbox_id,
+                error = %e,
+                "Failed to send voicemail email notification"
+            );
+        }
     }
 }

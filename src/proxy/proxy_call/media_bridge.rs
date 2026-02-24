@@ -15,7 +15,8 @@ use tracing::{debug, info, warn};
 /// Monitor mode for the supervisor leg.
 ///
 /// Controls how audio flows between the monitor and the call participants.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MonitorMode {
     /// Monitor hears both sides but cannot speak (default).
     SilentListen,

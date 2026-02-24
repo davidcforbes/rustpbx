@@ -426,6 +426,32 @@ pub struct VoicemailConfig {
     pub storage_path: String,
     #[serde(default = "default_voicemail_auto_transcribe")]
     pub auto_transcribe: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email_notifications: Option<VoicemailEmailConfig>,
+}
+
+fn default_voicemail_email_smtp_port() -> u16 {
+    587
+}
+
+fn default_voicemail_email_subject_template() -> Option<String> {
+    Some("New voicemail from {caller}".to_string())
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VoicemailEmailConfig {
+    pub smtp_host: String,
+    #[serde(default = "default_voicemail_email_smtp_port")]
+    pub smtp_port: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smtp_username: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smtp_password: Option<String>,
+    pub from_address: String,
+    #[serde(default)]
+    pub attach_audio: bool,
+    #[serde(default = "default_voicemail_email_subject_template")]
+    pub subject_template: Option<String>,
 }
 
 impl Default for VoicemailConfig {
@@ -437,6 +463,7 @@ impl Default for VoicemailConfig {
             greeting_path: default_voicemail_greeting_path(),
             storage_path: default_voicemail_storage_path(),
             auto_transcribe: default_voicemail_auto_transcribe(),
+            email_notifications: None,
         }
     }
 }

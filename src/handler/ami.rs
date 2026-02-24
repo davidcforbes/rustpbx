@@ -3,6 +3,8 @@ use crate::{
     config::{Config, ProxyConfig},
     handler::middleware::clientaddr::ClientAddr,
     preflight,
+    proxy::proxy_call::media_bridge::MonitorMode,
+    proxy::proxy_call::state::SessionAction,
 };
 use axum::{
     Json, Router,
@@ -37,6 +39,9 @@ pub fn ami_router(app_state: AppState) -> Router<AppState> {
             "/frequency_limits",
             get(list_frequency_limits).delete(clear_frequency_limits),
         )
+        .route("/calls/{session_id}/monitor/start", post(monitor_start_handler))
+        .route("/calls/{session_id}/monitor/stop", post(monitor_stop_handler))
+        .route("/calls/{session_id}/monitor/mode", post(monitor_set_mode_handler))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             crate::handler::middleware::ami_auth::ami_auth_middleware,
@@ -618,5 +623,77 @@ async fn backup_history_handler(
             })),
         )
             .into_response(),
+    }
+}
+
+// --- Call monitoring endpoints ---
+
+#[derive(Debug, Deserialize)]
+struct MonitorModePayload {
+    mode: MonitorMode,
+}
+
+async fn monitor_start_handler(
+    Path(session_id): Path<String>,
+    State(state): State<AppState>,
+    Json(payload): Json<MonitorModePayload>,
+) -> Response {
+    let registry = state.sip_server().inner.active_call_registry.clone();
+    let Some(handle) = registry.get_handle(&session_id) else {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "status": "error", "message": format!("Call session '{}' not found", session_id),
+        }))).into_response();
+    };
+    match handle.send_command(SessionAction::MonitorStart { mode: payload.mode }) {
+        Ok(_) => {
+            info!(session_id = %session_id, mode = ?payload.mode, "Monitor start dispatched");
+            Json(serde_json::json!({ "status": "ok", "session_id": session_id, "mode": payload.mode })).into_response()
+        }
+        Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
+            "status": "error", "message": format!("Failed: {}", err),
+        }))).into_response(),
+    }
+}
+
+async fn monitor_stop_handler(
+    Path(session_id): Path<String>,
+    State(state): State<AppState>,
+) -> Response {
+    let registry = state.sip_server().inner.active_call_registry.clone();
+    let Some(handle) = registry.get_handle(&session_id) else {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "status": "error", "message": format!("Call session '{}' not found", session_id),
+        }))).into_response();
+    };
+    match handle.send_command(SessionAction::MonitorStop) {
+        Ok(_) => {
+            info!(session_id = %session_id, "Monitor stop dispatched");
+            Json(serde_json::json!({ "status": "ok", "session_id": session_id })).into_response()
+        }
+        Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
+            "status": "error", "message": format!("Failed: {}", err),
+        }))).into_response(),
+    }
+}
+
+async fn monitor_set_mode_handler(
+    Path(session_id): Path<String>,
+    State(state): State<AppState>,
+    Json(payload): Json<MonitorModePayload>,
+) -> Response {
+    let registry = state.sip_server().inner.active_call_registry.clone();
+    let Some(handle) = registry.get_handle(&session_id) else {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "status": "error", "message": format!("Call session '{}' not found", session_id),
+        }))).into_response();
+    };
+    match handle.send_command(SessionAction::MonitorSetMode { mode: payload.mode }) {
+        Ok(_) => {
+            info!(session_id = %session_id, mode = ?payload.mode, "Monitor mode change dispatched");
+            Json(serde_json::json!({ "status": "ok", "session_id": session_id, "mode": payload.mode })).into_response()
+        }
+        Err(err) => (StatusCode::CONFLICT, Json(serde_json::json!({
+            "status": "error", "message": format!("Failed: {}", err),
+        }))).into_response(),
     }
 }

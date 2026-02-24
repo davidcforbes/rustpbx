@@ -3,6 +3,7 @@ use crate::callrecord::CallRecordHangupReason;
 use crate::proxy::active_call_registry::{
     ActiveProxyCallEntry, ActiveProxyCallRegistry, ActiveProxyCallStatus,
 };
+use crate::proxy::proxy_call::media_bridge::MonitorMode;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use rsip::StatusCode;
@@ -52,6 +53,13 @@ pub enum SessionAction {
     RefreshSession,
     MuteTrack(String),
     UnmuteTrack(String),
+    MonitorStart {
+        mode: MonitorMode,
+    },
+    MonitorStop,
+    MonitorSetMode {
+        mode: MonitorMode,
+    },
 }
 
 impl SessionAction {
