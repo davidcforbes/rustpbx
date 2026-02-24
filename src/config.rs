@@ -532,6 +532,23 @@ pub struct ProxyConfig {
     pub sip_flow_max_items: Option<usize>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub addons: Option<Vec<String>>,
+    #[serde(default)]
+    pub transcript: Option<TranscriptToolConfig>,
+}
+
+/// Configuration for the transcript addon command-line tool.
+/// Deserialized from `[proxy.transcript]` in the config file.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TranscriptToolConfig {
+    /// Path or name of the transcription command (e.g. "sensevoice-cli" or "groq-sensevoice-wrapper")
+    #[serde(default)]
+    pub command: Option<String>,
+    /// Directory containing ASR model files
+    #[serde(default)]
+    pub models_path: Option<String>,
+    /// Timeout in seconds for the transcription command
+    #[serde(default)]
+    pub timeout_secs: Option<u64>,
 }
 
 #[derive(Default, Clone)]
@@ -722,6 +739,7 @@ impl Default for ProxyConfig {
             nat_fix: true,
             sip_flow_max_items: None,
             addons: None,
+            transcript: None,
         }
     }
 }

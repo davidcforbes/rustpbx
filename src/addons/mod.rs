@@ -111,6 +111,7 @@ pub trait Addon: Send + Sync {
     fn call_record_hook(
         &self,
         _db: &sea_orm::DatabaseConnection,
+        _config: &crate::config::Config,
     ) -> Option<Box<dyn crate::callrecord::CallRecordHook>> {
         None
     }

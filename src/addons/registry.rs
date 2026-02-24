@@ -166,7 +166,7 @@ impl AddonRegistry {
         self.addons
             .iter()
             .filter(|a| self.is_enabled(a.id(), &config))
-            .filter_map(|a| a.call_record_hook(db))
+            .filter_map(|a| a.call_record_hook(db, config))
             .collect()
     }
 

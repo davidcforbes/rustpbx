@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +28,20 @@ pub struct StoredTranscript {
     pub text: String,
     #[serde(default)]
     pub analysis: Option<StoredTranscriptAnalysis>,
+    /// Maps channel number to participant info (role and label).
+    /// E.g. {"0": {"role": "caller", "label": "1001"}, "1": {"role": "callee", "label": "1002"}}
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub channel_labels: HashMap<String, ChannelParticipant>,
+}
+
+/// Describes the participant associated with a recording channel.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelParticipant {
+    /// "caller" or "callee"
+    pub role: String,
+    /// Display label, e.g. extension number or phone number
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +56,12 @@ pub struct StoredTranscriptSegment {
     pub end: Option<f64>,
     #[serde(default)]
     pub channel: Option<u32>,
+    /// "caller" or "callee" based on recorder channel mapping
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    /// Display label for the speaker, e.g. extension number or phone number
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

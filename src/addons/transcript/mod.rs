@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use axum::{Router, routing::get};
 
 pub mod handlers;
+pub mod hook;
 pub mod models;
 
 pub struct TranscriptAddon;
@@ -88,5 +89,29 @@ impl Addon for TranscriptAddon {
             url_path_regex: r"^/console/call-records/\d+$",
             script_url: "/static/transcript/transcript_addon.js".to_string(),
         }]
+    }
+
+    fn call_record_hook(
+        &self,
+        db: &sea_orm::DatabaseConnection,
+        config: &crate::config::Config,
+    ) -> Option<Box<dyn crate::callrecord::CallRecordHook>> {
+        let transcript_config = config
+            .proxy
+            .transcript
+            .clone()
+            .unwrap_or_default();
+
+        tracing::info!(
+            command = ?transcript_config.command,
+            models_path = ?transcript_config.models_path,
+            timeout_secs = ?transcript_config.timeout_secs,
+            "registering transcript auto-transcription hook"
+        );
+
+        Some(Box::new(hook::TranscriptHook::new(
+            db.clone(),
+            transcript_config,
+        )))
     }
 }

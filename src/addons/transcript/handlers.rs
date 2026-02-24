@@ -1,7 +1,8 @@
 use crate::addons::transcript::models::{
-    SenseVoiceCliChannel, StoredTranscript, StoredTranscriptAnalysis, StoredTranscriptSegment,
-    TranscriptRequest, TranscriptSettingsUpdate,
+    ChannelParticipant, SenseVoiceCliChannel, StoredTranscript, StoredTranscriptAnalysis,
+    StoredTranscriptSegment, TranscriptRequest, TranscriptSettingsUpdate,
 };
+use std::collections::HashMap;
 use crate::callrecord::storage::CdrStorage;
 use crate::console::ConsoleState;
 use crate::console::handlers::call_record::{CdrData, load_cdr_data, select_recording_path};
@@ -433,12 +434,51 @@ pub async fn trigger_call_record_transcript(
         }
     };
 
+    // Build channel-to-participant mapping from the DB record.
+    // Stereo WAV recorder: channel 0 = leg A = caller, channel 1 = leg B = callee.
+    let caller_label = record
+        .from_number
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .or_else(|| record.caller_uri.as_deref().filter(|s| !s.is_empty()))
+        .map(|s| s.to_string());
+
+    let callee_label = record
+        .to_number
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .or_else(|| record.callee_uri.as_deref().filter(|s| !s.is_empty()))
+        .map(|s| s.to_string());
+
+    let mut channel_labels = HashMap::new();
+    channel_labels.insert(
+        "0".to_string(),
+        ChannelParticipant {
+            role: "caller".to_string(),
+            label: caller_label.clone(),
+        },
+    );
+    channel_labels.insert(
+        "1".to_string(),
+        ChannelParticipant {
+            role: "callee".to_string(),
+            label: callee_label.clone(),
+        },
+    );
+
     // Convert CLI output to StoredTranscript
     let mut segments = Vec::new();
     let mut full_text = String::new();
     let mut total_word_count = 0;
 
     for channel in cli_output {
+        let ch_num = channel.channel.unwrap_or(0);
+        let (role, label) = match ch_num {
+            0 => ("caller".to_string(), caller_label.clone()),
+            1 => ("callee".to_string(), callee_label.clone()),
+            n => (format!("channel_{}", n), None),
+        };
+
         for segment in channel.segments {
             let text = segment.text.trim();
             if !text.is_empty() {
@@ -454,6 +494,8 @@ pub async fn trigger_call_record_transcript(
                 start: segment.start_sec,
                 end: segment.end_sec,
                 channel: channel.channel,
+                role: Some(role.clone()),
+                label: label.clone(),
             });
         }
     }
@@ -473,6 +515,7 @@ pub async fn trigger_call_record_transcript(
             word_count: total_word_count,
             asr_model: Some("sensevoice-small".to_string()),
         }),
+        channel_labels,
     };
 
     // Save transcript to the local path (already the correct full path)
