@@ -657,6 +657,40 @@ impl CallModule {
         }
     }
 
+    async fn resolve_callee_voicemail_enabled(
+        &self,
+        request: &rsip::Request,
+    ) -> Result<Option<bool>> {
+        let callee_uri = request.to_header()?.uri()?;
+        let callee_realm = callee_uri.host().to_string();
+        if !self.inner.server.is_same_realm(&callee_realm).await {
+            return Ok(None);
+        }
+
+        let username = callee_uri
+            .user()
+            .map(|u| u.to_string())
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        if username.is_empty() {
+            return Ok(None);
+        }
+
+        match self
+            .inner
+            .server
+            .user_backend
+            .get_user(username.as_str(), Some(&callee_realm), Some(request))
+            .await
+            .map_err(Into::into)
+        {
+            Ok(Some(user)) => Ok(Some(user.voicemail_enabled)),
+            Ok(None) => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
     fn matches_any_pattern(value: &str, patterns: &[String]) -> bool {
         patterns
             .iter()
@@ -823,14 +857,14 @@ impl CallModule {
                 .await?
         }
 
-        if dialplan.call_forwarding.is_none() {
-            // Optimization: Skip call forwarding check for wholesale calls (from trunks)
-            let is_wholesale = cookie
-                .get_extension::<TrunkContext>()
-                .map(|ctx| ctx.tenant_id.is_some())
-                .unwrap_or(false);
+        // Optimization: Skip callee user resolution for wholesale calls (from trunks)
+        let is_wholesale = cookie
+            .get_extension::<TrunkContext>()
+            .map(|ctx| ctx.tenant_id.is_some())
+            .unwrap_or(false);
 
-            if !is_wholesale {
+        if !is_wholesale {
+            if dialplan.call_forwarding.is_none() {
                 match self.resolve_callee_forwarding(&tx.original).await {
                     Ok(Some(config)) => {
                         dialplan = dialplan.with_call_forwarding(Some(config));
@@ -839,6 +873,19 @@ impl CallModule {
                     Err(err) => {
                         warn!(error = %err, "failed to resolve call forwarding for callee");
                     }
+                }
+            }
+
+            // Resolve callee's voicemail setting
+            match self.resolve_callee_voicemail_enabled(&tx.original).await {
+                Ok(Some(enabled)) => {
+                    dialplan = dialplan.with_voicemail_enabled(enabled);
+                }
+                Ok(None) => {
+                    // No user found; voicemail stays at default (false)
+                }
+                Err(err) => {
+                    warn!(error = %err, "failed to resolve voicemail setting for callee");
                 }
             }
         }

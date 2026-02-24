@@ -251,12 +251,13 @@ impl TranscriptHook {
         Ok(stored)
     }
 
-    /// Update the database call record with transcript status.
+    /// Update the database call record with transcript status and optionally the transcript text.
     async fn update_db_status(
         &self,
         call_id: &str,
         has_transcript: bool,
         status: &str,
+        transcript_text: Option<String>,
     ) -> Result<()> {
         let now = Utc::now();
         // Find the record by call_id
@@ -266,13 +267,16 @@ impl TranscriptHook {
             .await?;
 
         if let Some(record) = record {
-            let active = CallRecordActiveModel {
+            let mut active = CallRecordActiveModel {
                 id: Set(record.id),
                 has_transcript: Set(has_transcript),
                 transcript_status: Set(status.to_string()),
                 updated_at: Set(now),
                 ..Default::default()
             };
+            if let Some(text) = transcript_text {
+                active.transcript_text = Set(Some(text));
+            }
             use sea_orm::ActiveModelTrait;
             active.update(&self.db).await?;
         }
@@ -317,7 +321,7 @@ impl CallRecordHook for TranscriptHook {
 
         // Mark as processing in the database
         if let Err(e) = self
-            .update_db_status(&record.call_id, false, "processing")
+            .update_db_status(&record.call_id, false, "processing", None)
             .await
         {
             warn!(
@@ -336,13 +340,26 @@ impl CallRecordHook for TranscriptHook {
                     "auto-transcription completed successfully"
                 );
 
+                // Serialize the transcript to JSON for database storage
+                let transcript_json = match serde_json::to_string(&transcript) {
+                    Ok(json) => Some(json),
+                    Err(e) => {
+                        warn!(
+                            call_id = %record.call_id,
+                            "failed to serialize transcript to JSON: {}", e
+                        );
+                        None
+                    }
+                };
+
                 // Update the CallRecord in-memory so downstream hooks see the result
                 record.details.has_transcript = true;
                 record.details.transcript_status = Some("completed".to_string());
+                record.details.transcript_text = transcript_json.clone();
 
                 // Update database
                 if let Err(e) = self
-                    .update_db_status(&record.call_id, true, "completed")
+                    .update_db_status(&record.call_id, true, "completed", transcript_json)
                     .await
                 {
                     warn!(
@@ -361,7 +378,7 @@ impl CallRecordHook for TranscriptHook {
                 record.details.transcript_status = Some("failed".to_string());
 
                 if let Err(db_err) = self
-                    .update_db_status(&record.call_id, false, "failed")
+                    .update_db_status(&record.call_id, false, "failed", None)
                     .await
                 {
                     warn!(

@@ -1,0 +1,197 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  # Use crates.io version of rsipstack in CI (local dev uses path override)
+  RSIPSTACK_VERSION: "0.4.7"
+
+permissions:
+  contents: write
+
+jobs:
+  # ===========================================================================
+  # Job 1: Build release binaries for multiple architectures
+  # ===========================================================================
+  build-release:
+    name: Build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            artifact_name: rustpbx-linux-x86_64
+          - target: aarch64-unknown-linux-gnu
+            artifact_name: rustpbx-linux-aarch64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch path dependencies for CI
+        run: |
+          if grep -q 'rsipstack.*path\s*=' Cargo.toml; then
+            sed -i 's|^rsipstack = { path = "[^"]*" }|rsipstack = "'"$RSIPSTACK_VERSION"'"|' Cargo.toml
+            echo "Patched rsipstack to crates.io version $RSIPSTACK_VERSION"
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: release-${{ matrix.target }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            release-${{ matrix.target }}-
+
+      - name: Build release binary
+        run: cross build --release --target ${{ matrix.target }} --features cross
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/rustpbx dist/
+          cp target/${{ matrix.target }}/release/sipflow dist/ || true
+          cd dist
+          tar czf ../${{ matrix.artifact_name }}.tar.gz *
+          cd ..
+          sha256sum ${{ matrix.artifact_name }}.tar.gz > ${{ matrix.artifact_name }}.tar.gz.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_name }}.tar.gz
+            ${{ matrix.artifact_name }}.tar.gz.sha256
+          retention-days: 5
+
+  # ===========================================================================
+  # Job 2: Run tests before release
+  # ===========================================================================
+  test-release:
+    name: Pre-release Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch path dependencies for CI
+        run: |
+          if grep -q 'rsipstack.*path\s*=' Cargo.toml; then
+            sed -i 's|^rsipstack = { path = "[^"]*" }|rsipstack = "'"$RSIPSTACK_VERSION"'"|' Cargo.toml
+            echo "Patched rsipstack to crates.io version $RSIPSTACK_VERSION"
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: test-release-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            test-release-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            pkg-config \
+            libopus-dev
+
+      - name: Run tests
+        run: cargo test --workspace
+        env:
+          RUST_BACKTRACE: 1
+
+  # ===========================================================================
+  # Job 3: Create GitHub Release
+  # ===========================================================================
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-release, test-release]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since $PREV_TAG" > changelog.md
+            echo "" >> changelog.md
+            git log --pretty=format:"- %s (%h)" "$PREV_TAG"..HEAD >> changelog.md
+          else
+            echo "## Initial Release" > changelog.md
+            echo "" >> changelog.md
+            git log --pretty=format:"- %s (%h)" --max-count=20 >> changelog.md
+          fi
+          echo "" >> changelog.md
+          echo "" >> changelog.md
+          echo "## Artifacts" >> changelog.md
+          echo "" >> changelog.md
+          echo "| Platform | Architecture | File |" >> changelog.md
+          echo "|----------|-------------|------|" >> changelog.md
+          echo "| Linux | x86_64 | \`rustpbx-linux-x86_64.tar.gz\` |" >> changelog.md
+          echo "| Linux | aarch64 | \`rustpbx-linux-aarch64.tar.gz\` |" >> changelog.md
+          echo "" >> changelog.md
+          echo "### Checksums" >> changelog.md
+          echo '```' >> changelog.md
+          cat artifacts/rustpbx-linux-x86_64/*.sha256 >> changelog.md 2>/dev/null || true
+          cat artifacts/rustpbx-linux-aarch64/*.sha256 >> changelog.md 2>/dev/null || true
+          echo '```' >> changelog.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: RustPBX ${{ steps.version.outputs.version }}
+          body_path: changelog.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-rc') || contains(steps.version.outputs.version, '-beta') || contains(steps.version.outputs.version, '-alpha') }}
+          files: |
+            artifacts/rustpbx-linux-x86_64/*.tar.gz
+            artifacts/rustpbx-linux-x86_64/*.sha256
+            artifacts/rustpbx-linux-aarch64/*.tar.gz
+            artifacts/rustpbx-linux-aarch64/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

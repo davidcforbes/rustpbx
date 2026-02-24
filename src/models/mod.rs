@@ -6,6 +6,7 @@ use url::Url;
 
 pub mod add_quality_columns;
 pub mod add_rewrite_columns;
+pub mod add_transcript_text_column;
 pub mod call_record;
 pub mod call_record_dashboard_index;
 pub mod call_record_from_number_index;
@@ -21,6 +22,9 @@ pub mod presence;
 pub mod routing;
 pub mod sip_trunk;
 pub mod user;
+pub mod voicemail;
+pub mod voicemail_greeting;
+pub mod create_voicemail_tables;
 
 pub fn prepare_sqlite_database(database_url: &str) -> Result<()> {
     let Some(path_part) = database_url.strip_prefix("sqlite://") else {

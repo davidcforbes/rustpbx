@@ -78,6 +78,7 @@ pub struct CallDetails {
     pub has_transcript: bool,
     pub transcript_status: Option<String>,
     pub transcript_language: Option<String>,
+    pub transcript_text: Option<String>,
     pub tags: Option<Value>,
 
     pub quality_score: Option<f32>,

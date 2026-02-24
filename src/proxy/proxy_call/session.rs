@@ -3303,6 +3303,21 @@ impl CallSession {
             }
         }
 
+        // Voicemail fallback: if the callee has voicemail enabled and the server
+        // is configured for voicemail, deposit a message instead of failing.
+        if self.should_redirect_to_voicemail() {
+            match self.handle_voicemail_deposit().await {
+                Ok(()) => return Ok(()),
+                Err(e) => {
+                    warn!(
+                        session_id = %self.context.session_id,
+                        error = %e,
+                        "Voicemail deposit failed, proceeding with normal failure"
+                    );
+                }
+            }
+        }
+
         if let Some((code, reason)) = self.last_error.clone() {
             self.report_failure(code, reason)?;
         } else {
@@ -3312,6 +3327,195 @@ impl CallSession {
             )?;
         }
         Err(anyhow!("Call failed"))
+    }
+
+    /// Check whether the current failure should redirect to voicemail.
+    ///
+    /// Returns true when all of the following are met:
+    /// 1. The failure is a busy or no-answer condition
+    /// 2. The callee has voicemail enabled in the dialplan
+    /// 3. The server has voicemail globally enabled
+    /// 4. No explicit call forwarding handled the failure already
+    fn should_redirect_to_voicemail(&self) -> bool {
+        if !self.context.dialplan.voicemail_enabled {
+            return false;
+        }
+
+        match &self.server.voicemail_config {
+            Some(config) if config.enabled => {}
+            _ => return false,
+        };
+
+        // Only redirect on busy or no-answer failures
+        self.failure_is_busy() || self.failure_is_no_answer()
+    }
+
+    /// Handle voicemail deposit: answer the call, optionally play a greeting,
+    /// wait for the caller to leave a message, then hang up.
+    ///
+    /// The caller's audio is captured by a recorder attached to the media bridge.
+    /// If a greeting WAV file exists for the mailbox, it is played before recording
+    /// begins.
+    async fn handle_voicemail_deposit(&mut self) -> Result<()> {
+        let vm_config = self
+            .server
+            .voicemail_config
+            .clone()
+            .ok_or_else(|| anyhow!("Voicemail config not available"))?;
+
+        // Determine the mailbox ID (callee's username portion)
+        let mailbox_id = self
+            .context
+            .original_callee
+            .split('@')
+            .next()
+            .unwrap_or(&self.context.original_callee)
+            .trim_start_matches("sip:")
+            .to_string();
+
+        let caller_id = self.context.original_caller.clone();
+        let caller_name = self
+            .context
+            .dialplan
+            .caller_display_name
+            .clone();
+        let call_id = self
+            .context
+            .dialplan
+            .call_id
+            .clone()
+            .unwrap_or_else(|| self.context.session_id.clone());
+
+        info!(
+            session_id = %self.context.session_id,
+            mailbox_id = %mailbox_id,
+            caller_id = %caller_id,
+            "Redirecting to voicemail"
+        );
+
+        let vm_service = crate::voicemail::VoicemailService::new(
+            vm_config.clone(),
+            self.server.database.clone(),
+        );
+
+        // Configure a recorder for the voicemail message so that when
+        // accept_call creates the media bridge the recorder is included.
+        let vm_recorder = vm_service.build_recorder_option(&call_id, &mailbox_id);
+        let recording_path = vm_recorder.recorder_file.clone();
+        self.recorder_option = Some(vm_recorder);
+
+        // Force media proxy on so the media bridge (and its recorder) is created.
+        self.use_media_proxy = true;
+
+        // Answer the call to establish media path
+        if !self.is_answered() {
+            self.accept_call(None, None, None).await?;
+        }
+
+        // Play greeting if available
+        let greeting_path = vm_service.resolve_greeting_path(&mailbox_id);
+        if let Some(ref greeting) = greeting_path {
+            info!(
+                session_id = %self.context.session_id,
+                greeting = %greeting,
+                "Playing voicemail greeting"
+            );
+            let greeting_ssrc = rand::random::<u32>();
+            let track = FileTrack::new("voicemail-greeting".to_string())
+                .with_path(greeting.clone())
+                .with_loop(false)
+                .with_ssrc(greeting_ssrc);
+
+            self.caller_peer
+                .update_track(Box::new(track), None)
+                .await;
+
+            // Wait for the greeting to finish or a timeout.
+            let greeting_timeout = Duration::from_secs(30);
+            tokio::select! {
+                _ = tokio::time::sleep(greeting_timeout) => {
+                    debug!(
+                        session_id = %self.context.session_id,
+                        "Voicemail greeting playback timed out"
+                    );
+                }
+                _ = self.cancel_token.cancelled() => {
+                    debug!(
+                        session_id = %self.context.session_id,
+                        "Call cancelled during voicemail greeting"
+                    );
+                    return Err(anyhow!("Call cancelled during voicemail greeting"));
+                }
+            }
+
+            // Remove the greeting track
+            self.caller_peer
+                .remove_track("voicemail-greeting", true)
+                .await;
+        }
+
+        info!(
+            session_id = %self.context.session_id,
+            recording_path = %recording_path,
+            max_duration_secs = vm_config.max_message_duration_secs,
+            "Voicemail recording in progress"
+        );
+
+        let max_record_duration =
+            Duration::from_secs(vm_config.max_message_duration_secs);
+        let record_start = Instant::now();
+
+        // Wait for the caller to hang up or the max duration to elapse.
+        // The media bridge recorder captures audio automatically.
+        tokio::select! {
+            _ = tokio::time::sleep(max_record_duration) => {
+                info!(
+                    session_id = %self.context.session_id,
+                    "Voicemail max recording duration reached"
+                );
+            }
+            _ = self.cancel_token.cancelled() => {
+                debug!(
+                    session_id = %self.context.session_id,
+                    "Call ended during voicemail recording (caller hung up)"
+                );
+            }
+        }
+
+        let duration_secs = record_start.elapsed().as_secs() as i32;
+
+        info!(
+            session_id = %self.context.session_id,
+            recording_path = %recording_path,
+            duration_secs,
+            "Voicemail recording completed"
+        );
+
+        // Save the voicemail record to the database
+        if let Err(e) = vm_service
+            .save_voicemail_record(
+                &call_id,
+                &mailbox_id,
+                &caller_id,
+                caller_name,
+                &recording_path,
+                duration_secs,
+            )
+            .await
+        {
+            warn!(
+                session_id = %self.context.session_id,
+                error = %e,
+                "Failed to save voicemail record to database"
+            );
+        }
+
+        // Mark hangup as system-initiated (voicemail deposited successfully)
+        self.hangup_reason = Some(crate::callrecord::CallRecordHangupReason::BySystem);
+        self.shared
+            .mark_hangup(crate::callrecord::CallRecordHangupReason::BySystem);
+
+        Ok(())
     }
 
     async fn execute_dialplan(&mut self, mut inbox: ActionInbox<'_>) -> Result<()> {

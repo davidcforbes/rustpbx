@@ -35,6 +35,9 @@ pub struct SipUser {
     pub call_forwarding_destination: Option<String>,
     #[serde(default)]
     pub call_forwarding_timeout: Option<i32>,
+    /// Whether voicemail is enabled for this user (default true)
+    #[serde(default = "default_voicemail_enabled")]
+    pub voicemail_enabled: bool,
     /// From the original INVITE
     #[serde(skip)]
     pub origin_contact: Option<rsip::typed::Contact>,
@@ -67,6 +70,10 @@ fn default_is_support_webrtc() -> bool {
     false
 }
 
+fn default_voicemail_enabled() -> bool {
+    true
+}
+
 impl Default for SipUser {
     fn default() -> Self {
         Self {
@@ -89,6 +96,7 @@ impl Default for SipUser {
             call_forwarding_mode: None,
             call_forwarding_destination: None,
             call_forwarding_timeout: None,
+            voicemail_enabled: true,
         }
     }
 }
@@ -299,6 +307,7 @@ impl TryFrom<&Transaction> for SipUser {
             phone: None,
             note: None,
             allow_guest_calls: false,
+            voicemail_enabled: true,
         };
         u.build_contact(tx);
         Ok(u)

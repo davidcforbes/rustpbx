@@ -70,6 +70,7 @@ impl ExtensionUserBackend {
             email: model.email,
             note: model.notes,
             allow_guest_calls: model.allow_guest_calls,
+            voicemail_enabled: !model.voicemail_disabled,
             ..Default::default()
         }
     }

@@ -64,6 +64,7 @@ pub struct AppStateInner {
     pub config_path: Option<String>,
     pub reload_requested: AtomicBool,
     pub addon_registry: Arc<crate::addons::registry::AddonRegistry>,
+    pub backup_service: Option<crate::backup::BackupService>,
     #[cfg(feature = "console")]
     pub console: Option<Arc<crate::console::ConsoleState>>,
 }
@@ -299,6 +300,7 @@ impl AppStateBuilder {
                     .with_storage(core.storage.clone())
                     .with_sipflow_config(config.sipflow.clone())
                     .with_quality_config(config.quality.clone())
+                    .with_voicemail_config(config.voicemail.clone())
                     .with_no_bind(self.skip_sip_bind)
                     .register_module("acl", AclModule::create)
                     .register_module("auth", AuthModule::create)
@@ -312,6 +314,24 @@ impl AppStateBuilder {
             }
         }?;
 
+        // Initialize backup service if configured and enabled
+        let backup_service = if let Some(ref backup_config) = config.backup {
+            if backup_config.enabled {
+                let recorder_path = config.recorder_path();
+                let service = crate::backup::BackupService::new(
+                    backup_config,
+                    &config.database_url,
+                    &recorder_path,
+                );
+                info!("Backup service initialized (dir: {})", backup_config.backup_dir);
+                Some(service)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let app_state = Arc::new(AppStateInner {
             core: core.clone(),
             sip_server,
@@ -322,6 +342,7 @@ impl AppStateBuilder {
             config_path,
             reload_requested: AtomicBool::new(false),
             addon_registry: addon_registry.clone(),
+            backup_service: backup_service.clone(),
             #[cfg(feature = "console")]
             console: console_state,
         });
@@ -329,6 +350,15 @@ impl AppStateBuilder {
         if let Some(mut manager) = callrecord_manager {
             tokio::spawn(async move {
                 manager.serve().await;
+            });
+        }
+
+        // Start backup scheduler if enabled
+        if let Some(ref backup_svc) = app_state.backup_service {
+            let svc = backup_svc.clone();
+            let backup_token = token.child_token();
+            crate::utils::spawn(async move {
+                svc.run_scheduler(backup_token).await;
             });
         }
 

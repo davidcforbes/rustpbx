@@ -28,6 +28,8 @@ pub fn ami_router(app_state: AppState) -> Router<AppState> {
         .route("/reload/routes", post(reload_routes_handler))
         .route("/reload/acl", post(reload_acl_handler))
         .route("/reload/app", post(reload_app_handler))
+        .route("/backup/status", get(backup_status_handler))
+        .route("/backup/trigger", post(backup_trigger_handler))
         .route(
             "/frequency_limits",
             get(list_frequency_limits).delete(clear_frequency_limits),
@@ -458,5 +460,65 @@ async fn clear_frequency_limits(
             })),
         )
             .into_response(),
+    }
+}
+
+async fn backup_status_handler(State(state): State<AppState>) -> Response {
+    let Some(ref backup_svc) = state.backup_service else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({
+                "status": "unavailable",
+                "reason": "backup_not_configured",
+                "message": "Add [backup] section with enabled = true to your config to enable backups",
+            })),
+        )
+            .into_response();
+    };
+
+    let status = backup_svc.get_status();
+    Json(serde_json::json!({
+        "status": "ok",
+        "backup": status,
+    }))
+    .into_response()
+}
+
+async fn backup_trigger_handler(
+    State(state): State<AppState>,
+    client_ip: ClientAddr,
+) -> Response {
+    let Some(ref backup_svc) = state.backup_service else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({
+                "status": "unavailable",
+                "reason": "backup_not_configured",
+                "message": "Add [backup] section with enabled = true to your config to enable backups",
+            })),
+        )
+            .into_response();
+    };
+
+    info!(%client_ip, "Manual backup triggered via /backup/trigger endpoint");
+
+    match backup_svc.trigger_backup().await {
+        Ok(path) => Json(serde_json::json!({
+            "status": "ok",
+            "message": "Backup completed successfully",
+            "path": path,
+        }))
+        .into_response(),
+        Err(err) => {
+            warn!(%client_ip, error = %err, "Manual backup failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "status": "error",
+                    "message": err,
+                })),
+            )
+                .into_response()
+        }
     }
 }

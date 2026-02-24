@@ -18,6 +18,7 @@ pub mod sip_trunk;
 pub mod sipflow;
 pub mod user;
 pub mod utils;
+pub mod voicemail;
 
 pub fn bad_request(message: impl Into<String>) -> axum::response::Response {
     let text = message.into();
@@ -52,7 +53,8 @@ pub fn router(state: Arc<ConsoleState>) -> Router {
         .merge(call_control::urls())
         .merge(presence::urls())
         .merge(addons::urls())
-        .merge(sipflow::urls());
+        .merge(sipflow::urls())
+        .merge(voicemail::urls());
 
     Router::new()
         .route(&format!("{base_path}/"), get(self::dashboard::dashboard))

@@ -635,6 +635,9 @@ pub struct Dialplan {
 
     pub call_forwarding: Option<CallForwardingConfig>,
 
+    /// Whether voicemail is enabled for the callee
+    pub voicemail_enabled: bool,
+
     pub route_invite: Option<Box<dyn RouteInvite>>,
     pub with_original_headers: bool,
     pub extensions: http::Extensions,
@@ -653,6 +656,7 @@ impl std::fmt::Debug for Dialplan {
             .field("media", &self.media)
             .field("call_timeout", &self.call_timeout)
             .field("enable_sipflow", &self.enable_sipflow)
+            .field("voicemail_enabled", &self.voicemail_enabled)
             .finish()
     }
 }
@@ -685,6 +689,7 @@ impl Dialplan {
             failure_action: FailureAction::default(),
             enable_sipflow: true, // Enable SIP flow recording by default
             call_forwarding: None,
+            voicemail_enabled: false,
             route_invite: None,
             with_original_headers: true,
             extensions: http::Extensions::new(),
@@ -742,6 +747,11 @@ impl Dialplan {
 
     pub fn with_call_forwarding(mut self, config: Option<CallForwardingConfig>) -> Self {
         self.call_forwarding = config;
+        self
+    }
+
+    pub fn with_voicemail_enabled(mut self, enabled: bool) -> Self {
+        self.voicemail_enabled = enabled;
         self
     }
 

@@ -10,7 +10,7 @@ use crate::{
         CallRecordSender,
         sipflow::{SipFlow, SipFlowBuilder},
     },
-    config::{ProxyConfig, QualityConfig, RtpConfig, SipFlowConfig},
+    config::{ProxyConfig, QualityConfig, RtpConfig, SipFlowConfig, VoicemailConfig},
     proxy::{
         FnCreateRouteInvite,
         active_call_registry::ActiveProxyCallRegistry,
@@ -76,6 +76,7 @@ pub struct SipServerInner {
     pub storage: Option<crate::storage::Storage>,
     pub presence_manager: Arc<PresenceManager>,
     pub quality_config: Option<QualityConfig>,
+    pub voicemail_config: Option<VoicemailConfig>,
 }
 
 pub type SipServerRef = Arc<SipServerInner>;
@@ -108,6 +109,7 @@ pub struct SipServerBuilder {
     storage: Option<crate::storage::Storage>,
     sipflow_config: Option<SipFlowConfig>,
     quality_config: Option<QualityConfig>,
+    voicemail_config: Option<VoicemailConfig>,
     no_bind: bool,
 }
 
@@ -135,6 +137,7 @@ impl SipServerBuilder {
             storage: None,
             sipflow_config: None,
             quality_config: None,
+            voicemail_config: None,
             no_bind: false,
         }
     }
@@ -146,6 +149,11 @@ impl SipServerBuilder {
 
     pub fn with_quality_config(mut self, config: Option<QualityConfig>) -> Self {
         self.quality_config = config;
+        self
+    }
+
+    pub fn with_voicemail_config(mut self, config: Option<VoicemailConfig>) -> Self {
+        self.voicemail_config = config;
         self
     }
 
@@ -533,6 +541,7 @@ impl SipServerBuilder {
             storage: self.storage,
             presence_manager,
             quality_config: self.quality_config,
+            voicemail_config: self.voicemail_config,
         });
 
         let inner_weak = Arc::downgrade(&inner);

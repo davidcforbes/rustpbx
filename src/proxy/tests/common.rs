@@ -99,6 +99,7 @@ pub async fn create_test_server_with_config(
         storage: None,
         presence_manager: Arc::new(crate::proxy::presence::PresenceManager::new(None)),
         quality_config: None,
+        voicemail_config: None,
     });
 
     // Add test users

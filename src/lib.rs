@@ -1,5 +1,6 @@
 pub mod addons;
 pub mod app;
+pub mod backup;
 pub mod call;
 pub mod callrecord;
 pub mod config;
@@ -17,3 +18,4 @@ pub mod sipflow;
 pub mod storage;
 pub mod utils;
 pub mod version; // Admin console
+pub mod voicemail;

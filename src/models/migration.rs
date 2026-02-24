@@ -21,6 +21,8 @@ impl MigratorTrait for Migrator {
             Box::new(super::call_record_from_number_index::Migration),
             Box::new(super::add_rewrite_columns::Migration),
             Box::new(super::add_quality_columns::Migration),
+            Box::new(super::add_transcript_text_column::Migration),
+            Box::new(super::create_voicemail_tables::Migration),
         ]
     }
 }

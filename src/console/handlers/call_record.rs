@@ -25,7 +25,7 @@ use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use sea_orm::sea_query::Order;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, DatabaseConnection, DbErr,
-    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -60,6 +60,8 @@ struct QueryCallRecordFilters {
     sip_trunk_ids: Option<Vec<i64>>,
     #[serde(default)]
     tags: Option<Vec<String>>,
+    #[serde(default)]
+    transcript_search: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -80,6 +82,10 @@ pub fn urls() -> Router<Arc<ConsoleState>> {
         .route(
             "/call-records",
             get(page_call_records).post(query_call_records),
+        )
+        .route(
+            "/call-records/search-transcripts",
+            axum::routing::post(search_transcripts),
         )
         .route(
             "/call-records/{id}",
@@ -665,11 +671,30 @@ async fn query_call_records(
         inline_recordings.push(inline_url);
     }
 
+    let transcript_search_term = filters
+        .as_ref()
+        .and_then(|f| f.transcript_search.as_ref())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
     let items: Vec<Value> = pagination
         .items
         .iter()
         .zip(inline_recordings.iter())
-        .map(|(record, inline)| build_record_payload(record, &related, &state, inline.as_deref()))
+        .map(|(record, inline)| {
+            let mut payload =
+                build_record_payload(record, &related, &state, inline.as_deref());
+            if let Some(ref search_term) = transcript_search_term {
+                if let Some(snippet) =
+                    extract_transcript_snippet(record.transcript_text.as_deref(), search_term)
+                {
+                    payload
+                        .as_object_mut()
+                        .map(|obj| obj.insert("transcript_snippet".to_string(), json!(snippet)));
+                }
+            }
+            payload
+        })
         .collect();
 
     let summary = match build_summary(db, condition).await {
@@ -988,6 +1013,17 @@ fn build_condition(filters: &Option<QueryCallRecordFilters>) -> Condition {
             }
             condition = condition.add(any_tag);
         }
+
+        if let Some(ts_raw) = filters.transcript_search.as_ref() {
+            let trimmed = ts_raw.trim();
+            if !trimmed.is_empty() {
+                let escaped = trimmed.replace('%', "\\%").replace('_', "\\_");
+                let pattern = format!("%{}%", escaped);
+                condition = condition.add(CallRecordColumn::TranscriptText.like(pattern));
+                // Also ensure we only match records that have transcripts
+                condition = condition.add(CallRecordColumn::HasTranscript.eq(true));
+            }
+        }
     }
 
     condition
@@ -1185,6 +1221,7 @@ fn build_record_payload(
         "has_transcript": record.has_transcript,
         "transcript_status": record.transcript_status,
         "transcript_language": record.transcript_language,
+        "transcript_text": record.transcript_text,
         "duration_secs": record.duration_secs,
         "recording": recording,
         "started_at": record.started_at.to_rfc3339(),
@@ -1579,6 +1616,224 @@ async fn build_summary(_db: &DatabaseConnection, _condition: Condition) -> Resul
         "outbound": 0,
         "asr": 0.0,
     }))
+}
+
+/// Extract a snippet from transcript text around the first occurrence of the search term.
+/// The transcript_text column stores JSON (array of segments or plain text).
+/// Returns a short excerpt with context around the match.
+fn extract_transcript_snippet(transcript_text: Option<&str>, search_term: &str) -> Option<String> {
+    let raw = transcript_text?;
+    if raw.trim().is_empty() || search_term.is_empty() {
+        return None;
+    }
+
+    // Extract plain text from JSON transcript data, then work with char indices
+    // to avoid issues with multi-byte UTF-8 boundaries.
+    let plain_text = extract_plain_text_from_transcript(raw);
+    let chars: Vec<char> = plain_text.chars().collect();
+    let lower_chars: Vec<char> = plain_text.to_lowercase().chars().collect();
+    let needle_chars: Vec<char> = search_term.to_lowercase().chars().collect();
+
+    if needle_chars.is_empty() || lower_chars.len() < needle_chars.len() {
+        return None;
+    }
+
+    // Find the char-index of the match
+    let match_pos = lower_chars
+        .windows(needle_chars.len())
+        .position(|window| window == needle_chars.as_slice())?;
+
+    // Build a snippet with ~60 chars of context on each side
+    let context = 60usize;
+
+    let start = if match_pos > context {
+        let candidate = match_pos - context;
+        // Try to find a word boundary (space) within the context window
+        chars[candidate..match_pos]
+            .iter()
+            .position(|&c| c == ' ')
+            .map(|i| candidate + i + 1)
+            .unwrap_or(candidate)
+    } else {
+        0
+    };
+
+    let end_pos = (match_pos + needle_chars.len()).min(chars.len());
+    let end = if end_pos + context < chars.len() {
+        let candidate = end_pos + context;
+        chars[end_pos..candidate]
+            .iter()
+            .rposition(|&c| c == ' ')
+            .map(|i| end_pos + i)
+            .unwrap_or(candidate)
+    } else {
+        chars.len()
+    };
+
+    let mut snippet = String::new();
+    if start > 0 {
+        snippet.push_str("...");
+    }
+    snippet.extend(&chars[start..end]);
+    if end < chars.len() {
+        snippet.push_str("...");
+    }
+
+    Some(snippet)
+}
+
+/// Parse transcript JSON and extract plain text content.
+/// Supports both JSON array of segments (with "text" fields) and plain string format.
+fn extract_plain_text_from_transcript(raw: &str) -> String {
+    // Try parsing as JSON
+    if let Ok(parsed) = serde_json::from_str::<Value>(raw) {
+        match &parsed {
+            // Array of transcript segments: [{"text": "hello", "speaker": "A", ...}, ...]
+            Value::Array(segments) => {
+                let texts: Vec<&str> = segments
+                    .iter()
+                    .filter_map(|seg| seg.get("text").and_then(|v| v.as_str()))
+                    .collect();
+                if !texts.is_empty() {
+                    return texts.join(" ");
+                }
+                // Fallback: try "content" field
+                let contents: Vec<&str> = segments
+                    .iter()
+                    .filter_map(|seg| seg.get("content").and_then(|v| v.as_str()))
+                    .collect();
+                if !contents.is_empty() {
+                    return contents.join(" ");
+                }
+            }
+            // Plain string stored as JSON string
+            Value::String(s) => {
+                return s.clone();
+            }
+            // Object with a "text" or "transcript" field
+            Value::Object(obj) => {
+                if let Some(text) = obj.get("text").and_then(|v| v.as_str()) {
+                    return text.to_string();
+                }
+                if let Some(text) = obj.get("transcript").and_then(|v| v.as_str()) {
+                    return text.to_string();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Not valid JSON or unrecognized structure; use raw text
+    raw.to_string()
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TranscriptSearchRequest {
+    #[serde(default)]
+    query: String,
+    #[serde(default = "default_transcript_search_limit")]
+    limit: u32,
+    #[serde(default)]
+    date_from: Option<String>,
+    #[serde(default)]
+    date_to: Option<String>,
+}
+
+fn default_transcript_search_limit() -> u32 {
+    25
+}
+
+async fn search_transcripts(
+    State(state): State<Arc<ConsoleState>>,
+    AuthRequired(_): AuthRequired,
+    Json(payload): Json<TranscriptSearchRequest>,
+) -> Response {
+    let search_term = payload.query.trim().to_string();
+    if search_term.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "message": "Search query is required" })),
+        )
+            .into_response();
+    }
+
+    let db = state.db();
+    let limit = payload.limit.min(100).max(1) as u64;
+
+    let mut condition = Condition::all();
+    condition = condition.add(CallRecordColumn::HasTranscript.eq(true));
+
+    let escaped = search_term.replace('%', "\\%").replace('_', "\\_");
+    let pattern = format!("%{}%", escaped);
+    condition = condition.add(CallRecordColumn::TranscriptText.like(pattern));
+
+    let date_from = parse_date(payload.date_from.as_ref(), false);
+    let date_to = parse_date(payload.date_to.as_ref(), true);
+
+    if let Some(from) = date_from {
+        condition = condition.add(CallRecordColumn::StartedAt.gte(from));
+    } else {
+        // Default to 90 days to avoid full table scan
+        let ninety_days_ago = Utc::now() - chrono::Duration::days(90);
+        condition = condition.add(CallRecordColumn::StartedAt.gte(ninety_days_ago));
+    }
+
+    if let Some(to) = date_to {
+        condition = condition.add(CallRecordColumn::StartedAt.lte(to));
+    }
+
+    let records = match CallRecordEntity::find()
+        .filter(condition)
+        .order_by(CallRecordColumn::StartedAt, Order::Desc)
+        .limit(limit)
+        .all(db)
+        .await
+    {
+        Ok(records) => records,
+        Err(err) => {
+            warn!("failed to search transcripts: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "message": "Failed to search transcripts" })),
+            )
+                .into_response();
+        }
+    };
+
+    let related = match load_related_context(db, &records).await {
+        Ok(related) => related,
+        Err(err) => {
+            warn!("failed to load related data for transcript search: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let items: Vec<Value> = records
+        .iter()
+        .map(|record| {
+            let snippet =
+                extract_transcript_snippet(record.transcript_text.as_deref(), &search_term);
+            let mut payload = build_record_payload(record, &related, &state, None);
+            if let Some(ref snippet_text) = snippet {
+                payload
+                    .as_object_mut()
+                    .map(|obj| obj.insert("transcript_snippet".to_string(), json!(snippet_text)));
+            }
+            payload
+        })
+        .collect();
+
+    Json(json!({
+        "query": search_term,
+        "total_items": items.len(),
+        "items": items,
+    }))
+    .into_response()
 }
 
 fn equals_ignore_ascii_case(left: &str, right: &str) -> bool {

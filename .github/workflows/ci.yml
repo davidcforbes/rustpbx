@@ -1,0 +1,308 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  # Use crates.io version of rsipstack in CI (local dev uses path override)
+  RSIPSTACK_VERSION: "0.4.7"
+
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Job 1: Lint (clippy + rustfmt)
+  # ===========================================================================
+  lint:
+    name: Lint (Rust ${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, nightly]
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch path dependencies for CI
+        run: |
+          # Replace local path dependency with crates.io version
+          if grep -q 'rsipstack.*path\s*=' Cargo.toml; then
+            sed -i 's|^rsipstack = { path = "[^"]*" }|rsipstack = "'"$RSIPSTACK_VERSION"'"|' Cargo.toml
+            echo "Patched rsipstack to crates.io version $RSIPSTACK_VERSION"
+            grep rsipstack Cargo.toml
+          fi
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: lint-${{ matrix.rust }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            lint-${{ matrix.rust }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            pkg-config \
+            libopus-dev
+
+      - name: Run cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # ===========================================================================
+  # Job 2: Build (debug + release)
+  # ===========================================================================
+  build:
+    name: Build (${{ matrix.profile }}, Rust ${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, nightly]
+        profile: [debug, release]
+        exclude:
+          # Skip nightly release builds to save CI time
+          - rust: nightly
+            profile: release
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch path dependencies for CI
+        run: |
+          if grep -q 'rsipstack.*path\s*=' Cargo.toml; then
+            sed -i 's|^rsipstack = { path = "[^"]*" }|rsipstack = "'"$RSIPSTACK_VERSION"'"|' Cargo.toml
+            echo "Patched rsipstack to crates.io version $RSIPSTACK_VERSION"
+          fi
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: build-${{ matrix.rust }}-${{ matrix.profile }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            build-${{ matrix.rust }}-${{ matrix.profile }}-
+            build-${{ matrix.rust }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            pkg-config \
+            libopus-dev
+
+      - name: Build (${{ matrix.profile }})
+        run: |
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            cargo build --release
+          else
+            cargo build
+          fi
+
+      - name: Verify binary exists
+        run: |
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            ls -lh target/release/rustpbx
+            file target/release/rustpbx
+          else
+            ls -lh target/debug/rustpbx
+            file target/debug/rustpbx
+          fi
+
+      - name: Upload release binary
+        if: matrix.profile == 'release' && matrix.rust == 'stable'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustpbx-linux-x86_64
+          path: target/release/rustpbx
+          retention-days: 7
+
+  # ===========================================================================
+  # Job 3: Unit tests
+  # ===========================================================================
+  test:
+    name: Test (Rust ${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, nightly]
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch path dependencies for CI
+        run: |
+          if grep -q 'rsipstack.*path\s*=' Cargo.toml; then
+            sed -i 's|^rsipstack = { path = "[^"]*" }|rsipstack = "'"$RSIPSTACK_VERSION"'"|' Cargo.toml
+            echo "Patched rsipstack to crates.io version $RSIPSTACK_VERSION"
+          fi
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: test-${{ matrix.rust }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            test-${{ matrix.rust }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            pkg-config \
+            libopus-dev
+
+      - name: Run unit tests
+        run: cargo test --workspace -- --nocapture
+        env:
+          RUST_BACKTRACE: 1
+
+  # ===========================================================================
+  # Job 4: Python lint (test files)
+  # ===========================================================================
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linting tools
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check tests/
+
+      - name: Run ruff format check
+        run: ruff format --check tests/
+        # Format check is advisory -- don't fail the build
+        continue-on-error: true
+
+  # ===========================================================================
+  # Job 5: Integration tests (manual trigger only)
+  # ===========================================================================
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch'
+    needs: [build]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python test dependencies
+        run: pip install -r tests/requirements.txt
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rustpbx-linux-x86_64
+          path: ./bin
+
+      - name: Make binary executable
+        run: chmod +x ./bin/rustpbx
+
+      - name: Run integration tests (L0 smoke)
+        run: |
+          python -m pytest tests/test_L0_smoke.py -v \
+            --timeout=60 \
+            --tb=short \
+            -x
+        env:
+          RUSTPBX_HOST: "127.0.0.1"
+          RUSTPBX_HTTP_PORT: "8080"
+          RUSTPBX_HTTPS_PORT: "8443"
+          RUSTPBX_SIP_PORT: "5060"
+          RUSTPBX_SCHEME: "http"
+          RUSTPBX_VERIFY_TLS: "false"
+        # Integration tests are expected to fail without a running server
+        # This job is a placeholder for when a test server is provisioned
+        continue-on-error: true
+
+      - name: Run integration tests (L1 infrastructure)
+        run: |
+          python -m pytest tests/test_L1_infra.py -v \
+            --timeout=120 \
+            --tb=short
+        env:
+          RUSTPBX_HOST: "127.0.0.1"
+          RUSTPBX_SCHEME: "http"
+          RUSTPBX_VERIFY_TLS: "false"
+        continue-on-error: true
+
+      - name: Run integration tests (L2 API)
+        run: |
+          python -m pytest tests/test_L2_api.py -v \
+            --timeout=120 \
+            --tb=short
+        env:
+          RUSTPBX_HOST: "127.0.0.1"
+          RUSTPBX_SCHEME: "http"
+          RUSTPBX_VERIFY_TLS: "false"
+        continue-on-error: true

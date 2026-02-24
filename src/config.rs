@@ -207,6 +207,10 @@ pub struct Config {
     pub sipflow: Option<SipFlowConfig>,
     #[serde(default)]
     pub quality: Option<QualityConfig>,
+    #[serde(default)]
+    pub voicemail: Option<VoicemailConfig>,
+    #[serde(default)]
+    pub backup: Option<BackupConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -384,6 +388,59 @@ fn default_sipflow_id_cache_size() -> usize {
     8192
 }
 
+fn default_voicemail_enabled() -> bool {
+    true
+}
+
+fn default_voicemail_max_message_duration_secs() -> u64 {
+    120
+}
+
+fn default_voicemail_max_messages_per_mailbox() -> u32 {
+    50
+}
+
+fn default_voicemail_greeting_path() -> String {
+    "./config/voicemail/greetings".to_string()
+}
+
+fn default_voicemail_storage_path() -> String {
+    "./config/voicemail/messages".to_string()
+}
+
+fn default_voicemail_auto_transcribe() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VoicemailConfig {
+    #[serde(default = "default_voicemail_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_voicemail_max_message_duration_secs")]
+    pub max_message_duration_secs: u64,
+    #[serde(default = "default_voicemail_max_messages_per_mailbox")]
+    pub max_messages_per_mailbox: u32,
+    #[serde(default = "default_voicemail_greeting_path")]
+    pub greeting_path: String,
+    #[serde(default = "default_voicemail_storage_path")]
+    pub storage_path: String,
+    #[serde(default = "default_voicemail_auto_transcribe")]
+    pub auto_transcribe: bool,
+}
+
+impl Default for VoicemailConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_voicemail_enabled(),
+            max_message_duration_secs: default_voicemail_max_message_duration_secs(),
+            max_messages_per_mailbox: default_voicemail_max_messages_per_mailbox(),
+            greeting_path: default_voicemail_greeting_path(),
+            storage_path: default_voicemail_storage_path(),
+            auto_transcribe: default_voicemail_auto_transcribe(),
+        }
+    }
+}
+
 fn default_quality_enabled() -> bool {
     true
 }
@@ -417,6 +474,51 @@ impl Default for QualityConfig {
             loss_critical_pct: None,
             jitter_warning_ms: None,
             jitter_critical_ms: None,
+        }
+    }
+}
+
+fn default_backup_schedule_cron() -> String {
+    "0 * * * *".to_string()
+}
+
+fn default_backup_dir() -> String {
+    "./backups".to_string()
+}
+
+fn default_backup_retention_days() -> u32 {
+    30
+}
+
+fn default_backup_notify_on_failure() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BackupConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_backup_schedule_cron")]
+    pub schedule_cron: String,
+    #[serde(default = "default_backup_dir")]
+    pub backup_dir: String,
+    #[serde(default = "default_backup_retention_days")]
+    pub retention_days: u32,
+    #[serde(default)]
+    pub include_recordings: bool,
+    #[serde(default = "default_backup_notify_on_failure")]
+    pub notify_on_failure: bool,
+}
+
+impl Default for BackupConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            schedule_cron: default_backup_schedule_cron(),
+            backup_dir: default_backup_dir(),
+            retention_days: default_backup_retention_days(),
+            include_recordings: false,
+            notify_on_failure: default_backup_notify_on_failure(),
         }
     }
 }
@@ -797,6 +899,8 @@ impl Default for Config {
             addons: HashMap::new(),
             sipflow: None,
             quality: None,
+            voicemail: None,
+            backup: None,
         }
     }
 }

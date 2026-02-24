@@ -67,6 +67,7 @@ pub async fn persist_call_record(
     let has_transcript = details.has_transcript;
     let transcript_status = details.transcript_status.clone();
     let transcript_language = details.transcript_language.clone();
+    let transcript_text = details.transcript_text.clone();
     let tags = details.tags.clone();
     let quality_score = details.quality_score.map(|v| v as f64);
     let packet_loss_pct = details.packet_loss_pct.map(|v| v as f64);
@@ -108,6 +109,7 @@ pub async fn persist_call_record(
         has_transcript: Set(has_transcript),
         transcript_status: Set(transcript_status_str),
         transcript_language: Set(transcript_language.clone()),
+        transcript_text: Set(transcript_text.clone()),
         tags: Set(tags.clone()),
         quality_score: Set(quality_score),
         packet_loss_pct: Set(packet_loss_pct),
@@ -148,6 +150,7 @@ pub async fn persist_call_record(
                     Column::HasTranscript,
                     Column::TranscriptStatus,
                     Column::TranscriptLanguage,
+                    Column::TranscriptText,
                     Column::Tags,
                     Column::QualityScore,
                     Column::PacketLossPct,
@@ -247,6 +250,8 @@ pub struct Model {
     pub has_transcript: bool,
     pub transcript_status: String,
     pub transcript_language: Option<String>,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub transcript_text: Option<String>,
     pub tags: Option<Json>,
     pub quality_score: Option<f64>,
     pub packet_loss_pct: Option<f64>,
@@ -342,6 +347,7 @@ impl MigrationTrait for Migration {
                             .default("pending"),
                     )
                     .col(string_null(Column::TranscriptLanguage).char_len(16))
+                    .col(text_null(Column::TranscriptText))
                     .col(json_null(Column::Tags))
                     .col(ColumnDef::new(Column::QualityScore).double().null())
                     .col(ColumnDef::new(Column::PacketLossPct).double().null())
@@ -459,6 +465,7 @@ impl Into<CallRecord> for Model {
             has_transcript: self.has_transcript,
             transcript_status: Some(self.transcript_status),
             transcript_language: self.transcript_language,
+            transcript_text: self.transcript_text,
             tags: self.tags,
             quality_score: self.quality_score.map(|v| v as f32),
             packet_loss_pct: self.packet_loss_pct.map(|v| v as f32),

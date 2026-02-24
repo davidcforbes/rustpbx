@@ -72,6 +72,7 @@ impl PlainTextBackend {
                 phone: None,
                 note: None,
                 allow_guest_calls: false,
+                voicemail_enabled: true,
             };
             users.insert(username.to_string(), user);
         }

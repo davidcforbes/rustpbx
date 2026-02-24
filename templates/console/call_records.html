@@ -101,7 +101,7 @@
                         </div>
                     </div>
                     <div class="flex flex-grow flex-wrap items-center justify-end gap-3">
-                        <label class="relative flex-1 min-w-[18rem]" aria-label="Search call records">
+                        <label class="relative flex-1 min-w-[14rem]" aria-label="Search call records">
                             <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                                 viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -110,6 +110,16 @@
                             <input type="search" x-model.trim="search" @input.debounce.400ms="scheduleFetch()"
                                 class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-9 text-sm text-slate-700 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
                                 placeholder="Search call-id, number...">
+                        </label>
+                        <label class="relative flex-1 min-w-[14rem]" aria-label="Search transcripts">
+                            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-400"
+                                viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 5h14M3 10h10M3 15h7" />
+                            </svg>
+                            <input type="search" x-model.trim="transcriptSearch" @input.debounce.500ms="scheduleFetch()"
+                                class="w-full rounded-lg border border-slate-200 px-3 py-2 pl-9 text-sm text-slate-700 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                                placeholder="Search transcripts...">
                         </label>
                         <div class="flex flex-wrap items-center gap-2">
                             <select aria-label="Add filter"
@@ -396,34 +406,41 @@
                                 <td class="px-4 py-2">
                                     <template
                                         x-if="transcriptStatusIcon(record.transcript_status, record.has_transcript) !== 'pending'">
-                                        <div class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                                            :class="transcriptStatusClasses(record.transcript_status, record.has_transcript)"
-                                            :title="transcriptStatusLabel(record.transcript_status, record.has_transcript)">
-                                            <svg x-cloak
-                                                x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'ready'"
-                                                class="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                                stroke-width="1.6">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M5 10l3 3 7-7" />
-                                            </svg>
-                                            <svg x-cloak
-                                                x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'processing'"
-                                                class="h-3 w-3 animate-spin" viewBox="0 0 20 20" fill="none"
-                                                stroke="currentColor" stroke-width="1.5">
-                                                <circle class="opacity-25" cx="10" cy="10" r="7" stroke="currentColor"
-                                                    stroke-width="1.5"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M10 3a7 7 0 0 1 7 7h-1.8a5.2 5.2 0 0 0-5.2-5.2V3Z" />
-                                            </svg>
-                                            <svg x-cloak
-                                                x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'failed'"
-                                                class="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                                stroke-width="1.6">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M6 6l8 8M6 14l8-8" />
-                                            </svg>
-                                            <span
-                                                x-text="transcriptStatusLabel(record.transcript_status, record.has_transcript)"></span>
+                                        <div>
+                                            <div class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                                :class="transcriptStatusClasses(record.transcript_status, record.has_transcript)"
+                                                :title="transcriptStatusLabel(record.transcript_status, record.has_transcript)">
+                                                <svg x-cloak
+                                                    x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'ready'"
+                                                    class="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                                    stroke-width="1.6">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M5 10l3 3 7-7" />
+                                                </svg>
+                                                <svg x-cloak
+                                                    x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'processing'"
+                                                    class="h-3 w-3 animate-spin" viewBox="0 0 20 20" fill="none"
+                                                    stroke="currentColor" stroke-width="1.5">
+                                                    <circle class="opacity-25" cx="10" cy="10" r="7" stroke="currentColor"
+                                                        stroke-width="1.5"></circle>
+                                                    <path class="opacity-75" fill="currentColor"
+                                                        d="M10 3a7 7 0 0 1 7 7h-1.8a5.2 5.2 0 0 0-5.2-5.2V3Z" />
+                                                </svg>
+                                                <svg x-cloak
+                                                    x-show="transcriptStatusIcon(record.transcript_status, record.has_transcript) === 'failed'"
+                                                    class="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                                    stroke-width="1.6">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M6 6l8 8M6 14l8-8" />
+                                                </svg>
+                                                <span
+                                                    x-text="transcriptStatusLabel(record.transcript_status, record.has_transcript)"></span>
+                                            </div>
+                                            <template x-if="record.transcript_snippet">
+                                                <div class="mt-1 max-w-[20rem] truncate text-[11px] text-violet-600 italic"
+                                                    :title="record.transcript_snippet"
+                                                    x-text="record.transcript_snippet"></div>
+                                            </template>
                                         </div>
                                     </template>
                                 </td>
@@ -536,6 +553,7 @@
                 billing_status: ['any'],
             },
             search: '',
+            transcriptSearch: '',
             statusFilter: 'any',
             directionFilter: 'any',
             dateRangeLabel: 'Custom',
@@ -767,6 +785,7 @@
                 };
 
                 this.$watch('search', scheduleWatcher);
+                this.$watch('transcriptSearch', scheduleWatcher);
                 this.$watch('statusFilter', immediateWatcher);
                 this.$watch('directionFilter', immediateWatcher);
                 this.$watch('billingStatusFilter', immediateWatcher);
@@ -871,6 +890,11 @@
                 const query = (this.search || '').trim();
                 if (query) {
                     filters.q = query;
+                }
+
+                const transcriptQuery = (this.transcriptSearch || '').trim();
+                if (transcriptQuery) {
+                    filters.transcript_search = transcriptQuery;
                 }
 
                 const status = (this.statusFilter || '').toLowerCase();
@@ -1064,6 +1088,7 @@
                 }
                 this._sync.filters = true;
                 this.search = '';
+                this.transcriptSearch = '';
                 this.statusFilter = 'any';
                 this.directionFilter = 'any';
                 this.billingStatusFilter = 'any';

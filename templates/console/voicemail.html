@@ -1,0 +1,451 @@
+{% extends "console/layout.html" %}
+{% block title %}Voicemail · {{site_name|default('RustPBX')}}{% endblock %}
+{% block content %}
+<div class="p-6">
+    <div class="mx-auto max-w-7xl space-y-6" x-data='voicemailConsole({
+            basePath: {{ (base_path | default("/console")) | tojson }},
+            mailboxId: {{ mailbox_id | tojson }},
+            unreadCount: {{ unread_count | default(0) | tojson }}
+        })' x-init="init()">
+
+        <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-sky-600">Communications</p>
+                <h1 class="text-2xl font-semibold text-slate-900">Voicemail</h1>
+                <p class="text-sm text-slate-500">
+                    Mailbox: <span class="font-medium text-slate-700" x-text="mailboxId"></span>
+                    <template x-if="unreadCount > 0">
+                        <span class="ml-2 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
+                            <span x-text="unreadCount"></span> unread
+                        </span>
+                    </template>
+                </p>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 text-xs font-medium text-slate-600 w-fit">
+            <button type="button" class="rounded-md px-4 py-1.5 transition"
+                :class="activeTab === 'messages' ? 'bg-sky-100 text-sky-700' : 'hover:bg-slate-100'"
+                @click="activeTab = 'messages'">
+                Messages
+                <template x-if="unreadCount > 0">
+                    <span class="ml-1 inline-flex items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white" x-text="unreadCount"></span>
+                </template>
+            </button>
+            <button type="button" class="rounded-md px-4 py-1.5 transition"
+                :class="activeTab === 'greetings' ? 'bg-sky-100 text-sky-700' : 'hover:bg-slate-100'"
+                @click="activeTab = 'greetings'">Greetings</button>
+        </div>
+
+        <!-- Messages Tab -->
+        <section x-show="activeTab === 'messages'" x-cloak class="space-y-4">
+            <div class="rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+                <div class="border-b border-slate-100 px-6 py-4">
+                    <h2 class="text-base font-semibold text-slate-900">Voicemail Messages</h2>
+                </div>
+
+                <!-- Loading indicator -->
+                <div x-show="loadingMessages" class="flex items-center justify-center py-12">
+                    <svg class="h-6 w-6 animate-spin text-sky-500" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </div>
+
+                <!-- Empty state -->
+                <div x-show="!loadingMessages && messages.length === 0" class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.98V19.5Z" />
+                    </svg>
+                    <p class="mt-3 text-sm text-slate-500">No voicemail messages</p>
+                </div>
+
+                <!-- Message list -->
+                <div x-show="!loadingMessages && messages.length > 0" class="divide-y divide-slate-100">
+                    <template x-for="msg in messages" :key="msg.id">
+                        <div class="flex items-start gap-4 px-6 py-4 hover:bg-slate-50 transition"
+                             :class="{ 'bg-sky-50/40': !msg.is_read }">
+                            <!-- Unread indicator -->
+                            <div class="mt-2 flex-shrink-0">
+                                <div class="h-2.5 w-2.5 rounded-full"
+                                     :class="msg.is_read ? 'bg-slate-200' : 'bg-sky-500'"></div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="min-w-0 flex-1 space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-slate-900" x-text="msg.caller_name || msg.caller_id"></span>
+                                    <template x-if="msg.caller_name">
+                                        <span class="text-xs text-slate-400" x-text="msg.caller_id"></span>
+                                    </template>
+                                    <template x-if="msg.is_urgent">
+                                        <span class="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">URGENT</span>
+                                    </template>
+                                </div>
+
+                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                    <span x-text="formatDate(msg.created_at)"></span>
+                                    <span>
+                                        <svg class="inline h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" />
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                                        </svg>
+                                        <span x-text="formatDuration(msg.duration_secs)"></span>
+                                    </span>
+                                </div>
+
+                                <!-- Transcript preview -->
+                                <template x-if="msg.transcript_text">
+                                    <p class="mt-1 text-xs text-slate-600 line-clamp-2" x-text="msg.transcript_text"></p>
+                                </template>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <template x-if="!msg.is_read">
+                                    <button type="button"
+                                        class="rounded-lg p-1.5 text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition"
+                                        title="Mark as read"
+                                        @click="markRead(msg)">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </button>
+                                </template>
+                                <button type="button"
+                                    class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                                    title="Delete message"
+                                    @click="confirmDeleteMessage(msg)">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </section>
+
+        <!-- Greetings Tab -->
+        <section x-show="activeTab === 'greetings'" x-cloak class="space-y-4">
+            <!-- Upload form -->
+            <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+                <h2 class="text-base font-semibold text-slate-900 mb-4">Upload New Greeting</h2>
+                <form @submit.prevent="uploadGreeting" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Greeting Type</label>
+                        <select x-model="uploadType"
+                            class="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-200">
+                            <option value="standard">Standard</option>
+                            <option value="busy">Busy</option>
+                            <option value="unavailable">Unavailable</option>
+                            <option value="temporary">Temporary</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Audio File (WAV, MP3, OGG, WebM)</label>
+                        <input type="file" accept=".wav,.mp3,.ogg,.webm,audio/*" x-ref="greetingFile"
+                            class="block w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm file:mr-3 file:rounded file:border-0 file:bg-sky-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-sky-700 hover:file:bg-sky-100" />
+                    </div>
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                        :disabled="uploading">
+                        <svg x-show="uploading" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span x-text="uploading ? 'Uploading...' : 'Upload'"></span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Greetings list -->
+            <div class="rounded-xl bg-white shadow-sm ring-1 ring-black/5">
+                <div class="border-b border-slate-100 px-6 py-4">
+                    <h2 class="text-base font-semibold text-slate-900">Your Greetings</h2>
+                </div>
+
+                <!-- Loading indicator -->
+                <div x-show="loadingGreetings" class="flex items-center justify-center py-12">
+                    <svg class="h-6 w-6 animate-spin text-sky-500" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </div>
+
+                <!-- Empty state -->
+                <div x-show="!loadingGreetings && greetings.length === 0" class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                    </svg>
+                    <p class="mt-3 text-sm text-slate-500">No greetings uploaded yet</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload a greeting above to get started</p>
+                </div>
+
+                <!-- Greeting cards -->
+                <div x-show="!loadingGreetings && greetings.length > 0" class="divide-y divide-slate-100">
+                    <template x-for="g in greetings" :key="g.id">
+                        <div class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition">
+                            <!-- Type badge -->
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize"
+                                    :class="{
+                                        'bg-sky-100 text-sky-700': g.greeting_type === 'standard',
+                                        'bg-amber-100 text-amber-700': g.greeting_type === 'busy',
+                                        'bg-slate-100 text-slate-700': g.greeting_type === 'unavailable',
+                                        'bg-violet-100 text-violet-700': g.greeting_type === 'temporary'
+                                    }"
+                                    x-text="g.greeting_type"></span>
+                            </div>
+
+                            <!-- Info -->
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <template x-if="g.is_active">
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                            ACTIVE
+                                        </span>
+                                    </template>
+                                    <span class="text-xs text-slate-400" x-text="formatDate(g.created_at)"></span>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <template x-if="!g.is_active">
+                                    <button type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
+                                        @click="activateGreeting(g)">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        Activate
+                                    </button>
+                                </template>
+                                <button type="button"
+                                    class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                                    title="Delete greeting"
+                                    @click="confirmDeleteGreeting(g)">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('voicemailConsole', (config) => ({
+        basePath: config.basePath || '/console',
+        mailboxId: config.mailboxId || '',
+        unreadCount: config.unreadCount || 0,
+        activeTab: 'messages',
+
+        // Messages
+        messages: [],
+        loadingMessages: false,
+
+        // Greetings
+        greetings: [],
+        loadingGreetings: false,
+        uploadType: 'standard',
+        uploading: false,
+
+        init() {
+            this.fetchMessages();
+            this.fetchGreetings();
+        },
+
+        async fetchMessages() {
+            this.loadingMessages = true;
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/messages`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.messages = data.items || [];
+                    this.unreadCount = data.unread_count || 0;
+                }
+            } catch (e) {
+                console.error('Failed to fetch messages:', e);
+            } finally {
+                this.loadingMessages = false;
+            }
+        },
+
+        async fetchGreetings() {
+            this.loadingGreetings = true;
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/greetings`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.greetings = data.items || [];
+                }
+            } catch (e) {
+                console.error('Failed to fetch greetings:', e);
+            } finally {
+                this.loadingGreetings = false;
+            }
+        },
+
+        async markRead(msg) {
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/messages/${msg.id}/read`, { method: 'POST' });
+                if (resp.ok) {
+                    msg.is_read = true;
+                    this.unreadCount = Math.max(0, this.unreadCount - 1);
+                    this.notify('Message marked as read', 'success');
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to mark as read', 'error');
+                }
+            } catch (e) {
+                this.notify('Failed to mark message as read', 'error');
+            }
+        },
+
+        confirmDeleteMessage(msg) {
+            window.dispatchEvent(new CustomEvent('console:confirm', {
+                detail: {
+                    title: 'Delete voicemail?',
+                    message: `Delete message from ${msg.caller_name || msg.caller_id}?`,
+                    confirmLabel: 'Delete',
+                    destructive: true,
+                    onConfirm: () => this.deleteMessage(msg)
+                }
+            }));
+        },
+
+        async deleteMessage(msg) {
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/messages/${msg.id}`, { method: 'DELETE' });
+                if (resp.ok) {
+                    this.messages = this.messages.filter(m => m.id !== msg.id);
+                    if (!msg.is_read) {
+                        this.unreadCount = Math.max(0, this.unreadCount - 1);
+                    }
+                    this.notify('Message deleted', 'success');
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to delete message', 'error');
+                }
+            } catch (e) {
+                this.notify('Failed to delete message', 'error');
+            }
+        },
+
+        async uploadGreeting() {
+            const fileInput = this.$refs.greetingFile;
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                this.notify('Please select an audio file', 'error');
+                return;
+            }
+
+            this.uploading = true;
+            const formData = new FormData();
+            formData.append('greeting_type', this.uploadType);
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/greetings/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (resp.ok) {
+                    this.notify('Greeting uploaded successfully', 'success');
+                    fileInput.value = '';
+                    this.uploadType = 'standard';
+                    await this.fetchGreetings();
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Upload failed', 'error');
+                }
+            } catch (e) {
+                this.notify('Failed to upload greeting', 'error');
+            } finally {
+                this.uploading = false;
+            }
+        },
+
+        async activateGreeting(g) {
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/greetings/${g.id}/activate`, { method: 'POST' });
+                if (resp.ok) {
+                    // Deactivate all greetings of the same type, then activate selected
+                    this.greetings.forEach(gg => {
+                        if (gg.greeting_type === g.greeting_type) {
+                            gg.is_active = false;
+                        }
+                    });
+                    g.is_active = true;
+                    this.notify('Greeting activated', 'success');
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to activate greeting', 'error');
+                }
+            } catch (e) {
+                this.notify('Failed to activate greeting', 'error');
+            }
+        },
+
+        confirmDeleteGreeting(g) {
+            window.dispatchEvent(new CustomEvent('console:confirm', {
+                detail: {
+                    title: 'Delete greeting?',
+                    message: `Delete this ${g.greeting_type} greeting?`,
+                    confirmLabel: 'Delete',
+                    destructive: true,
+                    onConfirm: () => this.deleteGreeting(g)
+                }
+            }));
+        },
+
+        async deleteGreeting(g) {
+            try {
+                const resp = await fetch(`${this.basePath}/voicemail/greetings/${g.id}`, { method: 'DELETE' });
+                if (resp.ok) {
+                    this.greetings = this.greetings.filter(gg => gg.id !== g.id);
+                    this.notify('Greeting deleted', 'success');
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to delete greeting', 'error');
+                }
+            } catch (e) {
+                this.notify('Failed to delete greeting', 'error');
+            }
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (_) {
+                return dateStr;
+            }
+        },
+
+        formatDuration(secs) {
+            if (!secs && secs !== 0) return '';
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        },
+
+        notify(message, type) {
+            window.dispatchEvent(new CustomEvent('console:notify', {
+                detail: { message, type }
+            }));
+        }
+    }));
+});
+</script>
+{% endblock %}
