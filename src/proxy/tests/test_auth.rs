@@ -469,6 +469,7 @@ async fn test_guest_call_allowed_extension() {
         storage: None,
         presence_manager: Arc::new(crate::proxy::presence::PresenceManager::new(None)),
         quality_config: None,
+        voicemail_config: None,
     });
 
     let module = AuthModule::new(server_inner);
