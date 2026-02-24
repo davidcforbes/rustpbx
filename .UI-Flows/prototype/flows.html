@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4iiz - Flows</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'iiz': {
+                            'cyan': '#00bcd4',
+                            'cyan-light': '#e0f7fa',
+                            'blue': '#2196f3',
+                            'blue-link': '#1e88e5',
+                            'green': '#4caf50',
+                            'red': '#f44336',
+                            'orange': '#ff9800',
+                            'gray-bg': '#f8f9fa',
+                            'gray-border': '#e0e0e0',
+                            'gray-text': '#757575',
+                            'dark': '#37474f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .activity-row:hover { background-color: #f0fafa; }
+        .activity-row { border-bottom: 1px solid #f0f0f0; }
+        .nav-icon-btn { @apply flex flex-col items-center gap-0.5 px-2 py-3 text-xs rounded-lg transition-colors; }
+        .nav-icon-btn.active { @apply text-iiz-cyan bg-iiz-cyan-light; }
+        .nav-icon-btn:not(.active) { @apply text-gray-500 hover:text-iiz-cyan hover:bg-gray-50; }
+        .side-nav-item { @apply block px-4 py-1.5 text-sm rounded-md transition-colors cursor-pointer; }
+        .side-nav-item.active { @apply text-iiz-cyan font-medium; }
+        .side-nav-item:not(.active) { @apply text-gray-600 hover:text-iiz-cyan hover:bg-gray-50; }
+        .col-header { @apply text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer select-none; }
+        .col-header:hover { @apply text-gray-700; }
+        .tag-badge { @apply inline-block px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600; }
+    </style>
+</head>
+<body class="bg-white min-h-screen" x-data="flowsApp()">
+
+<!-- ============================================================ -->
+<!-- LAYOUT: Icon Nav | Side Panel | Top Bar + Content             -->
+<!-- ============================================================ -->
+<div class="flex h-screen overflow-hidden">
+
+    <!-- LEFT ICON NAV (persistent) -->
+    <nav class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-2 flex-shrink-0">
+        <!-- Logo -->
+        <div class="mb-4 py-2">
+            <svg viewBox="0 0 40 20" class="w-10 h-5 text-iiz-cyan" fill="currentColor">
+                <text x="0" y="16" font-size="16" font-weight="bold" font-family="system-ui">4iiz</text>
+            </svg>
+        </div>
+
+        <!-- Nav Icons -->
+        <div class="flex flex-col gap-1 flex-1">
+            <button class="nav-icon-btn" title="Activities">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+                <span class="text-[10px]">Activities</span>
+            </button>
+            <button class="nav-icon-btn" title="Numbers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+                </svg>
+                <span class="text-[10px]">Numbers</span>
+            </button>
+            <button class="nav-icon-btn active" title="Flows">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+                <span class="text-[10px]">Flows</span>
+            </button>
+            <button class="nav-icon-btn" title="AI Tools">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                </svg>
+                <span class="text-[10px]">AI Tools</span>
+            </button>
+            <button class="nav-icon-btn" title="Reports">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span class="text-[10px]">Reports</span>
+            </button>
+            <button class="nav-icon-btn" title="Contacts">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                </svg>
+                <span class="text-[10px]">Contacts</span>
+            </button>
+            <button class="nav-icon-btn" title="Trust Center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                </svg>
+                <span class="text-[10px]">Trust<br>Center</span>
+            </button>
+        </div>
+
+        <!-- Bottom icons -->
+        <div class="flex flex-col gap-1 mt-auto pb-2">
+            <button class="nav-icon-btn" title="Help">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                </svg>
+                <span class="text-[10px]">Help</span>
+            </button>
+            <button class="nav-icon-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                <span class="text-[10px]">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SECONDARY NAV PANEL -->
+    <aside class="w-52 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto" x-show="!sidebarCollapsed" x-transition>
+        <!-- Section Header -->
+        <div class="px-4 pt-4 pb-2">
+            <div class="flex items-center gap-2 text-iiz-cyan">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+                <span class="text-lg font-light">Flows</span>
+            </div>
+        </div>
+
+        <nav class="px-2 pb-4">
+            <!-- ROUTING -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <!-- swap/route icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+                    Routing
+                </h3>
+                <a :class="flowsPage === 'voicemenus' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'voicemenus'">Voice Menus</a>
+                <a :class="flowsPage === 'queues' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'queues'">Queues</a>
+                <a :class="flowsPage === 'smartrouters' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'smartrouters'">Smart Routers</a>
+                <a :class="flowsPage === 'georouters' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'georouters'">Geo Routers</a>
+                <a :class="flowsPage === 'schedules' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'schedules'">Schedules</a>
+                <a :class="flowsPage === 'agentscripts' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'agentscripts'">Agent Scripts</a>
+                <a :class="flowsPage === 'routingtables' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'routingtables'">Routing Tables</a>
+                <a :class="flowsPage === 'voicemails' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'voicemails'">Voicemails</a>
+            </div>
+
+            <!-- AUTOMATION -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <!-- lightning bolt icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg>
+                    Automation
+                </h3>
+                <a :class="flowsPage === 'workflows' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'workflows'">Workflows</a>
+                <a :class="flowsPage === 'triggers' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'triggers'">Triggers</a>
+                <a :class="flowsPage === 'keywordspotting' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'keywordspotting'">Keyword Spotting</a>
+                <a :class="flowsPage === 'lambdas' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'lambdas'">Lambdas</a>
+                <a :class="flowsPage === 'apilogs' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'apilogs'">API Logs</a>
+                <a :class="flowsPage === 'global' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'global'">Global</a>
+                <a :class="flowsPage === 'webhooks' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'webhooks'">Webhooks</a>
+            </div>
+
+            <!-- ENGAGEMENT -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <!-- speech bubble icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+                    Engagement
+                </h3>
+                <a :class="flowsPage === 'bulkmessages' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'bulkmessages'">Bulk Messages</a>
+                <a :class="flowsPage === 'leadreactor' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'leadreactor'">LeadReactor</a>
+                <a :class="flowsPage === 'smartdialers' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'smartdialers'">Smart Dialers</a>
+                <a :class="flowsPage === 'formreactor' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'formreactor'">FormReactor</a>
+                <a :class="flowsPage === 'chatwidget' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'chatwidget'">Chat Widget</a>
+                <a :class="flowsPage === 'chatai' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'chatai'">
+                    ChatAI <span class="ml-1 text-[9px] bg-iiz-cyan text-white px-1.5 py-0.5 rounded-full font-bold">BETA</span>
+                </a>
+                <a :class="flowsPage === 'dialogflow' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'dialogflow'">
+                    Dialogflow <span class="ml-1 text-[9px] bg-iiz-cyan text-white px-1.5 py-0.5 rounded-full font-bold">BETA</span>
+                </a>
+                <a :class="flowsPage === 'reminders' ? 'active' : ''" class="side-nav-item" @click="flowsPage = 'reminders'">Reminders</a>
+            </div>
+        </nav>
+
+        <!-- Collapse toggle -->
+        <button class="absolute left-[275px] top-1/2 -translate-y-1/2 w-5 h-8 bg-white border border-gray-200 rounded-r-md flex items-center justify-center text-gray-400 hover:text-gray-600 z-10"
+                @click="sidebarCollapsed = !sidebarCollapsed">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+        </button>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- TOP BAR -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+            <button class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <button class="btn btn-sm btn-ghost gap-1 text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                    Filter
+                </button>
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1"></div>
+
+            <!-- Right controls -->
+            <div class="flex items-center gap-2">
+                <button class="btn btn-sm btn-ghost btn-circle relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                    <span class="badge badge-xs bg-iiz-cyan text-white border-none absolute -top-1 -right-1">4950</span>
+                </button>
+                <div class="join">
+                    <button class="btn btn-sm btn-ghost join-item"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg></button>
+                    <button class="btn btn-sm btn-ghost join-item"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Z" /></svg></button>
+                </div>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE CONTENT -->
+        <main class="flex-1 overflow-y-auto bg-iiz-gray-bg">
+
+            <!-- ========================================== -->
+            <!-- VOICE MENUS PAGE                           -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'voicemenus'" x-cloak>
+                <div class="p-6">
+                    <!-- Info banner -->
+                    <div class="alert bg-blue-50 border border-blue-200 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-iiz-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                        <div class="text-sm text-gray-700">
+                            <span class="font-medium">Voice Menus (IVR)</span> allow callers to navigate options using their phone keypad or voice. Configure greetings, menu options, and route callers to the right destination.
+                        </div>
+                        <div class="flex gap-2 text-xs flex-shrink-0">
+                            <a class="link link-primary">Creating Voice Menus</a>
+                            <a class="link link-primary">Voice Menu Overview</a>
+                            <a class="link link-primary">Creating a Preset</a>
+                            <a class="link link-primary">More Info</a>
+                            <a class="link link-primary">Walkthrough Video</a>
+                            <button class="btn btn-xs btn-ghost">Close</button>
+                        </div>
+                    </div>
+
+                    <!-- Title + Actions -->
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-xl font-semibold text-iiz-dark">Voice Menus</h1>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Voice Menu</button>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="col-header">Name</th>
+                                    <th class="col-header">Greeting</th>
+                                    <th class="col-header">Tag this call</th>
+                                    <th class="col-header">Speech Recognition</th>
+                                    <th class="col-header">Speech Language</th>
+                                    <th class="col-header">Updated</th>
+                                    <th class="col-header">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">CM Agencies VM</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-04-25 10:52 AM</td>
+                                    <td class="text-xs text-gray-500">2025-04-25 10:52 AM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">Voicemail Language Selection</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-24 10:15 AM</td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:18 PM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">English Voicemail</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"><span class="tag-badge">english voicemail</span></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:19 PM</td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:19 PM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">Spanish Voicemail</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"><span class="tag-badge">spanish voicemail</span></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:19 PM</td>
+                                    <td class="text-xs text-gray-500">2025-02-10 04:17 PM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">English IVR</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"><span class="tag-badge">english ivr</span></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:12 PM</td>
+                                    <td class="text-xs text-gray-500">2018-07-31 11:27 AM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">Spanish IVR</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"><span class="tag-badge">spanish ivr</span></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-21 04:09 PM</td>
+                                    <td class="text-xs text-gray-500">2018-07-31 11:27 AM</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="text-iiz-blue-link text-sm font-medium">Initial Language Selection</span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-sm text-gray-500"></td>
+                                    <td class="text-xs text-gray-500">2025-02-13 10:57 AM</td>
+                                    <td class="text-xs text-gray-500">2020-11-23 11:28 AM</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- Footer -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <span>7 Voice Menus</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- QUEUES PAGE                                -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'queues'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Queues</h1>
+                            <p class="text-sm text-gray-500">Allow callers to wait for the next available agent</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Queue</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="col-header">Name</th>
+                                        <th class="col-header">Repeat callers</th>
+                                        <th class="col-header">Distribute</th>
+                                        <th class="col-header">Prompt</th>
+                                        <th class="col-header">Caller ID</th>
+                                        <th class="col-header">Schedule</th>
+                                        <th class="col-header">Agents</th>
+                                        <th class="col-header">No Answer</th>
+                                        <th class="col-header">Updated</th>
+                                        <th class="col-header">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Collections FKM/RMs</td>
+                                        <td class="text-xs text-gray-500">Next available agents</td>
+                                        <td class="text-xs text-gray-500">Simultaneously</td>
+                                        <td class="text-xs text-gray-500"></td>
+                                        <td class="text-xs text-gray-500">Use Caller Number</td>
+                                        <td class="text-xs text-gray-500">Jalisco</td>
+                                        <td class="text-xs text-gray-500">
+                                            <span class="text-iiz-blue-link">Jorge Lopez, Evelyn Navarro</span>
+                                            <span class="tag-badge ml-1">+13 more</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">Hangup</td>
+                                        <td class="text-xs text-gray-500">2026-02-23</td>
+                                        <td class="text-xs text-gray-500">2025-05-02</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">SYSTANGO TESTING</td>
+                                        <td class="text-xs text-gray-500">Next available agents</td>
+                                        <td class="text-xs text-gray-500">Simultaneously</td>
+                                        <td class="text-xs text-iiz-green">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                                        </td>
+                                        <td class="text-xs text-gray-500">Use Caller Number</td>
+                                        <td class="text-xs text-gray-500">Always On</td>
+                                        <td class="text-xs text-gray-500">
+                                            <span class="text-iiz-blue-link">Rusty Speedy, Anmol Sachar</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">Hangup</td>
+                                        <td class="text-xs text-gray-500">2026-02-23</td>
+                                        <td class="text-xs text-gray-500">2026-02-23</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">PRIMING CALLS ONLY</td>
+                                        <td class="text-xs text-gray-500">Next available agents</td>
+                                        <td class="text-xs text-gray-500">Simultaneously</td>
+                                        <td class="text-xs text-iiz-green">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                                        </td>
+                                        <td class="text-xs text-gray-500">Use Caller Number</td>
+                                        <td class="text-xs text-gray-500">Jalisco</td>
+                                        <td class="text-xs text-gray-500">
+                                            <span class="text-iiz-blue-link">Mariana Diaz, Rafael Martin del Campo</span>
+                                            <span class="tag-badge ml-1">+6 more</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">ANSWERHERO</td>
+                                        <td class="text-xs text-gray-500">2026-02-20</td>
+                                        <td class="text-xs text-gray-500">2022-08-23</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Customer Service Queue (Official)</td>
+                                        <td class="text-xs text-gray-500">Next available agents</td>
+                                        <td class="text-xs text-gray-500">Simultaneously</td>
+                                        <td class="text-xs text-gray-500"></td>
+                                        <td class="text-xs text-gray-500">Use Caller Number</td>
+                                        <td class="text-xs text-gray-500">Jalisco</td>
+                                        <td class="text-xs text-gray-500">
+                                            <span class="text-iiz-blue-link">Alexis Tapia, Alberto Flores</span>
+                                            <span class="tag-badge ml-1">+45 more</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">Voicemail Language Selection</td>
+                                        <td class="text-xs text-gray-500">2026-02-16</td>
+                                        <td class="text-xs text-gray-500">2018-04-12</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="join">
+                                    <button class="join-item btn btn-xs bg-iiz-cyan text-white border-none">1</button>
+                                    <button class="join-item btn btn-xs btn-ghost">2</button>
+                                </div>
+                                <button class="btn btn-xs btn-ghost">&rarr;</button>
+                                <span class="ml-2">11 Queues</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SMART ROUTERS PAGE                         -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'smartrouters'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Smart Routers</h1>
+                            <p class="text-sm text-gray-500">Conditionally route callers based on their specific properties</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Smart Router</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="col-header">Name</th>
+                                    <th class="col-header">Routes</th>
+                                    <th class="col-header">Updated</th>
+                                    <th class="col-header">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="activity-row">
+                                    <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Current Client or Priming?</td>
+                                    <td class="text-xs text-gray-500 max-w-md">
+                                        <div class="bg-gray-50 rounded p-2 text-xs">
+                                            <span class="font-medium text-gray-700">If all rules match:</span> Contact Category includes any...
+                                            <span class="font-medium text-iiz-cyan ml-1">Then:</span> CallQueue, Tag Call
+                                        </div>
+                                    </td>
+                                    <td class="text-xs text-gray-500">2026-02-05</td>
+                                    <td class="text-xs text-gray-500">2025-09-08</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Priming Routing</td>
+                                    <td class="text-xs text-gray-500 max-w-md">
+                                        <div class="bg-gray-50 rounded p-2 text-xs">
+                                            <span class="font-medium text-gray-700">If all rules match:</span> Tracking Number includes any...
+                                            <span class="font-medium text-iiz-cyan ml-1">Then:</span> CallQueue
+                                        </div>
+                                    </td>
+                                    <td class="text-xs text-gray-500">2026-02-04</td>
+                                    <td class="text-xs text-gray-500">2025-09-08</td>
+                                </tr>
+                                <tr class="activity-row">
+                                    <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Check if New Lead or Current Client</td>
+                                    <td class="text-xs text-gray-500 max-w-md">
+                                        <div class="bg-gray-50 rounded p-2 text-xs">
+                                            <span class="font-medium text-gray-700">If all rules match:</span> Contact is within Current Clients Or Contact Name contains visa/matter/cancel...
+                                            <span class="font-medium text-iiz-cyan ml-1">Then:</span> actions
+                                        </div>
+                                    </td>
+                                    <td class="text-xs text-gray-500">2025-04-30</td>
+                                    <td class="text-xs text-gray-500">2022-05-09</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <span>5 Smart Routers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SCHEDULES PAGE                             -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'schedules'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Schedules</h1>
+                            <p class="text-sm text-gray-500">Recurring active times for agents, voice menus, call queues, and more</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Schedule</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="col-header">Name</th>
+                                    <th class="col-header">Times</th>
+                                    <th class="col-header">Days</th>
+                                    <th class="col-header">Time Zone</th>
+                                    <th class="col-header">Updated</th>
+                                    <th class="col-header">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="activity-row">
+                                    <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Jalisco (PV/GDL Agents)</td>
+                                    <td class="text-xs text-gray-500">
+                                        <div>07:55 AM - 10:00 PM</div>
+                                        <div>07:55 AM - 09:00 PM</div>
+                                        <div>09:00 AM - 09:00 PM</div>
+                                    </td>
+                                    <td class="text-xs text-gray-500">
+                                        <div>M T W Th F</div>
+                                        <div>Sa</div>
+                                        <div>S</div>
+                                    </td>
+                                    <td class="text-xs text-gray-500 whitespace-nowrap">Eastern Time (US &amp; Canada)</td>
+                                    <td class="text-xs text-gray-500">2024-08-22</td>
+                                    <td class="text-xs text-gray-500">2018-04-27</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <span>1 Schedule</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TRIGGERS PAGE                              -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'triggers'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Triggers</h1>
+                            <p class="text-sm text-gray-500">Trigger actions on your activities</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">Visual Workflows</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">API Logs</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Trigger</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="col-header">Name</th>
+                                        <th class="col-header">Trigger</th>
+                                        <th class="col-header">Run</th>
+                                        <th class="col-header">Rules</th>
+                                        <th class="col-header">Runs (7d)</th>
+                                        <th class="col-header">Updated</th>
+                                        <th class="col-header">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">FKM Tagging - Outbound</td>
+                                        <td class="text-xs text-gray-500">End event with all data ready</td>
+                                        <td class="text-xs text-gray-500">All Tracking Numbers</td>
+                                        <td class="text-xs text-gray-500 max-w-xs">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                <span class="font-medium text-gray-700">If all rules match:</span> Agent is any [list]...
+                                                <span class="font-medium text-iiz-cyan ml-1">Then:</span> Tag Call
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-600 font-medium">1,689</td>
+                                        <td class="text-xs text-gray-500">2026-01-28</td>
+                                        <td class="text-xs text-gray-500">2026-01-28</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">#NA &amp; Missed Calls Tickets</td>
+                                        <td class="text-xs text-gray-500">End event with all data ready</td>
+                                        <td class="text-xs text-gray-500">All Tracking Numbers</td>
+                                        <td class="text-xs text-gray-500 max-w-xs">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                <span class="font-medium text-gray-700">If all rules match:</span> Tags includes any: missed call, #na...
+                                                <span class="font-medium text-iiz-cyan ml-1">Then:</span> Run Webhook, Tag Call
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-600 font-medium">1,074</td>
+                                        <td class="text-xs text-gray-500">2026-01-26</td>
+                                        <td class="text-xs text-gray-500">2026-01-23</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">AnswerHero Tickets</td>
+                                        <td class="text-xs text-gray-500">End event with all data ready</td>
+                                        <td class="text-xs text-gray-500">All Tracking Numbers</td>
+                                        <td class="text-xs text-gray-500 max-w-xs">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                <span class="font-medium text-gray-700">If all rules match:</span> Receiving Number is any...
+                                                <span class="font-medium text-iiz-cyan ml-1">Then:</span> Tag Call, Run Webhook
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-600 font-medium">474</td>
+                                        <td class="text-xs text-gray-500">2026-01-23</td>
+                                        <td class="text-xs text-gray-500">2024-04-30</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Repeated Callers</td>
+                                        <td class="text-xs text-gray-500">End event with all data ready</td>
+                                        <td class="text-xs text-gray-500">All Tracking Numbers</td>
+                                        <td class="text-xs text-gray-500 max-w-xs">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                <span class="font-medium text-gray-700">If all rules match:</span> Tags includes any: repeated caller...
+                                                <span class="font-medium text-iiz-cyan ml-1">Then:</span> Run Webhook
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-600 font-medium">1,429</td>
+                                        <td class="text-xs text-gray-500">2025-05-09</td>
+                                        <td class="text-xs text-gray-500">2025-05-09</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Assigned Agent</td>
+                                        <td class="text-xs text-gray-500">End event with all data ready</td>
+                                        <td class="text-xs text-gray-500">All Tracking Numbers</td>
+                                        <td class="text-xs text-gray-500 max-w-xs">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                <span class="font-medium text-gray-700">If all rules match:</span> Tags does not include any: agent_assigned...
+                                                <span class="font-medium text-iiz-cyan ml-1">Then:</span> Tag Call
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-600 font-medium">23,274</td>
+                                        <td class="text-xs text-gray-500">2025-03-28</td>
+                                        <td class="text-xs text-gray-500">2025-03-28</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="join">
+                                    <button class="join-item btn btn-xs bg-iiz-cyan text-white border-none">1</button>
+                                    <button class="join-item btn btn-xs btn-ghost">2</button>
+                                    <button class="join-item btn btn-xs btn-ghost">3</button>
+                                </div>
+                                <button class="btn btn-xs btn-ghost">&rarr;</button>
+                                <span class="ml-2">26 Triggers</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- WEBHOOKS PAGE                              -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'webhooks'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Webhooks</h1>
+                            <p class="text-sm text-gray-500">Send data to your servers</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">Global Webhooks</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">API Logs</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ Start</button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Webhook</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="col-header">Name</th>
+                                        <th class="col-header">Trigger</th>
+                                        <th class="col-header">Callback URL</th>
+                                        <th class="col-header">Method</th>
+                                        <th class="col-header">Body Type</th>
+                                        <th class="col-header">Updated</th>
+                                        <th class="col-header">Created</th>
+                                        <th class="col-header"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">4iiz AI Outbound SMS webhook</td>
+                                        <td class="text-xs text-gray-500">After text sent [outbound_text]</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">https://gfphuh6fxq...lambda-url.us-east-1.on.aws/</td>
+                                        <td class="text-xs text-gray-500">POST</td>
+                                        <td class="text-xs text-gray-500">Log Data</td>
+                                        <td class="text-xs text-gray-500">2026-02-24</td>
+                                        <td class="text-xs text-gray-500">2026-01-02</td>
+                                        <td class="text-xs">
+                                            <div class="flex gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">Test</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-500">De...</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Offline-Comms-test1</td>
+                                        <td class="text-xs text-gray-500">At end of call/form/chat [end]</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">https://52cf27c5b24d.ngrok-free.app/api/ctm/webhook</td>
+                                        <td class="text-xs text-gray-500">POST</td>
+                                        <td class="text-xs text-gray-500">Log Data</td>
+                                        <td class="text-xs text-gray-500">2026-02-02</td>
+                                        <td class="text-xs text-gray-500">2026-01-29</td>
+                                        <td class="text-xs">
+                                            <div class="flex gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">Test</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-500">De...</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">#Na Calls to Tickets</td>
+                                        <td class="text-xs text-gray-500">Through a trigger [route]</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">https://hooks.zapier.com/hooks/catch/302833/uqk53wa/</td>
+                                        <td class="text-xs text-gray-500">POST</td>
+                                        <td class="text-xs text-gray-500">Log Data</td>
+                                        <td class="text-xs text-gray-500">2026-01-26</td>
+                                        <td class="text-xs text-gray-500">2024-06-25</td>
+                                        <td class="text-xs">
+                                            <div class="flex gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">Test</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-500">De...</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">AnswerHero</td>
+                                        <td class="text-xs text-gray-500">At end of call/form/chat [end]</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">https://hooks.zapier.com/hooks/catch/302833/2glltg8/</td>
+                                        <td class="text-xs text-gray-500">POST</td>
+                                        <td class="text-xs text-gray-500">Log Data</td>
+                                        <td class="text-xs text-gray-500">2026-01-23</td>
+                                        <td class="text-xs text-gray-500">2024-11-19</td>
+                                        <td class="text-xs">
+                                            <div class="flex gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">Test</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-500">De...</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">4iiz AI SMS hook</td>
+                                        <td class="text-xs text-gray-500">After text received [inbound_text]</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">https://gfphuh6fxq...lambda-url.us-east-1.on.aws/</td>
+                                        <td class="text-xs text-gray-500">POST</td>
+                                        <td class="text-xs text-gray-500">Log Data</td>
+                                        <td class="text-xs text-gray-500">2025-09-23</td>
+                                        <td class="text-xs text-gray-500">2025-09-23</td>
+                                        <td class="text-xs">
+                                            <div class="flex gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">Test</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-500">De...</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="join">
+                                    <button class="join-item btn btn-xs bg-iiz-cyan text-white border-none">1</button>
+                                    <button class="join-item btn btn-xs btn-ghost">2</button>
+                                    <button class="join-item btn btn-xs btn-ghost">3</button>
+                                </div>
+                                <button class="btn btn-xs btn-ghost">&rarr;</button>
+                                <span class="ml-2">24 Webhooks</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- BULK MESSAGES PAGE                         -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'bulkmessages'" x-cloak>
+                <div class="p-6">
+                    <!-- Warning banner -->
+                    <div class="alert bg-red-50 border border-red-300 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-iiz-red flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                        <span class="text-sm text-red-700">You have Bulk Messages that need attention. To ensure delivery, please deactivate the existing messages and recreate them.</span>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">Bulk Messages</h1>
+                            <p class="text-sm text-gray-500">Send text messages to a group of recipients</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New Bulk Message</button>
+                        </div>
+                    </div>
+
+                    <!-- Status filters -->
+                    <div class="flex items-center gap-1 my-3">
+                        <button class="btn btn-xs bg-iiz-cyan text-white border-none">All</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Sending</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Pending</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Completed</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Cancelled</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Failed</button>
+                        <button class="btn btn-xs btn-ghost text-gray-500">Export...</button>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="col-header">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" /></svg>
+                                        </th>
+                                        <th class="col-header">Label</th>
+                                        <th class="col-header">Phone Numbers</th>
+                                        <th class="col-header">Body</th>
+                                        <th class="col-header">Recipients</th>
+                                        <th class="col-header">Send Time</th>
+                                        <th class="col-header">Delivered On</th>
+                                        <th class="col-header">Status</th>
+                                        <th class="col-header">Updated</th>
+                                        <th class="col-header">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="activity-row">
+                                        <td class="text-xs text-gray-400"></td>
+                                        <td class="text-iiz-blue-link text-sm font-medium max-w-[180px] truncate">Atencion: tienes una cita importante con Diener Law</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">(919) 725-8000</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">Hola Somos DienerLaw !Tu vida puede cambiar...</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">61</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-24 10:15</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-24 10:16 AM</td>
+                                        <td class="text-xs">
+                                            <span class="badge badge-sm bg-iiz-green text-white border-none">Completed</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">2026-02-24</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div>2026-02-24</div>
+                                            <div class="text-[10px] text-gray-400">Christian Michelle Vazquez Ruvalcaba</div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-xs text-gray-400"></td>
+                                        <td class="text-iiz-blue-link text-sm font-medium max-w-[180px] truncate">Diener Law</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">(469) 218-2269</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">Hola buenos dias somos Diener Law Abogados...</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">9</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-24 09:47</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-24 09:47 AM</td>
+                                        <td class="text-xs">
+                                            <span class="badge badge-sm bg-iiz-green text-white border-none">Completed</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">2026-02-24</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div>2026-02-24</div>
+                                            <div class="text-[10px] text-gray-400">Maria Patino</div>
+                                        </td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-xs text-gray-400"></td>
+                                        <td class="text-iiz-blue-link text-sm font-medium max-w-[180px] truncate">Atencion: tienes una cita importante con Diener Law</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">(919) 725-8000</td>
+                                        <td class="text-xs text-gray-500 max-w-[200px] truncate">Hola Somos DienerLaw !Tu vida puede cambiar...</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">407</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-20 11:56</td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">2026-02-20 11:56 AM</td>
+                                        <td class="text-xs">
+                                            <span class="badge badge-sm bg-iiz-green text-white border-none">Completed</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500">2026-02-20</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div>2026-02-20</div>
+                                            <div class="text-[10px] text-gray-400">Christian Michelle Vazquez Ruvalcaba</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="join">
+                                    <button class="join-item btn btn-xs bg-iiz-cyan text-white border-none">1</button>
+                                    <button class="join-item btn btn-xs btn-ghost">2</button>
+                                    <button class="join-item btn btn-xs btn-ghost">3</button>
+                                    <button class="join-item btn btn-xs btn-ghost">...</button>
+                                    <button class="join-item btn btn-xs btn-ghost">169</button>
+                                    <button class="join-item btn btn-xs btn-ghost">170</button>
+                                </div>
+                                <button class="btn btn-xs btn-ghost">&rarr;</button>
+                                <span class="ml-2">1695 Bulk Messages</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- FORMREACTOR PAGE                           -->
+            <!-- ========================================== -->
+            <div x-show="flowsPage === 'formreactor'" x-cloak>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <div>
+                            <h1 class="text-xl font-semibold text-iiz-dark">FormReactors</h1>
+                            <p class="text-sm text-gray-500">Embeddable forms that can trigger phone calls, text messages, and emails</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-sm btn-ghost text-gray-500">Restore</button>
+                            <button class="btn btn-sm btn-ghost text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                Info
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">+ New FormReactor</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden mt-4">
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="col-header">Form Name</th>
+                                        <th class="col-header">Fields</th>
+                                        <th class="col-header">Tracking Number</th>
+                                        <th class="col-header">Updated</th>
+                                        <th class="col-header">Created</th>
+                                        <th class="col-header">Calls</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Permanent Residence Form</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                Name * Phone * Email * Submit
+                                                <span class="ml-1 text-gray-400">(Gravity Forms)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">+15622836869</td>
+                                        <td class="text-xs text-gray-500">2025-04-16</td>
+                                        <td class="text-xs text-gray-500">2021-08-02</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">7</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Book - Spanish</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                Name * Phone * Email * Submit
+                                                <span class="ml-1 text-gray-400">(Gravity Forms)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">+15622836869</td>
+                                        <td class="text-xs text-gray-500">2025-04-16</td>
+                                        <td class="text-xs text-gray-500">2020-05-17</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">5</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Questions</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                Name * Phone * Email * Submit
+                                                <span class="ml-1 text-gray-400">(Gravity Forms)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">+15622836869</td>
+                                        <td class="text-xs text-gray-500">2025-04-16</td>
+                                        <td class="text-xs text-gray-500">2020-02-06</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">335</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Immigration Questionnaire</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                Name * Phone * Email * Submit
+                                                <span class="ml-1 text-gray-400">(Gravity Forms)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">+15622836869</td>
+                                        <td class="text-xs text-gray-500">2025-04-16</td>
+                                        <td class="text-xs text-gray-500">2019-10-17</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">120</td>
+                                    </tr>
+                                    <tr class="activity-row">
+                                        <td class="text-iiz-blue-link text-sm font-medium whitespace-nowrap">Footer Contact</td>
+                                        <td class="text-xs text-gray-500">
+                                            <div class="bg-gray-50 rounded p-1.5 text-xs">
+                                                Name * Phone * Email * Submit
+                                                <span class="ml-1 text-gray-400">(Gravity Forms)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-xs text-gray-500 whitespace-nowrap">+15622836869</td>
+                                        <td class="text-xs text-gray-500">2025-04-16</td>
+                                        <td class="text-xs text-gray-500">2019-10-16</td>
+                                        <td class="text-xs text-gray-600 font-medium text-center">747</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <span>Per page:</span>
+                                <select class="select select-xs select-bordered"><option>10</option><option>25</option><option>50</option></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="join">
+                                    <button class="join-item btn btn-xs bg-iiz-cyan text-white border-none">1</button>
+                                    <button class="join-item btn btn-xs btn-ghost">2</button>
+                                    <button class="join-item btn btn-xs btn-ghost">3</button>
+                                </div>
+                                <button class="btn btn-xs btn-ghost">&rarr;</button>
+                                <span class="ml-2">30 FormReactors</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- PLACEHOLDER / FORM-EDITOR PAGES            -->
+            <!-- ========================================== -->
+            <template x-for="page in placeholderPages" :key="page.id">
+                <div x-show="flowsPage === page.id" x-cloak>
+                    <div class="p-6">
+                        <div class="flex items-center justify-center min-h-[400px]">
+                            <div class="card bg-white shadow-md border border-gray-200 w-full max-w-lg">
+                                <div class="card-body items-center text-center">
+                                    <div class="w-16 h-16 rounded-full bg-iiz-cyan-light flex items-center justify-center mb-2">
+                                        <!-- Pencil/edit icon -->
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-iiz-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                        </svg>
+                                    </div>
+                                    <h2 class="card-title text-iiz-dark" x-text="'Form Editor \u2014 ' + page.name"></h2>
+                                    <p class="text-sm text-gray-500" x-text="page.desc"></p>
+                                    <div class="card-actions mt-4">
+                                        <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none" x-text="'Open ' + page.name + ' Editor'"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+        </main>
+    </div>
+</div>
+
+<script>
+function flowsApp() {
+    return {
+        flowsPage: 'voicemenus',
+        sidebarCollapsed: false,
+        placeholderPages: [
+            { id: 'georouters', name: 'Geo Routers', desc: 'Route callers based on their geographic location using area codes, states, or countries.' },
+            { id: 'agentscripts', name: 'Agent Scripts', desc: 'Create guided scripts for agents to follow during calls, ensuring consistent messaging.' },
+            { id: 'routingtables', name: 'Routing Tables', desc: 'Define advanced routing rules using lookup tables for number-based call distribution.' },
+            { id: 'voicemails', name: 'Voicemails', desc: 'Configure voicemail boxes, greetings, and notification settings for missed calls.' },
+            { id: 'workflows', name: 'Workflows', desc: 'Build visual multi-step automation workflows with drag-and-drop logic.' },
+            { id: 'keywordspotting', name: 'Keyword Spotting', desc: 'Automatically detect and tag calls based on keywords spoken during conversations.' },
+            { id: 'lambdas', name: 'Lambdas', desc: 'Write custom JavaScript functions that execute during call flows for advanced logic.' },
+            { id: 'apilogs', name: 'API Logs', desc: 'View detailed logs of all API requests, webhook deliveries, and integration activity.' },
+            { id: 'global', name: 'Global Settings', desc: 'Configure account-wide automation settings, default behaviors, and global variables.' },
+            { id: 'leadreactor', name: 'LeadReactor', desc: 'Automatically respond to new leads with calls, texts, or emails based on configurable rules.' },
+            { id: 'smartdialers', name: 'Smart Dialers', desc: 'Set up automated outbound dialing campaigns with intelligent pacing and retry logic.' },
+            { id: 'chatwidget', name: 'Chat Widget', desc: 'Configure embeddable chat widgets for your website with custom styling and behavior.' },
+            { id: 'chatai', name: 'ChatAI', desc: 'Configure AI-powered chat responses using natural language processing for automated customer interactions.' },
+            { id: 'dialogflow', name: 'Dialogflow', desc: 'Integrate Google Dialogflow for advanced conversational AI and intent-based call routing.' },
+            { id: 'reminders', name: 'Reminders', desc: 'Schedule automated reminder calls, texts, or emails to contacts at specified times.' },
+        ]
+    }
+}
+</script>
+
+</body>
+</html>
