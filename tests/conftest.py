@@ -11,17 +11,28 @@ import os
 import socket
 import time
 import uuid
+import warnings
 
 import pytest
 import requests
+import urllib3
+
+# Suppress InsecureRequestWarning for self-signed TLS certs
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ---------------------------------------------------------------------------
 # Configuration from environment or defaults
 # ---------------------------------------------------------------------------
-RUSTPBX_HOST = os.environ.get("RUSTPBX_HOST", "rustpbx")
-RUSTPBX_HTTP_PORT = int(os.environ.get("RUSTPBX_HTTP_PORT", "8080"))
+RUSTPBX_HOST = os.environ.get("RUSTPBX_HOST", "127.0.0.1")
+RUSTPBX_HTTP_PORT = int(os.environ.get("RUSTPBX_HTTP_PORT", "8443"))
 RUSTPBX_SIP_PORT = int(os.environ.get("RUSTPBX_SIP_PORT", "5060"))
-RUSTPBX_BASE_URL = f"http://{RUSTPBX_HOST}:{RUSTPBX_HTTP_PORT}"
+RUSTPBX_SCHEME = os.environ.get("RUSTPBX_SCHEME", "https")
+RUSTPBX_BASE_URL = os.environ.get(
+    "RUSTPBX_BASE_URL",
+    f"{RUSTPBX_SCHEME}://{RUSTPBX_HOST}:{RUSTPBX_HTTP_PORT}",
+)
+# Disable TLS certificate verification for self-signed certs
+RUSTPBX_VERIFY_TLS = os.environ.get("RUSTPBX_VERIFY_TLS", "false").lower() in ("1", "true", "yes")
 ADMIN_USER = os.environ.get("RUSTPBX_ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("RUSTPBX_ADMIN_PASS", "admin123")
 
@@ -131,7 +142,13 @@ def sip_port():
 
 
 @pytest.fixture(scope="session")
-def api_session(base_url):
+def verify_tls():
+    """Whether to verify TLS certificates."""
+    return RUSTPBX_VERIFY_TLS
+
+
+@pytest.fixture(scope="session")
+def api_session(base_url, verify_tls):
     """Authenticated requests.Session with console login cookie.
 
     Attempts to log in to the RustPBX console using the configured admin
@@ -139,6 +156,7 @@ def api_session(base_url):
     L1/L2 tests depend on an authenticated session.
     """
     session = requests.Session()
+    session.verify = verify_tls
     login_data = {"identifier": ADMIN_USER, "password": ADMIN_PASS}
     try:
         resp = session.post(
