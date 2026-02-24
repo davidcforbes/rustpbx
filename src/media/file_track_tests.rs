@@ -83,8 +83,8 @@ async fn test_file_track_opus_codec_sdp() {
         "SDP should contain Opus codec"
     );
     assert!(
-        sdp.contains("a=fmtp:111 minptime=10;useinbandfec=1"),
-        "SDP should contain Opus fmtp parameters"
+        sdp.contains("a=fmtp:111 minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=128000"),
+        "SDP should contain enhanced Opus fmtp parameters"
     );
 }
 

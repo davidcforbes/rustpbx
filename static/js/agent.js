@@ -717,9 +717,12 @@ function mainApp() {
 
             let mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    advanced: [{
-                        echoCancellation: true,
-                    }]
+                    echoCancellation: true,
+                    noiseSuppression: false,
+                    autoGainControl: false,
+                    sampleRate: 48000,
+                    channelCount: 1,
+                    sampleSize: 16,
                 }, video: false
             });
 

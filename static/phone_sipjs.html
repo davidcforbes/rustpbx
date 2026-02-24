@@ -722,7 +722,14 @@
             const inviteOptions = {
                 sessionDescriptionHandlerOptions: {
                     constraints: {
-                        audio: true,
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            sampleRate: 48000,
+                            channelCount: 1,
+                            sampleSize: 16,
+                        },
                         video: false
                     }
                 }
@@ -845,7 +852,14 @@
                 const options = {
                     sessionDescriptionHandlerOptions: {
                         constraints: {
-                            audio: true,
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: false,
+                                autoGainControl: false,
+                                sampleRate: 48000,
+                                channelCount: 1,
+                                sampleSize: 16,
+                            },
                             video: false
                         }
                     }

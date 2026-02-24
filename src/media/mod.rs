@@ -42,6 +42,19 @@ pub fn apply_gain(samples: &mut [i16], gain: f32) {
     }
 }
 
+/// Return enhanced fmtp parameters for a codec. For Opus, this includes
+/// high-bitrate and stereo parameters beyond the defaults from audio-codec.
+fn opus_enhanced_fmtp(codec: &CodecType) -> Option<String> {
+    match codec {
+        #[cfg(feature = "opus")]
+        CodecType::Opus => Some(
+            "minptime=10;useinbandfec=1;stereo=1;sprop-stereo=1;maxaveragebitrate=128000"
+                .to_string(),
+        ),
+        other => other.fmtp().map(|s| s.to_string()),
+    }
+}
+
 pub fn get_timestamp() -> u64 {
     let now = std::time::SystemTime::now();
     now.duration_since(std::time::UNIX_EPOCH)
@@ -240,7 +253,7 @@ impl RtcTrack {
                         key: "rtpmap".to_string(),
                         value: Some(format!("{} {}", pt, info.codec.rtpmap())),
                     });
-                    if let Some(fmtp) = info.codec.fmtp() {
+                    if let Some(fmtp) = opus_enhanced_fmtp(&info.codec) {
                         section.attributes.push(Attribute {
                             key: "fmtp".to_string(),
                             value: Some(format!("{} {}", pt, fmtp)),
@@ -669,7 +682,7 @@ impl Track for FileTrack {
                         key: "rtpmap".to_string(),
                         value: Some(format!("{} {}", pt_str, codec.rtpmap())),
                     });
-                    if let Some(fmtp) = codec.fmtp() {
+                    if let Some(fmtp) = opus_enhanced_fmtp(codec) {
                         section.attributes.push(Attribute {
                             key: "fmtp".to_string(),
                             value: Some(format!("{} {}", pt_str, fmtp)),

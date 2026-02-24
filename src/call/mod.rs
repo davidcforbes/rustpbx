@@ -689,12 +689,12 @@ impl Dialplan {
             with_original_headers: true,
             extensions: http::Extensions::new(),
             allow_codecs: vec![
-                CodecType::G729,
-                CodecType::G722,
-                CodecType::PCMU,
-                CodecType::PCMA,
                 #[cfg(feature = "opus")]
                 CodecType::Opus,
+                CodecType::G722,
+                CodecType::G729,
+                CodecType::PCMU,
+                CodecType::PCMA,
                 CodecType::TelephoneEvent,
             ],
         }
