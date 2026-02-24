@@ -1,0 +1,649 @@
+{% extends "console/layout.html" %}
+{% block title %}Monitoring · {{ site_name | default('RustPBX') }}{% endblock %}
+{% block content %}
+<div class="p-4 sm:p-6">
+    <div class="mx-auto max-w-7xl space-y-6" x-data='monitoringDashboard({
+            basePath: {{ (base_path | default("/console")) | tojson }}
+        })' x-init="init()">
+
+        <!-- Header -->
+        <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="space-y-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-sky-600">Supervisor tools</p>
+                <h1 class="text-2xl font-semibold text-slate-900">Call Monitoring</h1>
+                <p class="text-sm text-slate-500">
+                    Monitor active calls in real time. Silent listen, whisper to agents, or barge into conversations.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm">
+                    <span class="relative flex h-2 w-2">
+                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                            :class="polling ? 'bg-emerald-400' : 'bg-slate-300'"></span>
+                        <span class="relative inline-flex h-2 w-2 rounded-full"
+                            :class="polling ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+                    </span>
+                    <span x-text="polling ? 'Live' : 'Paused'"></span>
+                </div>
+                <button type="button"
+                    class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                    @click="togglePolling()">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <template x-if="polling">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </template>
+                        <template x-if="!polling">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </template>
+                    </svg>
+                    <span x-text="polling ? 'Pause' : 'Resume'"></span>
+                </button>
+                <button type="button"
+                    class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                    @click="fetchCalls(); fetchEvents()">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Summary cards -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Active Calls</p>
+                        <p class="text-2xl font-bold text-slate-900" x-text="calls.length">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Currently Monitoring</p>
+                        <p class="text-2xl font-bold text-slate-900" x-text="monitoredSessionId ? '1' : '0'">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Audit Events (recent)</p>
+                        <p class="text-2xl font-bold text-slate-900" x-text="events.length">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitor Controls Panel (shown when monitoring) -->
+        <template x-if="monitoredSessionId">
+            <div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex-1 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="relative flex h-3 w-3">
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                                <span class="relative inline-flex h-3 w-3 rounded-full bg-amber-500"></span>
+                            </span>
+                            <h2 class="text-lg font-semibold text-amber-900">Monitoring Active</h2>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+                            <div>
+                                <span class="text-amber-700">Session:</span>
+                                <span class="ml-1 font-mono text-xs text-amber-900" x-text="monitoredSessionId.substring(0, 12) + '...'"></span>
+                            </div>
+                            <div>
+                                <span class="text-amber-700">Caller:</span>
+                                <span class="ml-1 font-medium text-amber-900" x-text="monitoredCallInfo.caller || '--'"></span>
+                            </div>
+                            <div>
+                                <span class="text-amber-700">Callee:</span>
+                                <span class="ml-1 font-medium text-amber-900" x-text="monitoredCallInfo.callee || '--'"></span>
+                            </div>
+                            <div>
+                                <span class="text-amber-700">Mode:</span>
+                                <span class="ml-1 font-semibold text-amber-900" x-text="monitorModeLabel()"></span>
+                            </div>
+                        </div>
+
+                        <!-- Audio level placeholders -->
+                        <div class="flex items-center gap-4 pt-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-700">Caller audio</span>
+                                <div class="flex gap-0.5">
+                                    <template x-for="i in 8" :key="'cL'+i">
+                                        <div class="h-4 w-1 rounded-full transition-all duration-150"
+                                            :class="i <= audioLevelCaller ? 'bg-emerald-500' : 'bg-amber-200'"
+                                            :style="'height:' + (8 + i * 2) + 'px'"></div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-700">Callee audio</span>
+                                <div class="flex gap-0.5">
+                                    <template x-for="i in 8" :key="'cR'+i">
+                                        <div class="h-4 w-1 rounded-full transition-all duration-150"
+                                            :class="i <= audioLevelCallee ? 'bg-sky-500' : 'bg-amber-200'"
+                                            :style="'height:' + (8 + i * 2) + 'px'"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                        <!-- Mode toggle -->
+                        <div class="inline-flex rounded-lg border border-amber-300 bg-white shadow-sm" role="group">
+                            <button type="button"
+                                class="rounded-l-lg px-3 py-2 text-xs font-semibold transition"
+                                :class="currentMonitorMode === 'silent_listen' ? 'bg-amber-500 text-white' : 'text-amber-700 hover:bg-amber-100'"
+                                @click="setMonitorMode('silent_listen')">
+                                Silent Listen
+                            </button>
+                            <button type="button"
+                                class="border-x border-amber-300 px-3 py-2 text-xs font-semibold transition"
+                                :class="currentMonitorMode === 'whisper' ? 'bg-amber-500 text-white' : 'text-amber-700 hover:bg-amber-100'"
+                                @click="setMonitorMode('whisper')">
+                                Whisper
+                            </button>
+                            <button type="button"
+                                class="rounded-r-lg px-3 py-2 text-xs font-semibold transition"
+                                :class="currentMonitorMode === 'barge' ? 'bg-amber-500 text-white' : 'text-amber-700 hover:bg-amber-100'"
+                                @click="setMonitorMode('barge')">
+                                Barge
+                            </button>
+                        </div>
+                        <!-- Stop button -->
+                        <button type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2"
+                            @click="stopMonitoring()">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
+                            </svg>
+                            Stop Monitoring
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Active Calls Table -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 px-5 py-4">
+                <h2 class="text-base font-semibold text-slate-900">Active Calls</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Auto-refreshes every 3 seconds. Click "Monitor" to begin listening.</p>
+            </div>
+
+            <!-- Empty state -->
+            <template x-if="calls.length === 0 && !loading">
+                <div class="py-16 text-center">
+                    <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                    </svg>
+                    <h3 class="mt-3 text-sm font-medium text-slate-700">No active calls</h3>
+                    <p class="mt-1 text-xs text-slate-500">Active calls will appear here automatically.</p>
+                </div>
+            </template>
+
+            <!-- Table -->
+            <template x-if="calls.length > 0">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th class="px-5 py-3">Caller</th>
+                                <th class="px-5 py-3">Callee</th>
+                                <th class="px-5 py-3">Direction</th>
+                                <th class="px-5 py-3">Status</th>
+                                <th class="px-5 py-3">Duration</th>
+                                <th class="px-5 py-3">Quality</th>
+                                <th class="px-5 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="call in calls" :key="call.session_id">
+                                <tr class="transition hover:bg-slate-50/50"
+                                    :class="monitoredSessionId === call.session_id ? 'bg-amber-50' : ''">
+                                    <td class="px-5 py-3 font-medium text-slate-900">
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600" x-text="(call.caller || '?')[0].toUpperCase()"></span>
+                                            <span x-text="call.caller || '--'"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-slate-700">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                            </svg>
+                                            <span x-text="call.callee || '--'"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                            :class="{
+                                                'bg-sky-100 text-sky-700': call.direction === 'inbound',
+                                                'bg-emerald-100 text-emerald-700': call.direction === 'outbound',
+                                                'bg-slate-100 text-slate-700': call.direction !== 'inbound' && call.direction !== 'outbound'
+                                            }"
+                                            x-text="call.direction || 'internal'"></span>
+                                    </td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <span class="h-2 w-2 rounded-full"
+                                                :class="{
+                                                    'bg-emerald-500': call.status === 'talking',
+                                                    'bg-amber-500 animate-pulse': call.status === 'ringing'
+                                                }"></span>
+                                            <span class="text-xs font-medium capitalize" x-text="call.status"></span>
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-3 font-mono text-xs text-slate-700" x-text="formatDuration(call.duration_secs)"></td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex items-center gap-1">
+                                            <span class="h-2.5 w-2.5 rounded-full"
+                                                :class="qualityColor(call.duration_secs, call.status)"></span>
+                                            <span class="text-xs" x-text="qualityLabel(call.duration_secs, call.status)"></span>
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-3 text-right">
+                                        <template x-if="monitoredSessionId !== call.session_id">
+                                            <button type="button"
+                                                class="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1"
+                                                @click="startMonitoring(call.session_id, call.caller, call.callee)"
+                                                :disabled="monitorActionPending">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                Monitor
+                                            </button>
+                                        </template>
+                                        <template x-if="monitoredSessionId === call.session_id">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-800">
+                                                <span class="relative flex h-2 w-2">
+                                                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75"></span>
+                                                    <span class="relative inline-flex h-2 w-2 rounded-full bg-amber-600"></span>
+                                                </span>
+                                                Monitoring
+                                            </span>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+
+        <!-- Monitoring Audit Log -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-900">Monitoring Audit Log</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Recent monitoring events with timestamps and details.</p>
+                </div>
+                <button type="button"
+                    class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    @click="fetchEvents()">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Empty state -->
+            <template x-if="events.length === 0">
+                <div class="py-12 text-center">
+                    <svg class="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="mt-3 text-sm font-medium text-slate-700">No audit events yet</h3>
+                    <p class="mt-1 text-xs text-slate-500">Events will appear when calls are monitored.</p>
+                </div>
+            </template>
+
+            <!-- Events list -->
+            <template x-if="events.length > 0">
+                <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                    <template x-for="event in events" :key="event.id">
+                        <div class="flex items-start gap-3 px-5 py-3 hover:bg-slate-50/50 transition">
+                            <div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                                :class="{
+                                    'bg-emerald-100 text-emerald-600': event.event_type === 'monitor_start',
+                                    'bg-rose-100 text-rose-600': event.event_type === 'monitor_stop',
+                                    'bg-sky-100 text-sky-600': event.event_type === 'mode_change'
+                                }">
+                                <template x-if="event.event_type === 'monitor_start'">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
+                                    </svg>
+                                </template>
+                                <template x-if="event.event_type === 'monitor_stop'">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728M9 9l6 6m0-6l-6 6" />
+                                    </svg>
+                                </template>
+                                <template x-if="event.event_type === 'mode_change'">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                    </svg>
+                                </template>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-slate-900" x-text="eventTypeLabel(event.event_type)"></span>
+                                    <template x-if="event.monitor_mode">
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                            :class="{
+                                                'bg-slate-100 text-slate-600': event.monitor_mode === 'silent_listen',
+                                                'bg-sky-100 text-sky-700': event.monitor_mode === 'whisper',
+                                                'bg-rose-100 text-rose-700': event.monitor_mode === 'barge'
+                                            }"
+                                            x-text="modeLabelShort(event.monitor_mode)"></span>
+                                    </template>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    <span x-text="'User: ' + event.monitor_user_id"></span>
+                                    <template x-if="event.agent_extension">
+                                        <span x-text="' | Agent: ' + event.agent_extension"></span>
+                                    </template>
+                                    <span x-text="' | Session: ' + (event.session_id || '').substring(0, 12) + '...'"></span>
+                                </p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-xs text-slate-500" x-text="formatEventTime(event.timestamp)"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('monitoringDashboard', (config) => ({
+        basePath: config.basePath || '/console',
+        calls: [],
+        events: [],
+        loading: false,
+        polling: true,
+        pollTimer: null,
+        durationTimer: null,
+        monitoredSessionId: null,
+        monitoredCallInfo: { caller: '', callee: '' },
+        currentMonitorMode: 'silent_listen',
+        monitorActionPending: false,
+        audioLevelCaller: 0,
+        audioLevelCallee: 0,
+        audioSimTimer: null,
+
+        init() {
+            this.fetchCalls();
+            this.fetchEvents();
+            this.startPolling();
+            this.startDurationUpdater();
+        },
+
+        startPolling() {
+            this.stopPolling();
+            if (this.polling) {
+                this.pollTimer = setInterval(() => {
+                    this.fetchCalls();
+                }, 3000);
+            }
+        },
+
+        stopPolling() {
+            if (this.pollTimer) {
+                clearInterval(this.pollTimer);
+                this.pollTimer = null;
+            }
+        },
+
+        togglePolling() {
+            this.polling = !this.polling;
+            if (this.polling) {
+                this.fetchCalls();
+                this.startPolling();
+            } else {
+                this.stopPolling();
+            }
+        },
+
+        startDurationUpdater() {
+            this.durationTimer = setInterval(() => {
+                this.calls.forEach(c => {
+                    if (c.status === 'talking' || c.status === 'ringing') {
+                        c.duration_secs++;
+                    }
+                });
+            }, 1000);
+        },
+
+        async fetchCalls() {
+            try {
+                const resp = await fetch(`${this.basePath}/monitoring/active-calls`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.calls = data.calls || [];
+                    // Check if monitored call is still active
+                    if (this.monitoredSessionId) {
+                        const still = this.calls.find(c => c.session_id === this.monitoredSessionId);
+                        if (!still) {
+                            this.monitoredSessionId = null;
+                            this.monitoredCallInfo = { caller: '', callee: '' };
+                            this.stopAudioSim();
+                            this.notify('Monitored call has ended', 'info');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch active calls:', err);
+            }
+        },
+
+        async fetchEvents() {
+            try {
+                const resp = await fetch(`${this.basePath}/monitoring/events?limit=50`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.events = data.events || [];
+                }
+            } catch (err) {
+                console.error('Failed to fetch audit events:', err);
+            }
+        },
+
+        async startMonitoring(sessionId, caller, callee) {
+            this.monitorActionPending = true;
+            try {
+                const resp = await fetch(`/ami/v1/calls/${sessionId}/monitor/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: this.currentMonitorMode }),
+                });
+                if (resp.ok) {
+                    this.monitoredSessionId = sessionId;
+                    this.monitoredCallInfo = { caller: caller || '', callee: callee || '' };
+                    this.startAudioSim();
+                    this.notify('Monitoring started in ' + this.monitorModeLabel() + ' mode', 'success');
+                    this.fetchEvents();
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to start monitoring', 'error');
+                }
+            } catch (err) {
+                this.notify('Error: ' + err.message, 'error');
+            } finally {
+                this.monitorActionPending = false;
+            }
+        },
+
+        async stopMonitoring() {
+            if (!this.monitoredSessionId) return;
+            this.monitorActionPending = true;
+            try {
+                const resp = await fetch(`/ami/v1/calls/${this.monitoredSessionId}/monitor/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}',
+                });
+                if (resp.ok) {
+                    this.notify('Monitoring stopped', 'info');
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to stop monitoring', 'error');
+                }
+            } catch (err) {
+                this.notify('Error: ' + err.message, 'error');
+            } finally {
+                this.monitoredSessionId = null;
+                this.monitoredCallInfo = { caller: '', callee: '' };
+                this.stopAudioSim();
+                this.monitorActionPending = false;
+                this.fetchEvents();
+            }
+        },
+
+        async setMonitorMode(mode) {
+            if (mode === this.currentMonitorMode) return;
+            if (!this.monitoredSessionId) {
+                this.currentMonitorMode = mode;
+                return;
+            }
+            this.monitorActionPending = true;
+            try {
+                const resp = await fetch(`/ami/v1/calls/${this.monitoredSessionId}/monitor/mode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: mode }),
+                });
+                if (resp.ok) {
+                    this.currentMonitorMode = mode;
+                    this.notify('Switched to ' + this.monitorModeLabel() + ' mode', 'success');
+                    this.fetchEvents();
+                } else {
+                    const data = await resp.json().catch(() => ({}));
+                    this.notify(data.message || 'Failed to change mode', 'error');
+                }
+            } catch (err) {
+                this.notify('Error: ' + err.message, 'error');
+            } finally {
+                this.monitorActionPending = false;
+            }
+        },
+
+        // Simulated audio level meters
+        startAudioSim() {
+            this.stopAudioSim();
+            this.audioSimTimer = setInterval(() => {
+                this.audioLevelCaller = Math.floor(Math.random() * 6) + 1;
+                this.audioLevelCallee = Math.floor(Math.random() * 6) + 1;
+            }, 300);
+        },
+
+        stopAudioSim() {
+            if (this.audioSimTimer) {
+                clearInterval(this.audioSimTimer);
+                this.audioSimTimer = null;
+            }
+            this.audioLevelCaller = 0;
+            this.audioLevelCallee = 0;
+        },
+
+        monitorModeLabel() {
+            switch (this.currentMonitorMode) {
+                case 'silent_listen': return 'Silent Listen';
+                case 'whisper': return 'Whisper';
+                case 'barge': return 'Barge';
+                default: return this.currentMonitorMode;
+            }
+        },
+
+        formatDuration(secs) {
+            if (secs == null || secs < 0) return '--';
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = secs % 60;
+            if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            return `${m}:${String(s).padStart(2, '0')}`;
+        },
+
+        qualityColor(durationSecs, status) {
+            if (status === 'ringing') return 'bg-amber-400';
+            if (durationSecs == null) return 'bg-slate-300';
+            // Simple heuristic: short calls and very long calls may have issues
+            return 'bg-emerald-500';
+        },
+
+        qualityLabel(durationSecs, status) {
+            if (status === 'ringing') return 'Ringing';
+            return 'Good';
+        },
+
+        eventTypeLabel(type) {
+            switch (type) {
+                case 'monitor_start': return 'Monitoring Started';
+                case 'monitor_stop': return 'Monitoring Stopped';
+                case 'mode_change': return 'Mode Changed';
+                default: return type;
+            }
+        },
+
+        modeLabelShort(mode) {
+            switch (mode) {
+                case 'silent_listen': return 'Silent';
+                case 'whisper': return 'Whisper';
+                case 'barge': return 'Barge';
+                default: return mode;
+            }
+        },
+
+        formatEventTime(ts) {
+            if (!ts) return '--';
+            const d = new Date(ts);
+            const now = new Date();
+            const diffMs = now - d;
+            if (diffMs < 60000) return 'just now';
+            if (diffMs < 3600000) return Math.floor(diffMs / 60000) + 'm ago';
+            if (diffMs < 86400000) return Math.floor(diffMs / 3600000) + 'h ago';
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        },
+
+        notify(message, type) {
+            window.dispatchEvent(new CustomEvent('console:notify', {
+                detail: { message, type }
+            }));
+        },
+
+        destroy() {
+            this.stopPolling();
+            this.stopAudioSim();
+            if (this.durationTimer) clearInterval(this.durationTimer);
+        }
+    }));
+});
+</script>
+{% endblock %}
