@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4iiz - Activities</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'iiz': {
+                            'cyan': '#00bcd4',
+                            'cyan-light': '#e0f7fa',
+                            'blue': '#2196f3',
+                            'blue-link': '#1e88e5',
+                            'green': '#4caf50',
+                            'red': '#f44336',
+                            'orange': '#ff9800',
+                            'gray-bg': '#f8f9fa',
+                            'gray-border': '#e0e0e0',
+                            'gray-text': '#757575',
+                            'dark': '#37474f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .activity-row:hover { background-color: #f0fafa; }
+        .activity-row { border-bottom: 1px solid #f0f0f0; }
+        .nav-icon-btn { @apply flex flex-col items-center gap-0.5 px-2 py-3 text-xs rounded-lg transition-colors; }
+        .nav-icon-btn.active { @apply text-iiz-cyan bg-iiz-cyan-light; }
+        .nav-icon-btn:not(.active) { @apply text-gray-500 hover:text-iiz-cyan hover:bg-gray-50; }
+        .side-nav-item { @apply block px-4 py-1.5 text-sm rounded-md transition-colors cursor-pointer; }
+        .side-nav-item.active { @apply text-iiz-cyan font-medium; }
+        .side-nav-item:not(.active) { @apply text-gray-600 hover:text-iiz-cyan hover:bg-gray-50; }
+        .col-header { @apply text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer select-none; }
+        .col-header:hover { @apply text-gray-700; }
+        .tag-badge { @apply inline-block px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600; }
+        .status-answered { @apply text-iiz-cyan; }
+        .status-in-progress { @apply text-iiz-orange; }
+        /* Audio player mini */
+        .audio-mini { @apply flex items-center gap-1 text-xs; }
+        /* Detail panel tabs */
+        .detail-tab { @apply flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer transition-colors; }
+        .detail-tab.active { @apply text-iiz-cyan font-medium border-l-2 border-iiz-cyan bg-iiz-cyan-light/30; }
+        .detail-tab:not(.active) { @apply text-gray-600 hover:text-iiz-cyan hover:bg-gray-50; }
+    </style>
+</head>
+<body class="bg-white min-h-screen" x-data="app()">
+
+<!-- ============================================================ -->
+<!-- LAYOUT: Icon Nav | Side Panel | Top Bar + Content             -->
+<!-- ============================================================ -->
+<div class="flex h-screen overflow-hidden">
+
+    <!-- LEFT ICON NAV (persistent) -->
+    <nav class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-2 flex-shrink-0">
+        <!-- Logo -->
+        <div class="mb-4 py-2">
+            <svg viewBox="0 0 40 20" class="w-10 h-5 text-iiz-cyan" fill="currentColor">
+                <text x="0" y="16" font-size="16" font-weight="bold" font-family="system-ui">4iiz</text>
+            </svg>
+        </div>
+
+        <!-- Nav Icons -->
+        <div class="flex flex-col gap-1 flex-1">
+            <button class="nav-icon-btn active" title="Activities">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+                <span class="text-[10px]">Activities</span>
+            </button>
+            <button class="nav-icon-btn" title="Numbers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+                </svg>
+                <span class="text-[10px]">Numbers</span>
+            </button>
+            <button class="nav-icon-btn" title="Flows">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+                <span class="text-[10px]">Flows</span>
+            </button>
+            <button class="nav-icon-btn" title="AI Tools">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                </svg>
+                <span class="text-[10px]">AI Tools</span>
+            </button>
+            <button class="nav-icon-btn" title="Reports">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span class="text-[10px]">Reports</span>
+            </button>
+            <button class="nav-icon-btn" title="Trust Center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                </svg>
+                <span class="text-[10px]">Trust<br>Center</span>
+            </button>
+        </div>
+
+        <!-- Bottom icons -->
+        <div class="flex flex-col gap-1 mt-auto pb-2">
+            <button class="nav-icon-btn" title="Help">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                </svg>
+                <span class="text-[10px]">Help</span>
+            </button>
+            <button class="nav-icon-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                <span class="text-[10px]">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SECONDARY NAV PANEL -->
+    <aside class="w-48 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto" x-show="!sidebarCollapsed" x-transition>
+        <!-- Section Header -->
+        <div class="px-4 pt-4 pb-2">
+            <div class="flex items-center gap-2 text-iiz-cyan">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+                <span class="text-lg font-light">Activities</span>
+            </div>
+        </div>
+
+        <nav class="px-2 pb-4">
+            <!-- Activity Logs -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" /></svg>
+                    Activity Logs
+                </h3>
+                <a :class="activeTab === 'calls' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'calls'">Calls</a>
+                <a :class="activeTab === 'texts' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'texts'">Texts</a>
+                <a :class="activeTab === 'forms' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'forms'">Forms</a>
+                <a :class="activeTab === 'chats' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'chats'">Chats</a>
+                <a :class="activeTab === 'faxes' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'faxes'">Faxes</a>
+                <a :class="activeTab === 'videos' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'videos'">Videos</a>
+                <a :class="activeTab === 'export' ? 'active' : ''" class="side-nav-item" @click="activeTab = 'export'">Export Log</a>
+            </div>
+
+            <!-- Contacts -->
+            <div>
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" /></svg>
+                    Contacts
+                </h3>
+                <a class="side-nav-item">Lists</a>
+                <a class="side-nav-item">Blocked Numbers</a>
+                <a class="side-nav-item">Do Not Call List</a>
+                <a class="side-nav-item">Do Not Text List</a>
+            </div>
+        </nav>
+
+        <!-- Collapse toggle -->
+        <button class="absolute left-[255px] top-1/2 -translate-y-1/2 w-5 h-8 bg-white border border-gray-200 rounded-r-md flex items-center justify-center text-gray-400 hover:text-gray-600 z-10"
+                @click="sidebarCollapsed = !sidebarCollapsed">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+        </button>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- TOP BAR -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+            <!-- Back + Title -->
+            <button class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+            </button>
+
+            <!-- Filter + Search -->
+            <div class="flex items-center gap-2">
+                <button class="btn btn-sm btn-ghost gap-1 text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                    Filter
+                </button>
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <!-- Active filters badge -->
+                <span class="badge badge-sm bg-iiz-cyan text-white border-none">22 active</span>
+                <!-- Count (dynamic per tab) -->
+                <span class="text-sm text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                    <span x-text="tabCounts[activeTab] || ''"></span>
+                </span>
+                <!-- Auto Load -->
+                <label class="flex items-center gap-1 text-sm text-gray-500 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" /></svg>
+                    Auto Load
+                </label>
+            </div>
+
+            <!-- Spacer -->
+            <div class="flex-1"></div>
+
+            <!-- Right controls -->
+            <div class="flex items-center gap-2">
+                <label class="flex items-center gap-1 text-sm text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>
+                    Desk Mode
+                </label>
+                <!-- Notification bell -->
+                <button class="btn btn-sm btn-ghost btn-circle relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                    <span class="badge badge-xs bg-iiz-cyan text-white border-none absolute -top-1 -right-1">4950</span>
+                </button>
+                <!-- View toggles -->
+                <div class="join">
+                    <button class="btn btn-sm btn-ghost join-item"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg></button>
+                    <button class="btn btn-sm btn-ghost join-item"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Z" /></svg></button>
+                    <button class="btn btn-sm btn-ghost join-item"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" /></svg></button>
+                </div>
+                <!-- Phone / New Message button -->
+                <button class="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white border-none gap-1" x-show="activeTab !== 'texts'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
+                    Phone
+                </button>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none gap-1" x-show="activeTab === 'texts'" x-cloak>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    New Message
+                </button>
+                <!-- Account -->
+                <div class="flex items-center gap-2 pl-2 border-l border-gray-200">
+                    <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                    <div class="avatar placeholder">
+                        <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                            <span class="text-xs">CF</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT: CALLS LIST -->
+        <div class="flex-1 overflow-y-auto" x-show="activeTab === 'calls'">
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                        Contact
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                        Source
+                    </div>
+                    <div class="col-header">Session Data</div>
+                    <div class="col-header">Score</div>
+                    <div class="col-header">Audio</div>
+                    <div class="col-header">Metrics</div>
+                    <div class="col-header">Routing</div>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Call Rows -->
+            <template x-for="call in calls" :key="call.id">
+                <div class="activity-row grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-3 items-start cursor-pointer"
+                     @click="selectedCall = call; showDetail = true">
+                    <!-- Call icon -->
+                    <div class="pt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+                    </div>
+                    <!-- Contact -->
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm" x-text="call.name"></span>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500" x-text="call.phone"></div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Call</a>
+                            <span class="text-gray-300">|</span>
+                            <a class="text-xs text-blue-500 hover:underline cursor-pointer" x-text="call.location"></a>
+                        </div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Edit</a>
+                        </div>
+                        <template x-if="call.tags && call.tags.length > 0">
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <template x-for="tag in call.tags">
+                                    <span class="tag-badge" x-text="tag"></span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                    <!-- Source -->
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                            <span class="text-sm font-medium" x-text="call.source"></span>
+                        </div>
+                        <div class="text-xs text-iiz-blue-link" x-text="call.sourceNumber"></div>
+                        <div class="text-xs text-gray-400" x-text="call.sourceName"></div>
+                    </div>
+                    <!-- Session Data -->
+                    <div class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                    </div>
+                    <!-- Score -->
+                    <div>
+                        <button class="text-iiz-cyan hover:text-iiz-cyan/80">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                            <span class="text-[10px]">Score</span>
+                        </button>
+                    </div>
+                    <!-- Audio -->
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" :class="call.hasAudio ? 'text-iiz-cyan' : 'text-gray-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                            <span class="text-xs" x-text="call.hasAudio ? 'audio' : 'no audio'"></span>
+                        </div>
+                        <div class="text-xs text-gray-500" x-text="'◀ ' + call.duration"></div>
+                    </div>
+                    <!-- Metrics -->
+                    <div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+                            <span x-text="call.date"></span>
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            <span x-text="call.time"></span>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="call.status === 'Answered' ? 'status-answered' : 'status-in-progress'">
+                            <span x-text="'● ' + call.status"></span>
+                        </div>
+                    </div>
+                    <!-- Routing / Agent -->
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <div class="avatar placeholder">
+                                <div class="w-7 h-7 rounded-full text-white text-[10px]" :style="'background-color:' + call.agentColor">
+                                    <span x-text="call.agentInitials"></span>
+                                </div>
+                            </div>
+                            <span class="text-sm" x-text="call.agent"></span>
+                        </div>
+                        <div class="text-xs text-iiz-blue-link mt-0.5" x-text="call.automation"></div>
+                    </div>
+                    <!-- Actions -->
+                    <div class="flex items-center gap-1">
+                        <button class="btn btn-xs btn-ghost text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                        </button>
+                        <button class="btn btn-xs btn-ghost text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- CONTENT: TEXTS LIST -->
+        <div class="flex-1 overflow-y-auto" x-show="activeTab === 'texts'">
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[24px_1.5fr_2.5fr_1.5fr_0.5fr_1fr_1fr_48px] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                        Contact
+                    </div>
+                    <div class="col-header">Message</div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                        Source
+                    </div>
+                    <div class="col-header">Score</div>
+                    <div class="col-header">Metrics</div>
+                    <div class="col-header">Routing</div>
+                    <div></div>
+                </div>
+            </div>
+            <template x-for="txt in texts" :key="txt.id">
+                <div class="activity-row grid grid-cols-[24px_1.5fr_2.5fr_1.5fr_0.5fr_1fr_1fr_48px] gap-2 px-4 py-3 items-start cursor-pointer"
+                     @click="selectedCall = txt; showDetail = true">
+                    <div class="pt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-iiz-cyan" fill="currentColor" viewBox="0 0 24 24"><path d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm" x-text="txt.name"></span>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500" x-text="txt.phone"></div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Reply</a>
+                            <span class="text-gray-300">|</span>
+                            <a class="text-xs text-blue-500 hover:underline cursor-pointer" x-text="txt.location"></a>
+                        </div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Edit</a>
+                        </div>
+                        <template x-if="txt.tags && txt.tags.length > 0">
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <template x-for="tag in txt.tags"><span class="tag-badge" x-text="tag"></span></template>
+                            </div>
+                        </template>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-700 line-clamp-3" x-text="txt.message"></p>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                            <span class="text-sm font-medium" x-text="txt.source"></span>
+                        </div>
+                        <div class="text-xs text-iiz-blue-link" x-text="txt.sourceNumber"></div>
+                        <div class="text-xs text-gray-400" x-text="txt.sourceName"></div>
+                    </div>
+                    <div>
+                        <button class="text-iiz-cyan hover:text-iiz-cyan/80">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                            <span class="text-[10px]">Score</span>
+                        </button>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+                            <span x-text="txt.date"></span>
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            <span x-text="txt.time"></span>
+                        </div>
+                        <div class="text-xs mt-0.5" :class="txt.status === 'Received' ? 'text-green-500' : 'text-iiz-cyan'">
+                            <span x-text="(txt.status === 'Received' ? '✓ ' : '● ') + txt.status"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <template x-if="txt.agent">
+                            <div class="flex items-center gap-2">
+                                <div class="avatar placeholder">
+                                    <div class="w-7 h-7 rounded-full text-white text-[10px]" :style="'background-color:' + txt.agentColor">
+                                        <span x-text="txt.agentInitials"></span>
+                                    </div>
+                                </div>
+                                <span class="text-sm" x-text="txt.agent"></span>
+                            </div>
+                        </template>
+                        <template x-if="!txt.agent">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">+ set agent</a>
+                        </template>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button class="btn btn-xs btn-ghost text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                        </button>
+                        <button class="btn btn-xs btn-ghost text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- CONTENT: FORMS LIST -->
+        <div class="flex-1 overflow-y-auto" x-show="activeTab === 'forms'">
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[24px_1.5fr_1.5fr_1.2fr_0.5fr_0.6fr_1fr_1fr_48px] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                        Contact
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                        Source
+                    </div>
+                    <div class="col-header">Session Data</div>
+                    <div class="col-header">Score</div>
+                    <div class="col-header">Audio</div>
+                    <div class="col-header">Metrics</div>
+                    <div class="col-header">Routing</div>
+                    <div></div>
+                </div>
+            </div>
+            <template x-for="form in forms" :key="form.id">
+                <div class="activity-row grid grid-cols-[24px_1.5fr_1.5fr_1.2fr_0.5fr_0.6fr_1fr_1fr_48px] gap-2 px-4 py-3 items-start cursor-pointer"
+                     @click="selectedCall = form; showDetail = true">
+                    <div class="pt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm" x-text="form.name"></span>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500" x-text="form.phone"></div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Call</a>
+                            <span class="text-gray-300">|</span>
+                            <a class="text-xs text-blue-500 hover:underline cursor-pointer" x-text="form.location"></a>
+                        </div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Edit</a>
+                        </div>
+                        <template x-if="form.tags && form.tags.length > 0">
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <template x-for="tag in form.tags"><span class="tag-badge" x-text="tag"></span></template>
+                            </div>
+                        </template>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                            <span class="text-sm font-medium" x-text="form.source"></span>
+                        </div>
+                        <div class="text-xs text-iiz-blue-link" x-text="form.formName"></div>
+                    </div>
+                    <div>
+                        <template x-if="form.sessionUrl">
+                            <div>
+                                <div class="flex items-center gap-1 text-xs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582" /></svg>
+                                    <a class="text-iiz-blue-link hover:underline" x-text="form.sessionUrl"></a>
+                                </div>
+                                <div class="text-xs text-gray-400 mt-0.5" x-text="form.sessionDetail"></div>
+                            </div>
+                        </template>
+                        <template x-if="!form.sessionUrl">
+                            <span class="text-xs text-gray-400">visitor data not available</span>
+                        </template>
+                    </div>
+                    <div>
+                        <button class="text-iiz-cyan hover:text-iiz-cyan/80">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                            <span class="text-[10px]">Score</span>
+                        </button>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-400">no audio</div>
+                        <div class="text-xs text-gray-500">◀ 00:00</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+                            <span x-text="form.date"></span>
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            <span x-text="form.time"></span>
+                        </div>
+                        <div class="text-xs mt-0.5 text-gray-500">
+                            <span x-text="'● ' + form.status"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <template x-if="form.agent">
+                            <div class="flex items-center gap-2">
+                                <div class="avatar placeholder">
+                                    <div class="w-7 h-7 rounded-full text-white text-[10px]" :style="'background-color:' + form.agentColor">
+                                        <span x-text="form.agentInitials"></span>
+                                    </div>
+                                </div>
+                                <span class="text-sm" x-text="form.agent"></span>
+                            </div>
+                        </template>
+                        <template x-if="!form.agent">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">+ set agent</a>
+                        </template>
+                        <div class="text-xs text-iiz-blue-link mt-0.5" x-text="form.automation"></div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button class="btn btn-xs btn-ghost text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                        </button>
+                        <button class="btn btn-xs btn-ghost text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- CONTENT: CHATS LIST -->
+        <div class="flex-1 overflow-y-auto" x-show="activeTab === 'chats'">
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                        Contact
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                        Source
+                    </div>
+                    <div class="col-header">Session Data</div>
+                    <div class="col-header">Score</div>
+                    <div class="col-header">Audio</div>
+                    <div class="col-header">Metrics</div>
+                    <div class="col-header">Routing</div>
+                    <div></div>
+                </div>
+            </div>
+            <template x-for="chat in chatItems" :key="chat.id">
+                <div class="activity-row grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-3 items-start cursor-pointer"
+                     @click="selectedCall = chat; showDetail = true">
+                    <div class="pt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.913 2.658c2.075-.27 4.19-.408 6.337-.408 2.147 0 4.262.139 6.337.408 1.922.25 3.291 1.861 3.405 3.727a4.403 4.403 0 0 0-1.032-.211 50.89 50.89 0 0 0-8.42 0c-2.358.196-4.04 2.19-4.04 4.434v4.286a4.47 4.47 0 0 0 2.433 3.984L7.28 21.53A.75.75 0 0 1 6 21v-2.955a12.31 12.31 0 0 1-1.588-.166C2.621 17.588 1.5 15.98 1.5 14.193V6.384c0-1.866 1.369-3.476 3.413-3.726ZM19.44 7.5c-2.042-.17-4.12-.17-6.162 0-1.457.121-2.528 1.306-2.528 2.638v4.286c0 1.332 1.071 2.517 2.528 2.638.95.079 1.91.12 2.872.12.4 0 .8-.006 1.198-.018l2.932 2.293a.75.75 0 0 0 1.22-.584v-2.291a3.064 3.064 0 0 0 .634-1.015c.18-.465.276-.966.276-1.487v-4.286c0-1.115-.764-2.21-1.97-2.494Z"/></svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm" x-text="chat.name"></span>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500" x-text="chat.phone"></div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Chat</a>
+                            <span class="text-gray-300">|</span>
+                            <a class="text-xs text-blue-500 hover:underline cursor-pointer" x-text="chat.location"></a>
+                        </div>
+                        <div class="flex items-center gap-1 mt-0.5"><a class="text-xs text-iiz-cyan hover:underline cursor-pointer">Edit</a></div>
+                        <template x-if="chat.tags && chat.tags.length > 0">
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <template x-for="tag in chat.tags"><span class="tag-badge" x-text="tag"></span></template>
+                            </div>
+                        </template>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                            <span class="text-sm font-medium" x-text="chat.source"></span>
+                        </div>
+                        <div class="text-xs text-iiz-blue-link" x-text="chat.sourceNumber"></div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                    </div>
+                    <div>
+                        <button class="text-iiz-cyan hover:text-iiz-cyan/80">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                            <span class="text-[10px]">Score</span>
+                        </button>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-400">◀ 00:00</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+                            <span x-text="chat.date"></span>
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            <span x-text="chat.time"></span>
+                        </div>
+                        <div class="text-xs mt-0.5 text-orange-500" x-text="'● ' + chat.status"></div>
+                    </div>
+                    <div>
+                        <template x-if="chat.agent">
+                            <div class="flex items-center gap-2">
+                                <div class="avatar placeholder"><div class="w-7 h-7 rounded-full text-white text-[10px]" :style="'background-color:' + chat.agentColor"><span x-text="chat.agentInitials"></span></div></div>
+                                <span class="text-sm" x-text="chat.agent"></span>
+                            </div>
+                        </template>
+                        <template x-if="!chat.agent">
+                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">+ set agent</a>
+                        </template>
+                        <div class="text-xs text-iiz-blue-link mt-0.5" x-text="chat.automation"></div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button class="btn btn-xs btn-ghost text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg></button>
+                        <button class="btn btn-xs btn-ghost text-red-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg></button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- CONTENT: EXPORT LOG -->
+        <div class="flex-1 overflow-y-auto" x-show="activeTab === 'export'">
+            <div class="p-6 max-w-4xl">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 mb-6">
+                    <h1 class="text-xl font-semibold">Export Calls</h1>
+                    <span class="text-sm text-gray-400">calls, forms, texts</span>
+                    <span class="text-gray-300">›</span>
+                    <div class="dropdown">
+                        <label tabindex="0" class="text-sm text-gray-600 cursor-pointer hover:text-gray-800 flex items-center gap-1">
+                            Export Delivery
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Export Delivery Section -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-semibold mb-4">Export Delivery</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label text-sm text-gray-600">Export method</label>
+                            <select class="select select-bordered w-64">
+                                <option selected>Email</option>
+                                <option>FTP</option>
+                                <option>SFTP</option>
+                            </select>
+                            <p class="text-xs text-gray-400 mt-1">Export via email with an attachment or FTP</p>
+                        </div>
+                        <div>
+                            <label class="label text-sm text-gray-600">Email address</label>
+                            <div class="input input-bordered flex items-center gap-2 w-full">
+                                <span class="badge badge-sm bg-gray-100 text-gray-700 gap-1">
+                                    <button class="text-gray-400 hover:text-gray-600">×</button>
+                                    chris@forbesassetmanagement.com
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">The specified email addresses will receive an email as soon as this report is available. You may enter multiple email addresses separated by commas.</p>
+                        </div>
+                        <div class="bg-gray-50 rounded p-3">
+                            <p class="text-sm text-gray-600">Exports sent via email will be in the form of a download link, with an expiration time of 7 days.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Section -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-semibold mb-1">Search <span class="text-sm font-normal text-gray-400">filter by keywords or phrases</span></h2>
+                    <div class="mt-4">
+                        <input type="text" class="input input-bordered w-80" placeholder="">
+                        <p class="text-xs text-gray-400 mt-1">filter export by matching words or phrases</p>
+                    </div>
+                </div>
+
+                <!-- Filters Section -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h2 class="text-lg font-semibold mb-1">Filters <span class="text-sm font-normal text-gray-400">filter by date or a dimension or metric</span></h2>
+                    <div class="mt-4 space-y-6">
+                        <!-- Export tags toggle -->
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" class="toggle toggle-sm" x-model="exportTagsSeparate">
+                            <span class="text-sm" x-text="exportTagsSeparate ? 'ON' : 'OFF'"></span>
+                            <span class="text-sm text-gray-600">Export tags in separate columns</span>
+                        </div>
+                        <p class="text-xs text-gray-400 -mt-4">Tags will be the last column in the export</p>
+
+                        <!-- Date Filter -->
+                        <div>
+                            <label class="text-sm text-gray-600">Date <span class="text-gray-400">is between</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <div class="flex items-center gap-2 mt-2">
+                                <input type="date" class="input input-sm input-bordered w-44">
+                                <span class="text-sm text-gray-400">to</span>
+                                <input type="date" class="input input-sm input-bordered w-44">
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <button class="btn btn-xs btn-outline">Today</button>
+                                <button class="btn btn-xs btn-outline">Yesterday</button>
+                                <button class="btn btn-xs btn-outline">Last 7 days</button>
+                                <button class="btn btn-xs btn-outline">Last 30 days</button>
+                                <button class="btn btn-xs btn-outline">Last Month</button>
+                                <button class="btn btn-xs btn-outline">This Month</button>
+                                <button class="btn btn-xs bg-iiz-cyan text-white border-none hover:bg-iiz-cyan/90">All Time</button>
+                            </div>
+                        </div>
+
+                        <!-- Dimension filter -->
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                            <span class="text-sm text-iiz-cyan">Not Set</span>
+                            <button class="text-gray-400 hover:text-gray-600 text-xs">×</button>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                        </div>
+
+                        <!-- Tag -->
+                        <div>
+                            <label class="text-sm text-gray-600">Tag <span class="text-gray-400">includes</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered w-80 mt-1" placeholder="Search for a tag">
+                        </div>
+
+                        <!-- Agent -->
+                        <div>
+                            <label class="text-sm text-gray-600">Agent <span class="text-gray-400">includes</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered w-80 mt-1" placeholder="Search for an agent">
+                        </div>
+
+                        <!-- Type -->
+                        <div>
+                            <label class="text-sm text-gray-600">Type <span class="text-gray-400">includes</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="badge badge-sm bg-gray-100 text-gray-700 gap-1"><button class="text-gray-400">×</button> Inbound Call</span>
+                                <span class="badge badge-sm bg-gray-100 text-gray-700 gap-1"><button class="text-gray-400">×</button> Outbound Call</span>
+                                <span class="badge badge-sm bg-gray-100 text-gray-700 gap-1"><button class="text-gray-400">×</button> Form</span>
+                                <span class="badge badge-sm bg-gray-100 text-gray-700 gap-1"><button class="text-gray-400">×</button> Chat</span>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Source -->
+                        <div>
+                            <label class="text-sm text-gray-600">Tracking Source <span class="text-gray-400">includes</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered w-80 mt-1" placeholder="Search for a tracking source">
+                        </div>
+
+                        <!-- Tracking Number -->
+                        <div>
+                            <label class="text-sm text-gray-600">Tracking Number <span class="text-gray-400">includes</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered w-80 mt-1" placeholder="Search for a tracking number">
+                        </div>
+
+                        <!-- Export Button -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <button class="btn bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Export</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPTY STATE for faxes/videos -->
+        <template x-if="['faxes','videos'].includes(activeTab)">
+            <div class="flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <p class="text-2xl text-gray-300 font-light">No Results</p>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- CALL DETAIL SLIDE-OUT PANEL -->
+    <div class="fixed inset-0 z-50 flex" x-show="showDetail" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:leave="transition ease-in duration-150">
+        <!-- Backdrop -->
+        <div class="flex-1 bg-black/20" @click="showDetail = false"></div>
+        <!-- Panel -->
+        <div class="w-[900px] bg-white shadow-2xl flex flex-col overflow-hidden"
+             x-show="showDetail"
+             x-transition:enter="transition ease-out duration-200 transform"
+             x-transition:enter-start="translate-x-full"
+             x-transition:enter-end="translate-x-0"
+             x-transition:leave="transition ease-in duration-150 transform"
+             x-transition:leave-start="translate-x-0"
+             x-transition:leave-end="translate-x-full">
+
+            <!-- Detail Header -->
+            <div class="border-b border-gray-200 px-4 py-3 flex items-start gap-6 bg-white flex-shrink-0" x-show="selectedCall">
+                <!-- Contact info -->
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium" x-text="selectedCall?.name"></span>
+                        <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+                    </div>
+                    <div class="text-xs text-gray-500" x-text="selectedCall?.phone"></div>
+                    <div class="text-xs text-iiz-blue-link" x-text="selectedCall?.location"></div>
+                </div>
+                <!-- Source -->
+                <div class="text-center">
+                    <div class="text-sm" x-text="selectedCall?.source"></div>
+                    <div class="text-xs text-iiz-blue-link" x-text="selectedCall?.sourceNumber"></div>
+                </div>
+                <!-- Score -->
+                <div class="text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mx-auto text-iiz-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                    <span class="text-[10px] text-gray-500">Score</span>
+                </div>
+                <!-- Audio -->
+                <div class="text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mx-auto text-iiz-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                    <span class="text-[10px] text-gray-500">audio</span>
+                    <div class="text-xs" x-text="'◀ ' + (selectedCall?.duration || '00:00')"></div>
+                </div>
+                <!-- Metrics -->
+                <div class="text-xs text-gray-500">
+                    <div x-text="selectedCall?.date"></div>
+                    <div x-text="selectedCall?.time"></div>
+                    <div class="text-iiz-cyan" x-text="'● ' + selectedCall?.status"></div>
+                </div>
+                <!-- Agent -->
+                <div class="flex items-center gap-2">
+                    <div class="avatar placeholder">
+                        <div class="w-8 h-8 rounded-full text-white text-xs" :style="'background-color:' + (selectedCall?.agentColor || '#666')">
+                            <span x-text="selectedCall?.agentInitials"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-sm" x-text="selectedCall?.agent"></span>
+                        <div class="text-xs text-iiz-blue-link" x-text="selectedCall?.automation"></div>
+                    </div>
+                </div>
+                <!-- Actions -->
+                <div class="flex items-center gap-1 ml-auto">
+                    <button class="btn btn-sm btn-ghost">Email</button>
+                    <button class="btn btn-sm btn-ghost text-red-400">Flag</button>
+                </div>
+            </div>
+
+            <!-- Detail Body -->
+            <div class="flex flex-1 overflow-hidden">
+                <!-- Tab Nav -->
+                <nav class="w-40 border-r border-gray-100 py-4 px-2 flex-shrink-0 overflow-y-auto">
+                    <a class="detail-tab" :class="detailTab === 'text' ? 'active' : ''" @click="detailTab = 'text'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+                        Text Message
+                    </a>
+                    <a class="detail-tab" :class="detailTab === 'contact' ? 'active' : ''" @click="detailTab = 'contact'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                        Contact
+                    </a>
+                    <a class="detail-tab" :class="detailTab === 'visitor' ? 'active' : ''" @click="detailTab = 'visitor'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                        Visitor Detail
+                    </a>
+                    <div class="ml-6">
+                        <a class="detail-tab" :class="detailTab === 'score' ? 'active' : ''" @click="detailTab = 'score'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
+                            Score
+                        </a>
+                        <a class="detail-tab" :class="detailTab === 'email' ? 'active' : ''" @click="detailTab = 'email'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                            Email
+                        </a>
+                    </div>
+                    <a class="detail-tab" :class="detailTab === 'voice' ? 'active' : ''" @click="detailTab = 'voice'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" /></svg>
+                        Voice Analysis
+                    </a>
+                    <div class="ml-6">
+                        <a class="detail-tab" :class="detailTab === 'flow' ? 'active' : ''" @click="detailTab = 'flow'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                            Flow
+                        </a>
+                    </div>
+                    <a class="detail-tab" :class="detailTab === 'reminder' ? 'active' : ''" @click="detailTab = 'reminder'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                        Reminder
+                    </a>
+                    <a class="detail-tab" :class="detailTab === 'zoho' ? 'active' : ''" @click="detailTab = 'zoho'">
+                        <span class="w-4 h-4 text-center text-xs font-bold">Z</span>
+                        Zoho
+                    </a>
+                    <a class="detail-tab" :class="detailTab === 'script' ? 'active' : ''" @click="detailTab = 'script'">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                        Script
+                    </a>
+                </nav>
+
+                <!-- Tab Content -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Text Message Tab -->
+                    <div x-show="detailTab === 'text'">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-medium">Text Message <span class="text-sm font-normal text-gray-400">reply to the message conversation</span></h2>
+                            <span class="text-xs text-gray-400" x-text="'Activity ID: ' + (selectedCall?.id || '')"></span>
+                        </div>
+                        <div class="text-center mb-4"><a class="text-xs text-iiz-cyan cursor-pointer">load more</a></div>
+                        <!-- Sample messages -->
+                        <div class="space-y-4">
+                            <div class="text-center text-xs text-gray-400">Mon, Sep 30, 2024 2:24 PM</div>
+                            <div class="flex justify-start"><div class="chat-bubble bg-iiz-cyan text-white max-w-lg text-sm rounded-2xl px-4 py-3">Somos Diener Law, estos clientes recibieron sus papeles recientemente. Ve video para detalles</div></div>
+                            <div class="text-center text-xs text-gray-400">Fri, Oct 11, 2024 10:44 AM</div>
+                            <div class="flex justify-end"><div class="chat-bubble bg-red-400 text-white max-w-lg text-sm rounded-2xl px-4 py-3">Le podemos regresar la llamada? / May we call you back?</div></div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Tab -->
+                    <div x-show="detailTab === 'contact'">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-medium">Contact <span class="text-sm font-normal text-gray-400">caller profile</span></h2>
+                            <button class="btn btn-sm btn-ghost" @click="showDetail = false">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-4">
+                            <div><label class="label text-xs text-gray-500">Contact Name</label><input type="text" class="input input-sm input-bordered w-full" x-model="selectedCall.name"></div>
+                            <div><label class="label text-xs text-gray-500">Email</label><input type="email" class="input input-sm input-bordered w-full" placeholder="email@example.com"></div>
+                            <div><label class="label text-xs text-gray-500">Contact Number</label><input type="tel" class="input input-sm input-bordered w-full" x-model="selectedCall.phone"></div>
+                            <div><label class="label text-xs text-gray-500">Street</label><input type="text" class="input input-sm input-bordered w-full" placeholder="Street address"></div>
+                            <div><label class="label text-xs text-gray-500">City</label><input type="text" class="input input-sm input-bordered w-full" placeholder="City"></div>
+                            <div><label class="label text-xs text-gray-500">State</label><input type="text" class="input input-sm input-bordered w-full" placeholder="State"></div>
+                            <div><label class="label text-xs text-gray-500">Country</label><select class="select select-sm select-bordered w-full"><option>US</option></select></div>
+                            <div><label class="label text-xs text-gray-500">Postal Code</label><input type="text" class="input input-sm input-bordered w-full" placeholder="Zip"></div>
+                            <div><label class="label text-xs text-gray-500">crm_contact_id</label><input type="text" class="input input-sm input-bordered w-full"></div>
+                            <div><label class="label text-xs text-gray-500">crm_matter_id</label><input type="text" class="input input-sm input-bordered w-full"></div>
+                            <div><label class="label text-xs text-gray-500">Contact Category</label><select class="select select-sm select-bordered w-full"><option></option><option>Sales</option></select></div>
+                            <div><label class="label text-xs text-gray-500">Appointment Set?</label><select class="select select-sm select-bordered w-full"><option></option></select></div>
+                            <!-- Toggles row -->
+                            <div><label class="label text-xs text-gray-500">Doc Drop Appointment?</label><input type="checkbox" class="toggle toggle-sm"></div>
+                            <div><label class="label text-xs text-gray-500">Payment Appointment?</label><input type="checkbox" class="toggle toggle-sm"></div>
+                            <div><label class="label text-xs text-gray-500">NPS?</label><input type="checkbox" class="toggle toggle-sm"></div>
+                            <div><label class="label text-xs text-gray-500">WC Call?</label><input type="checkbox" class="toggle toggle-sm"></div>
+                            <div><label class="label text-xs text-gray-500">Answered?</label><input type="checkbox" class="toggle toggle-sm"></div>
+                            <div><label class="label text-xs text-gray-500">Google Review</label><select class="select select-sm select-bordered w-full"><option></option></select></div>
+                            <div><label class="label text-xs text-gray-500">RM Call Type</label><input type="text" class="input input-sm input-bordered w-full"></div>
+                            <div><label class="label text-xs text-gray-500">Social Selling New Lead</label><input type="checkbox" class="toggle toggle-sm"></div>
+                        </div>
+                        <div class="flex gap-2 mt-6">
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Save Changes</button>
+                            <button class="btn btn-sm btn-outline">Save & Close</button>
+                        </div>
+                        <!-- Notes -->
+                        <div class="mt-8 pt-6 border-t border-gray-200">
+                            <h3 class="font-medium mb-2">Notes <span class="text-sm font-normal text-gray-400">notes for this contact</span></h3>
+                            <label class="label text-xs text-gray-500">New Note (supports Markdown)</label>
+                            <textarea class="textarea textarea-bordered w-full h-24" placeholder="Add a note..."></textarea>
+                            <div class="flex gap-2 mt-2">
+                                <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Save Note</button>
+                                <button class="btn btn-sm btn-outline">Save & Close</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Score Tab -->
+                    <div x-show="detailTab === 'score'">
+                        <h2 class="text-lg font-medium mb-4">Score <span class="text-sm font-normal text-gray-400">call revenue / sales rating</span></h2>
+                        <div class="space-y-4 max-w-md">
+                            <div><label class="label text-xs text-gray-500">Reporting Tag</label><input type="text" class="input input-sm input-bordered w-full" placeholder="Select tag"></div>
+                            <div><label class="label text-xs text-gray-500">Score Call</label><select class="select select-sm select-bordered w-full"><option>No rating</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+                            <div><label class="label text-xs text-gray-500">Converted</label><input type="checkbox" class="toggle toggle-sm"></div>
+                        </div>
+                        <div class="flex justify-between mt-6 max-w-md">
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Save Changes</button>
+                            <button class="btn btn-sm btn-outline text-red-400 border-red-300">Remove Score</button>
+                        </div>
+                    </div>
+
+                    <!-- Voice Analysis Tab -->
+                    <div x-show="detailTab === 'voice'">
+                        <h2 class="text-lg font-medium mb-4">Voice Analysis <span class="text-sm font-normal text-gray-400">transcription of the call</span></h2>
+                        <button class="btn btn-sm btn-outline mb-4">Access Logs</button>
+                        <!-- Audio waveform placeholder -->
+                        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-gray-500">1.00x</span>
+                                <button class="btn btn-xs btn-circle btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+                                <span class="text-xs">00:00</span>
+                                <div class="flex-1 h-12 bg-gradient-to-r from-transparent via-iiz-cyan/30 to-transparent rounded relative overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-full h-8 flex items-end gap-[1px]" id="waveform">
+                                            <script>
+                                                // Generate waveform bars
+                                                document.addEventListener('DOMContentLoaded', () => {
+                                                    const wf = document.getElementById('waveform');
+                                                    if(wf) for(let i=0;i<120;i++){const b=document.createElement('div');b.className='bg-iiz-cyan/60 rounded-sm';b.style.width='2px';b.style.height=Math.random()*100+'%';b.style.minHeight='2px';wf.appendChild(b);}
+                                                });
+                                            </script>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-xs">00:08</span>
+                                <button class="btn btn-xs btn-ghost">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                                </button>
+                            </div>
+                            <div class="flex gap-3 mt-2 text-xs">
+                                <a class="text-gray-500 hover:text-gray-700 cursor-pointer">Download</a>
+                                <a class="text-iiz-cyan hover:underline cursor-pointer">Share</a>
+                                <a class="text-red-400 hover:text-red-500 cursor-pointer ml-auto">Delete...</a>
+                            </div>
+                        </div>
+                        <!-- Transcription -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h3 class="font-medium mb-2">Transcription</h3>
+                            <p class="text-sm text-gray-500">No transcription available</p>
+                        </div>
+                    </div>
+
+                    <!-- Flow Tab -->
+                    <div x-show="detailTab === 'flow'">
+                        <h2 class="text-lg font-medium mb-4">Flow <span class="text-sm font-normal text-gray-400">key events of the activity</span></h2>
+                        <div class="flex gap-2 mb-6">
+                            <button class="btn btn-sm btn-outline gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06" /></svg> Debug Flow</button>
+                            <button class="btn btn-sm btn-outline">Agent Logs</button>
+                        </div>
+                        <!-- Timeline -->
+                        <div class="relative pl-6">
+                            <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-blue-200"></div>
+                            <template x-for="(event, i) in flowEvents" :key="i">
+                                <div class="relative mb-3 flex items-start gap-3">
+                                    <div class="absolute left-[-18px] top-1.5 w-3 h-3 rounded-full bg-blue-400 border-2 border-white"></div>
+                                    <a class="text-xs text-iiz-cyan hover:underline whitespace-nowrap" x-text="event.time"></a>
+                                    <span class="text-sm" x-text="event.name"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Reminder Tab -->
+                    <div x-show="detailTab === 'reminder'">
+                        <h2 class="text-lg font-medium mb-4">Callback Reminder</h2>
+                        <div class="space-y-4 max-w-md">
+                            <div><label class="label text-xs text-gray-500">How to remind:</label><select class="select select-sm select-bordered w-full"><option>Email</option><option>SMS</option></select></div>
+                            <div><label class="label text-xs text-gray-500">Remind at:</label><input type="datetime-local" class="input input-sm input-bordered w-full"></div>
+                            <div><label class="label text-xs text-gray-500">Timezone:</label><select class="select select-sm select-bordered w-full"><option>(GMT-05:00) America/New_York</option></select></div>
+                            <div><label class="label text-xs text-gray-500">Reminder message:</label><textarea class="textarea textarea-bordered w-full h-20"></textarea></div>
+                            <div class="flex gap-2 text-xs">
+                                <div class="dropdown dropdown-top"><label tabindex="0" class="btn btn-xs btn-ghost gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25" /></svg> Activity</label></div>
+                                <div class="dropdown dropdown-top"><label tabindex="0" class="btn btn-xs btn-ghost gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg> Contact</label></div>
+                                <div class="dropdown dropdown-top"><label tabindex="0" class="btn btn-xs btn-ghost gap-1">Score</label></div>
+                                <div class="dropdown dropdown-top"><label tabindex="0" class="btn btn-xs btn-ghost gap-1">Enhanced</label></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-6 max-w-md">
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Save</button>
+                            <button class="btn btn-sm btn-outline">Close</button>
+                        </div>
+                    </div>
+
+                    <!-- Email Tab -->
+                    <div x-show="detailTab === 'email'">
+                        <h2 class="text-lg font-medium mb-4">Email <span class="text-sm font-normal text-gray-400">send an email of this call</span></h2>
+                        <div class="space-y-4 max-w-lg">
+                            <div><label class="label text-xs text-gray-500">To</label><input type="email" class="input input-sm input-bordered w-full" placeholder="Email address"><div class="text-xs text-iiz-cyan mt-1">CC Email &nbsp; BCC Email</div></div>
+                            <div><label class="label text-xs text-gray-500">Subject</label><input type="text" class="input input-sm input-bordered w-full" value="Follow-up from our call"></div>
+                            <div><label class="label text-xs text-gray-500">Message</label><textarea class="textarea textarea-bordered w-full h-32"></textarea></div>
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox checkbox-sm"> Include Call Record</label>
+                            <p class="text-xs text-gray-400">Optionally include a link of call details with the email including a recording if enabled.</p>
+                        </div>
+                        <div class="flex justify-between mt-6 max-w-lg">
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none">Send Call</button>
+                            <button class="btn btn-sm btn-outline">Close</button>
+                        </div>
+                    </div>
+
+                    <!-- Visitor Detail Tab -->
+                    <div x-show="detailTab === 'visitor'">
+                        <h2 class="text-lg font-medium mb-4">Visitor Detail <span class="text-sm font-normal text-gray-400">user/visitor activity for this contact</span></h2>
+                        <p class="text-sm font-medium mb-4">No session data</p>
+                        <div class="flex gap-2">
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                                GA4 Activity Log
+                            </button>
+                            <button class="btn btn-sm bg-iiz-cyan text-white hover:bg-iiz-cyan/90 border-none gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75Z" /></svg>
+                                Check Analytics (GA3)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function app() {
+    return {
+        activeTab: 'calls',
+        sidebarCollapsed: false,
+        showDetail: false,
+        selectedCall: null,
+        detailTab: 'text',
+        exportTagsSeparate: false,
+        tabCounts: {
+            calls: '3,694,942 calls',
+            texts: '1,410,190 texts',
+            forms: '1,621 calls',
+            chats: '1 call',
+            faxes: '0 faxes',
+            videos: '0 videos',
+        },
+        flowEvents: [
+            { time: '24 Feb 02:39:51 PM', name: 'Abandoned Call Notification' },
+            { time: '24 Feb 02:39:52 PM', name: 'SMS for AHC' },
+            { time: '24 Feb 02:39:53 PM', name: 'Zoho Integration2' },
+            { time: '24 Feb 02:39:54 PM', name: 'Tag calls forwarded to Lex' },
+            { time: '24 Feb 02:39:56 PM', name: 'Tag call if not answered' },
+            { time: '24 Feb 02:40:08 PM', name: '#NA & Missed Calls Tickets' },
+            { time: '24 Feb 02:40:09 PM', name: 'Enter Workflow' },
+            { time: '24 Feb 02:40:19 PM', name: 'FKM Tagging - Outbound' },
+            { time: '24 Feb 02:40:31 PM', name: 'Voicemail to Tickets' },
+            { time: '24 Feb 02:40:57 PM', name: 'AnswerHero Tickets' },
+            { time: '24 Feb 02:41:06 PM', name: 'Repeated Callers' },
+            { time: '24 Feb 02:42:07 PM', name: 'Force Transcription AH' },
+            { time: '24 Feb 02:46:22 PM', name: 'User accessed recording' },
+        ],
+        calls: [
+            { id: '4045529975', name: 'Wilne Jean', phone: '(773) 648-1494', location: 'Month Olive, NC', source: 'Mystery Shopper', sourceNumber: '(919) 436-4235', sourceName: '(Mystery Shopper)', hasAudio: true, duration: '00:08', date: 'Tue Feb 24th', time: '02:39 PM', status: 'Answered', agent: 'Magaly Almaraz', agentInitials: 'MA', agentColor: '#7b1fa2', automation: 'Answered Calls Lookup - Missed Calls Automation', tags: ['agent_assigned'] },
+            { id: '4045529976', name: 'Jose Hipolito -Fb', phone: '(408) 449-1936', location: 'San Jose/North Da, CA US', source: 'Google Organic', sourceNumber: '(949) 649-6378', sourceName: '(Santa Ana Office - Google My Business)', hasAudio: true, duration: '00:28', date: 'Tue Feb 24th', time: '02:39 PM', status: 'Answered', agent: 'Cecilia Arrezola', agentInitials: 'CA', agentColor: '#00897b', automation: 'Cecilia Arrezola', tags: [] },
+            { id: '4045529977', name: 'Wilne Jean', phone: '(773) 648-1494', location: 'Month Olive, NC', source: 'Mystery Shopper', sourceNumber: '(919) 436-4235', sourceName: '(Mystery Shopper)', hasAudio: true, duration: '00:12', date: 'Tue Feb 24th', time: '02:39 PM', status: 'Answered', agent: 'Magaly Almaraz', agentInitials: 'MA', agentColor: '#7b1fa2', automation: 'Answered Calls Lookup - Missed Calls Automation', tags: [] },
+            { id: '4045529978', name: 'Jose Ramon Garcia Sanchez 25-45997 - Safe And Secure With Foia', phone: '(602) 930-7605', location: 'Phoenix, AZ US', source: 'Google Organic', sourceNumber: '(602) 838-6665', sourceName: '(Phoenix Office - Google My Business)', hasAudio: false, duration: '01:08', date: 'Tue Feb 24th', time: '02:39 PM', status: 'in progress', agent: 'Oswaldo Aguilera', agentInitials: 'OA', agentColor: '#0277bd', automation: 'Initial Language Selection', tags: ['repeated caller', 'spanish ivr', 'inbound to make payment'] },
+            { id: '4045529979', name: 'Jose Tores', phone: '(786) 862-3629', location: 'FL US', source: 'Tiktok Organic', sourceNumber: '(657) 279-5506', sourceName: '(TikTok Organic)', hasAudio: false, duration: '01:13', date: 'Tue Feb 24th', time: '02:39 PM', status: 'in progress', agent: 'Mario Rivas', agentInitials: 'MR', agentColor: '#c62828', automation: 'Initial Language Selection', tags: ['repeated caller', 'spanish ivr', 'in ice custody', 'sales call'] },
+            { id: '4045529980', name: 'Ismael Diosdado', phone: '(919) 360-0772', location: 'Chapel Hill, NC US', source: 'Google Organic', sourceNumber: '(919) 725-8000', sourceName: '(Durham Office - Google My Business)', hasAudio: false, duration: '02:30', date: 'Tue Feb 24th', time: '02:37 PM', status: 'in progress', agent: 'Celia Torres', agentInitials: 'CT', agentColor: '#4527a0', automation: '', tags: [] },
+            { id: '4045529981', name: 'Clemente Aldahir Gonzalez', phone: '(657) 520-8092', location: 'Santa Ana, CA US', source: 'Tiktok Organic', sourceNumber: '(657) 279-5506', sourceName: '(TikTok Organic)', hasAudio: false, duration: '02:49', date: 'Tue Feb 24th', time: '02:37 PM', status: 'in progress', agent: 'Israel Navarro', agentInitials: 'IN', agentColor: '#558b2f', automation: 'Initial Language Selection', tags: ['repeated caller', 'spanish ivr', 'sales call'] },
+            { id: '4045529982', name: 'Adolfo Angel Valerio Armijo 25-47527 - U-Visa Takeover', phone: '(323) 598-3978', location: 'Montebello, CA US', source: 'Google Organic', sourceNumber: '(949) 649-6378', sourceName: '(Santa Ana Office - Google My Business)', hasAudio: false, duration: '03:05', date: 'Tue Feb 24th', time: '02:37 PM', status: 'in progress', agent: '', agentInitials: '+', agentColor: '#9e9e9e', automation: 'Initial Language Selection', tags: ['repeated caller', 'english ivr', 'cs routed per priming', 'cs smart router'] },
+        ],
+        texts: [
+            { id: 'T001', name: 'Jaime González-Fb', phone: '(972) 809-6537', location: 'Grand Prairie, TX US', message: 'Claro, esperamos su llamada', source: 'Google Organic', sourceNumber: '(469) 218-2269', sourceName: '(Dallas Office - Google My Business)', date: 'Tue Feb 24th', time: '02:53 PM', status: 'Delivered', agent: 'Diego Lopez', agentInitials: 'DL', agentColor: '#1565c0', tags: [] },
+            { id: 'T002', name: 'Jaime González-Fb', phone: '(972) 809-6537', location: 'Grand Prairie, TX US', message: '¿Te puedo marcar después?', source: 'Google Organic', sourceNumber: '(469) 218-2269', sourceName: '(Dallas Office - Google My Business)', date: 'Tue Feb 24th', time: '02:53 PM', status: 'Received', agent: '', agentInitials: '', agentColor: '', tags: ['repeated caller'] },
+            { id: 'T003', name: 'Alan Rodriguez-Fb', phone: '(803) 606-0054', location: 'Columbia, SC US', message: 'Soy Marco Perez de DienerLaw, confirmando tu cita del 03/05/2026 a las 10am en 3116 Milton Rd A, Charlotte, NC 28215 Manda STOP para darte de baja.', source: 'Google Organic', sourceNumber: '(919) 725-8000', sourceName: '(Durham Office - Google My Business)', date: 'Tue Feb 24th', time: '02:52 PM', status: 'Delivered', agent: 'Marco Perez', agentInitials: 'MP', agentColor: '#00695c', tags: [] },
+            { id: 'T004', name: 'Maria Solorzano', phone: '(469) 441-2364', location: 'Grand Prairie, TX US', message: 'Somos Diener Law, confirmando tu cita para MANIANA 1PM en nuestra oficina de 3420 W Illinois Ave, Dallas, TX 75211.Manda STOP para darte de baja.', source: 'Google Organic', sourceNumber: '(469) 218-2269', sourceName: '(Dallas Office - Google My Business)', date: 'Tue Feb 24th', time: '02:50 PM', status: 'Delivered', agent: 'Iveth Rodriguez', agentInitials: 'IR', agentColor: '#00838f', tags: [] },
+            { id: 'T005', name: 'Clemente Aldahir Gonzalez', phone: '(657) 520-8092', location: 'Santa Ana, CA US', message: 'Somos Diener Law, tu cita quedo para 02/24/2026 ah las 4:30pm en la oficina de 1710 E. 17th Street, Unit D Santa Ana, CA 92705 Te esperamos! Manda STOP para darte de baja.', source: 'Google Organic', sourceNumber: '(424) 391-3305', sourceName: '(Lynwood Office - Google My Business)', date: 'Tue Feb 24th', time: '02:50 PM', status: 'Delivered', agent: 'Israel Navarro', agentInitials: 'IN', agentColor: '#558b2f', tags: [] },
+            { id: 'T006', name: 'Sandra Melendez - Whats', phone: '(817) 524-7797', location: 'Arlington, TX US', message: 'Gracias', source: 'Google Organic', sourceNumber: '(469) 218-2269', sourceName: '(Dallas Office - Google My Business)', date: 'Tue Feb 24th', time: '02:50 PM', status: 'Received', agent: '', agentInitials: '', agentColor: '', tags: ['repeated caller'] },
+            { id: 'T007', name: 'Rolando Davalos - Fb', phone: '(979) 472-9401', location: 'Sealy, TX US', message: 'Hola! intentamos contactarte de DienerLawAbogados pero no tuvimos exito. Tendras un horario en especifico para una llamada?.Mande STOP para darse de baja', source: 'Google Organic', sourceNumber: '(469) 218-2269', sourceName: '(Dallas Office - Google My Business)', date: 'Tue Feb 24th', time: '02:50 PM', status: 'Delivered', agent: 'Brianda Rios', agentInitials: 'BR', agentColor: '#ad1457', tags: [] },
+            { id: 'T008', name: 'Yulisa Wife Of Tony Calderon Sarabia 26-49300 - Habeas Corpus / 26-49301', phone: '(336) 755-1783', location: 'Mount Airy, NC US', message: 'Responde STOP si deseas dejar de recibir mensajes.', source: 'Google Organic', sourceNumber: '(919) 725-8000', sourceName: '(Durham Office - Google My Business)', date: 'Tue Feb 24th', time: '02:49 PM', status: 'Delivered', agent: 'Jorge Duran', agentInitials: 'JD', agentColor: '#4527a0', tags: [] },
+        ],
+        forms: [
+            { id: 'F001', name: 'Not Provided', phone: '(862) 123-4455', location: '', source: 'Customer Service Line', formName: 'CONOZCA SI CALIFICA PARA BENEFICIOS DE INMIGRACIÓN', sessionUrl: 'dienerlawca.com', sessionDetail: '100% referral / dienerlawca.com', date: 'Tue Sep 12th, 2023', time: '02:28 AM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: 'Zoho Integration2 %', tags: ['new lead'] },
+            { id: 'F002', name: 'Alfredo Mendoza', phone: '(984) 259-7884', location: 'DURHAM, NC', source: 'Customer Service Line', formName: 'CONOZCA SI CALIFICA PARA BENEFICIOS DE INMIGRACIÓN', sessionUrl: 'dienerlawca.com', sessionDetail: '100%.dienerlawca.com / referral', date: 'Wed Jul 5th, 2023', time: '10:45 PM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: 'Zoho Integration2 %', tags: [] },
+            { id: 'F003', name: 'Rossburn,Mb', phone: '(431) 883-2631', location: 'Rossburn, MB', source: 'Google Organic', formName: 'Questions', sessionUrl: '', sessionDetail: '', date: 'Thu Sep 16th, 2021', time: '11:47 PM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+            { id: 'F004', name: 'Not Provided', phone: '(723) 721-5005', location: '', source: 'Google Organic', formName: 'Questions', sessionUrl: '', sessionDetail: '', date: 'Thu Sep 16th, 2021', time: '10:54 PM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+            { id: 'F005', name: 'Normandin,Qc', phone: '(581) 588-3617', location: 'Normandin, QC', source: 'Google Organic', formName: 'Questions', sessionUrl: '', sessionDetail: '', date: 'Thu Sep 16th, 2021', time: '10:53 PM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+            { id: 'F006', name: 'Reachout Capita', phone: '(202) 991-6766', location: 'Washington Zone 1, DC', source: 'Google Organic', formName: 'Questions', sessionUrl: '', sessionDetail: '', date: 'Thu Sep 16th, 2021', time: '01:29 PM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+            { id: 'F007', name: 'Snto Domingo Do', phone: '(829) 387-8537', location: 'Santo Domingo, DR', source: 'Google Organic', formName: 'Immigration Questionnaire', sessionUrl: 'dienerabogados.com', sessionDetail: '100%', date: 'Thu Sep 16th, 2021', time: '10:57 AM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+            { id: 'F008', name: 'Oklahoma Cty,Ok', phone: '(405) 438-8668', location: 'Oklahoma City, OK', source: 'Google Organic', formName: 'Questions', sessionUrl: '', sessionDetail: '', date: 'Thu Sep 16th, 2021', time: '09:05 AM', status: 'Completed', agent: '', agentInitials: '', agentColor: '', automation: '', tags: [] },
+        ],
+        chatItems: [
+            { id: 'C001', name: 'Canton Oh', phone: '(234) 207-1092', location: 'Canton, OH US', source: 'Woosender', sourceNumber: '(919) 651-3966', date: 'Mon Sep 2nd, 2024', time: '01:13 PM', status: 'no answer', agent: '', agentInitials: '', agentColor: '', automation: 'Woosender SMS Queue %', tags: ['new lead'] },
+        ],
+    }
+}
+</script>
+</body>
+</html>
