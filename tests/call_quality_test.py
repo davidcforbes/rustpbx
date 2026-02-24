@@ -665,7 +665,7 @@ def align_signals(reference, received):
     ref_chunk = reference[:chunk_len].astype(np.float64)
     rec_search = received[:chunk_len * 2].astype(np.float64) if len(received) > chunk_len else received.astype(np.float64)
     corr = np.correlate(rec_search, ref_chunk, mode="valid")
-    offset = int(np.argmax(np.abs(corr)))
+    offset = int(np.argmax(corr))
     rec_aligned = received[offset:]
     min_len = min(len(reference), len(rec_aligned))
     return reference[:min_len], rec_aligned[:min_len]
@@ -957,6 +957,7 @@ def test_fidelity(duration=30):
             skip = SAMPLE_RATE
             ref_trim = ref_pcm[skip:]
             rec_trim = received[skip:]
+
             ref_a, rec_a = align_signals(ref_trim, rec_trim)
 
             if len(ref_a) > SAMPLE_RATE:
