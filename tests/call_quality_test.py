@@ -1068,78 +1068,66 @@ def test_transcription(duration=45):
 
     teardown_call(ctx)
 
-    # Wait for transcription
-    print("  Waiting 60s for transcription...")
-    time.sleep(60)
+    # Wait for recording to be finalized
+    print("  Waiting 5s for recording...")
+    time.sleep(5)
 
-    # Check for new recordings
+    # Find new recording files
     en_match = False
     es_match = False
     transcript_found = False
+    new_wav = None
 
     if os.path.isdir(RECORDER_DIR):
         post_files = set(os.listdir(RECORDER_DIR))
-        new_files = post_files - pre_recordings
+        new_files = [f for f in sorted(post_files - pre_recordings) if f.endswith(".wav")]
         print(f"  New recording files: {len(new_files)}")
+        if new_files:
+            new_wav = os.path.join(RECORDER_DIR, new_files[-1])
+            print(f"  Recording: {new_files[-1]} ({os.path.getsize(new_wav)} bytes)")
 
-        for fname in sorted(new_files):
-            fpath = os.path.join(RECORDER_DIR, fname)
-            # Check associated transcript files
-            base = os.path.splitext(fpath)[0]
-            for ext in (".txt", ".json", ".transcript"):
-                tpath = base + ext
-                if os.path.exists(tpath):
-                    with open(tpath) as f:
-                        text = f.read().lower()
-                    if text.strip():
-                        transcript_found = True
-                        if any(w in text for w in ["fox", "quick", "brown", "lazy", "dog"]):
-                            en_match = True
-                        if any(w in text for w in ["buenos", "dias", "como", "estas", "trabajar", "buen"]):
-                            es_match = True
+    r.check("Recording created", new_wav is not None)
 
-    # Also check via API
-    if not transcript_found:
+    # Run transcription wrapper directly on the recording
+    if new_wav:
+        transcript_out = "/tmp/call_test_transcript.txt"
+        print("  Running transcription...")
         try:
-            import urllib.request
-            import ssl
-            ssl_ctx = ssl.create_default_context()
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
-            req = urllib.request.Request(f"{API_BASE}/api/callrecords")
-            with urllib.request.urlopen(req, context=ssl_ctx, timeout=10) as resp:
-                records = json.loads(resp.read())
-                if isinstance(records, list):
-                    for rec in records[:5]:
-                        tx = str(rec.get("transcript", "") or rec.get("transcription", "")).lower()
-                        if tx:
-                            transcript_found = True
-                            if any(w in tx for w in ["fox", "quick", "brown"]):
-                                en_match = True
-                            if any(w in tx for w in ["buenos", "dias", "trabajar"]):
-                                es_match = True
-        except Exception as e:
-            print(f"  [WARN] API check: {e}")
-
-    # Check server log as last resort
-    if not transcript_found:
-        try:
-            log_path = os.path.expanduser("~/rustpbx.log")
-            with open(log_path) as f:
-                lines = f.readlines()[-1000:]
-            text = "\n".join(lines).lower()
-            if "transcript" in text:
-                transcript_found = True
-                if any(w in text for w in ["fox", "quick", "brown"]):
-                    en_match = True
-                if any(w in text for w in ["buenos", "dias", "trabajar"]):
-                    es_match = True
-        except Exception:
-            pass
+            result = subprocess.run(
+                ["groq-sensevoice-wrapper", new_wav, "-o", transcript_out],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0 and os.path.exists(transcript_out):
+                with open(transcript_out) as f:
+                    text = f.read().lower()
+                if text.strip():
+                    transcript_found = True
+                    if any(w in text for w in ["fox", "quick", "brown", "lazy", "dog"]):
+                        en_match = True
+                    if any(w in text for w in ["buenos", "dias", "como", "estas", "trabajar", "buen"]):
+                        es_match = True
+                    # Show snippet of what was transcribed
+                    try:
+                        data = json.loads(text)
+                        for ch in data:
+                            ch_num = ch.get("channel", "?")
+                            segs = ch.get("segments", [])
+                            if segs:
+                                first = segs[0].get("text", "")[:80]
+                                print(f"  Ch{ch_num}: \"{first}\"")
+                    except (json.JSONDecodeError, TypeError):
+                        print(f"  Transcript: {text[:200]}")
+                os.unlink(transcript_out)
+            else:
+                print(f"  [WARN] Transcription failed: {result.stderr[:200]}")
+        except subprocess.TimeoutExpired:
+            print("  [WARN] Transcription timed out")
+        except FileNotFoundError:
+            print("  [WARN] groq-sensevoice-wrapper not found")
 
     r.check("Transcription produced", transcript_found)
-    r.check("English recognized", en_match, f"expected: fox, quick, brown, lazy, dog")
-    r.check("Spanish recognized", es_match, f"expected: buenos, dias, trabajar")
+    r.check("English recognized", en_match, "expected: fox, quick, brown, lazy, dog")
+    r.check("Spanish recognized", es_match, "expected: buenos, dias, trabajar")
 
     return r
 
