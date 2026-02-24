@@ -647,6 +647,11 @@ def compute_snr(reference, received):
     min_len = min(len(reference), len(received))
     ref = reference[:min_len].astype(np.float64)
     rec = received[:min_len].astype(np.float64)
+    # Normalize RMS amplitudes before comparison (Opus codec changes gain)
+    ref_rms = np.sqrt(np.mean(ref ** 2))
+    rec_rms = np.sqrt(np.mean(rec ** 2))
+    if ref_rms > 0 and rec_rms > 0:
+        rec = rec * (ref_rms / rec_rms)
     noise = rec - ref
     sig_power = np.mean(ref ** 2)
     noise_power = np.mean(noise ** 2)
