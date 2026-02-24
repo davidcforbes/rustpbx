@@ -2,7 +2,7 @@
 
 **Created:** 2026-02-24
 **Tracking:** Beads issue tracker (prefix: rpbx-)
-**Total Issues:** 78 (12 epics + 66 tasks)
+**Total Issues:** 86 (13 epics + 73 tasks)
 
 ---
 
@@ -22,6 +22,7 @@
 | 10 | rpbx-5bl | Reverse engineer 4E's UI | P3 | 2 | Blocked (screenshots) |
 | 11 | rpbx-mwi | Resilient infrastructure/clustering | P2 | 7 | Ready |
 | 12 | rpbx-kng | Backup and recovery | P2 | 6 | Ready |
+| 13 | rpbx-cu9 | Call monitoring (listen/whisper/barge) | P1 | 8 | Ready |
 
 ---
 
@@ -194,6 +195,43 @@ Each has 2 tasks: (1) Screenshot analysis -> feature requirements, (2) Gap mappi
 
 ---
 
+## 13. Call Monitoring - Listen/Whisper/Barge (rpbx-cu9) - P1
+
+**Purpose:** Call center training and supervision. Managers can listen to active calls, coach agents via whisper, or join conversations via barge.
+
+**Three Modes:**
+- **Silent Listen** - Supervisor hears both sides, neither party hears supervisor
+- **Whisper** - Supervisor audio goes to agent only, customer hears nothing
+- **Barge** - Supervisor joins as 3rd party, both sides hear supervisor
+
+**Current Infrastructure (80% ready):**
+- MediaBridge has 2-leg track forwarding with mute/suppress support
+- Active call registry tracks all sessions with command handles
+- call_control API already supports mute/unmute/hangup/transfer
+- Recorder has 2-leg PCM mixing logic (extend to 3-leg)
+- WebRTC track infrastructure supports dynamic attachment
+
+**Key Files:**
+- `src/proxy/proxy_call/media_bridge.rs:15-34` - MediaBridge struct (add leg_monitor)
+- `src/proxy/proxy_call/state.rs:28-55` - SessionAction enum (add monitor commands)
+- `src/console/handlers/call_control.rs:37-57` - API commands (add monitor endpoints)
+- `src/proxy/active_call_registry.rs:23-31` - Active call lookup
+- `src/media/recorder.rs:55-59,305+` - Leg enum and mix function
+
+**Tasks:**
+1. `rpbx-cu9.1` [P1] Extend MediaBridge to support optional monitor leg
+2. `rpbx-cu9.2` [P1] Add whisper mode (monitor speaks to agent only)
+3. `rpbx-cu9.3` [P2] Add barge mode (monitor joins as 3rd party)
+4. `rpbx-cu9.4` [P1] Add monitoring commands to SessionAction and call control API
+5. `rpbx-cu9.5` [P1] Implement supervisor permissions and audit logging
+6. `rpbx-cu9.6` [P2] Build supervisor monitoring UI in console
+7. `rpbx-cu9.7` [P3] Add monitor leg to call recording
+8. `rpbx-cu9.8` [P2] Add automated tests for call monitoring
+
+**Critical Path:** cu9.1 (MediaBridge) -> cu9.4 (API) -> cu9.5 (permissions) -> cu9.6 (UI)
+
+---
+
 ## Recommended Execution Order
 
 ### Phase 1 - Foundation (Immediate)
@@ -205,15 +243,16 @@ Each has 2 tasks: (1) Screenshot analysis -> feature requirements, (2) Gap mappi
 4. **rpbx-eid** Architecture docs (P2, 8 tasks) - document current state before changing it
 
 ### Phase 3 - Features
-5. **rpbx-101** Voicemail (P2, 8 tasks) - major user-facing feature
-6. **rpbx-lld** Performance tests (P2, 8 tasks) - validate capacity
+5. **rpbx-cu9** Call monitoring/listen/whisper/barge (P1, 8 tasks) - critical for call center ops
+6. **rpbx-101** Voicemail (P2, 8 tasks) - major user-facing feature
+7. **rpbx-lld** Performance tests (P2, 8 tasks) - validate capacity
 
 ### Phase 4 - Infrastructure
-7. **rpbx-kng** Backup/recovery (P2, 6 tasks) - protect existing data
-8. **rpbx-mwi** Clustering/HA (P2, 7 tasks) - production readiness
+8. **rpbx-kng** Backup/recovery (P2, 6 tasks) - protect existing data
+9. **rpbx-mwi** Clustering/HA (P2, 7 tasks) - production readiness
 
 ### Phase 5 - Competitive Analysis (when screenshots provided)
-9. **rpbx-c68** CTM analysis (P3)
-10. **rpbx-p2v** Zoho analysis (P3)
-11. **rpbx-cr1** Flow Legal analysis (P3)
-12. **rpbx-5bl** 4E's analysis (P3)
+10. **rpbx-c68** CTM analysis (P3)
+11. **rpbx-p2v** Zoho analysis (P3)
+12. **rpbx-cr1** Flow Legal analysis (P3)
+13. **rpbx-5bl** 4E's analysis (P3)
