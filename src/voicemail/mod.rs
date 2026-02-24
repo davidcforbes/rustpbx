@@ -1,11 +1,16 @@
 use crate::config::VoicemailConfig;
 use crate::media::recorder::RecorderOption;
 use crate::models::voicemail;
+use crate::models::voicemail_greeting;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+    QueryOrder,
+};
+use sea_orm::sea_query::Order;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 
 /// VoicemailService manages voicemail deposit operations.
 ///
@@ -69,17 +74,57 @@ impl VoicemailService {
 
     /// Resolve the greeting audio file path for a given mailbox.
     ///
-    /// Looks for a custom greeting first, then falls back to a default.
-    /// Returns None if no greeting file exists.
-    pub fn resolve_greeting_path(&self, mailbox_id: &str) -> Option<String> {
-        // Try custom greeting for this mailbox
+    /// First checks the database for an active custom greeting uploaded by the
+    /// user. If none exists (or there is no database), falls back to a
+    /// per-mailbox WAV file on disk, and finally to the system default greeting.
+    /// Returns None if no greeting file exists anywhere.
+    pub async fn resolve_greeting_path(&self, mailbox_id: &str) -> Option<String> {
+        // 1. Check database for an active custom greeting
+        if let Some(db) = &self.db {
+            match voicemail_greeting::Entity::find()
+                .filter(voicemail_greeting::Column::MailboxId.eq(mailbox_id))
+                .filter(voicemail_greeting::Column::IsActive.eq(true))
+                .order_by(voicemail_greeting::Column::CreatedAt, Order::Desc)
+                .one(db)
+                .await
+            {
+                Ok(Some(greeting)) => {
+                    let path = PathBuf::from(&greeting.recording_path);
+                    if path.exists() {
+                        info!(
+                            mailbox_id,
+                            path = %greeting.recording_path,
+                            "Using custom greeting from database"
+                        );
+                        return Some(greeting.recording_path);
+                    }
+                    warn!(
+                        mailbox_id,
+                        path = %greeting.recording_path,
+                        "Active greeting in database but file not found on disk"
+                    );
+                }
+                Ok(None) => {
+                    // No active greeting in DB, fall through to filesystem
+                }
+                Err(e) => {
+                    warn!(
+                        mailbox_id,
+                        error = %e,
+                        "Failed to query greeting from database, falling back to filesystem"
+                    );
+                }
+            }
+        }
+
+        // 2. Try per-mailbox greeting file on disk
         let custom = PathBuf::from(&self.config.greeting_path)
             .join(format!("{}.wav", mailbox_id));
         if custom.exists() {
             return Some(custom.to_string_lossy().to_string());
         }
 
-        // Try default greeting
+        // 3. Try system default greeting
         let default_greeting = PathBuf::from(&self.config.greeting_path)
             .join("default.wav");
         if default_greeting.exists() {
@@ -141,6 +186,78 @@ impl VoicemailService {
             "Voicemail record saved to database"
         );
 
+        Ok(())
+    }
+
+    /// List voicemail messages for a mailbox, ordered by newest first.
+    ///
+    /// Only returns non-deleted messages (where deleted_at is NULL).
+    pub async fn get_messages(&self, mailbox_id: &str) -> Result<Vec<voicemail::Model>> {
+        let db = self
+            .db
+            .as_ref()
+            .ok_or_else(|| anyhow!("No database configured"))?;
+
+        let messages = voicemail::Entity::find()
+            .filter(voicemail::Column::MailboxId.eq(mailbox_id))
+            .filter(voicemail::Column::DeletedAt.is_null())
+            .order_by(voicemail::Column::CreatedAt, Order::Desc)
+            .all(db)
+            .await
+            .map_err(|e| anyhow!("Failed to query voicemails: {}", e))?;
+
+        Ok(messages)
+    }
+
+    /// Mark a voicemail message as read.
+    pub async fn mark_read(&self, message_id: i64) -> Result<()> {
+        let db = self
+            .db
+            .as_ref()
+            .ok_or_else(|| anyhow!("No database configured"))?;
+
+        let msg = voicemail::Entity::find_by_id(message_id)
+            .one(db)
+            .await
+            .map_err(|e| anyhow!("Failed to find voicemail {}: {}", message_id, e))?
+            .ok_or_else(|| anyhow!("Voicemail message {} not found", message_id))?;
+
+        let mut active: voicemail::ActiveModel = msg.into();
+        active.is_read = Set(true);
+        active.updated_at = Set(Utc::now());
+
+        active
+            .update(db)
+            .await
+            .map_err(|e| anyhow!("Failed to mark voicemail {} as read: {}", message_id, e))?;
+
+        info!(message_id, "Voicemail message marked as read");
+        Ok(())
+    }
+
+    /// Soft-delete a voicemail message by setting its deleted_at timestamp.
+    pub async fn delete_message(&self, message_id: i64) -> Result<()> {
+        let db = self
+            .db
+            .as_ref()
+            .ok_or_else(|| anyhow!("No database configured"))?;
+
+        let msg = voicemail::Entity::find_by_id(message_id)
+            .one(db)
+            .await
+            .map_err(|e| anyhow!("Failed to find voicemail {}: {}", message_id, e))?
+            .ok_or_else(|| anyhow!("Voicemail message {} not found", message_id))?;
+
+        let mut active: voicemail::ActiveModel = msg.into();
+        active.deleted_at = Set(Some(Utc::now()));
+        active.updated_at = Set(Utc::now());
+
+        active
+            .update(db)
+            .await
+            .map_err(|e| anyhow!("Failed to delete voicemail {}: {}", message_id, e))?;
+
+        info!(message_id, "Voicemail message soft-deleted");
         Ok(())
     }
 }

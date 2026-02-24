@@ -3413,7 +3413,7 @@ impl CallSession {
         }
 
         // Play greeting if available
-        let greeting_path = vm_service.resolve_greeting_path(&mailbox_id);
+        let greeting_path = vm_service.resolve_greeting_path(&mailbox_id).await;
         if let Some(ref greeting) = greeting_path {
             info!(
                 session_id = %self.context.session_id,

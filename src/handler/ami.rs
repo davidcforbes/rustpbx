@@ -30,6 +30,9 @@ pub fn ami_router(app_state: AppState) -> Router<AppState> {
         .route("/reload/app", post(reload_app_handler))
         .route("/backup/status", get(backup_status_handler))
         .route("/backup/trigger", post(backup_trigger_handler))
+        .route("/backup/health", get(backup_health_handler))
+        .route("/backup/verify", get(backup_verify_handler))
+        .route("/backup/history", get(backup_history_handler))
         .route(
             "/frequency_limits",
             get(list_frequency_limits).delete(clear_frequency_limits),
@@ -520,5 +523,100 @@ async fn backup_trigger_handler(
             )
                 .into_response()
         }
+    }
+}
+
+async fn backup_health_handler(State(state): State<AppState>) -> Response {
+    let Some(ref backup_svc) = state.backup_service else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({
+                "status": "unavailable",
+                "reason": "backup_not_configured",
+                "message": "Add [backup] section with enabled = true to your config to enable backups",
+            })),
+        )
+            .into_response();
+    };
+
+    let health = backup_svc.check_health().await;
+    Json(serde_json::json!({
+        "status": "ok",
+        "health": health,
+    }))
+    .into_response()
+}
+
+async fn backup_verify_handler(State(state): State<AppState>) -> Response {
+    let Some(ref backup_svc) = state.backup_service else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({
+                "status": "unavailable",
+                "reason": "backup_not_configured",
+                "message": "Add [backup] section with enabled = true to your config to enable backups",
+            })),
+        )
+            .into_response();
+    };
+
+    match backup_svc.verify_latest_backup().await {
+        Ok(result) => Json(serde_json::json!({
+            "status": "ok",
+            "verification": result,
+        }))
+        .into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "status": "error",
+                "message": err,
+            })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct BackupHistoryQuery {
+    #[serde(default = "default_backup_history_limit")]
+    limit: usize,
+}
+
+fn default_backup_history_limit() -> usize {
+    20
+}
+
+async fn backup_history_handler(
+    State(state): State<AppState>,
+    Query(params): Query<BackupHistoryQuery>,
+) -> Response {
+    let Some(ref backup_svc) = state.backup_service else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(serde_json::json!({
+                "status": "unavailable",
+                "reason": "backup_not_configured",
+                "message": "Add [backup] section with enabled = true to your config to enable backups",
+            })),
+        )
+            .into_response();
+    };
+
+    match backup_svc.get_history(params.limit).await {
+        Ok(history) => Json(serde_json::json!({
+            "status": "ok",
+            "count": history.len(),
+            "history": history,
+        }))
+        .into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "status": "error",
+                "message": err,
+            })),
+        )
+            .into_response(),
     }
 }

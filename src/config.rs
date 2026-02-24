@@ -508,6 +508,9 @@ pub struct BackupConfig {
     pub include_recordings: bool,
     #[serde(default = "default_backup_notify_on_failure")]
     pub notify_on_failure: bool,
+    /// Optional webhook URL for sending backup alerts (e.g., Slack, PagerDuty).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alert_webhook_url: Option<String>,
 }
 
 impl Default for BackupConfig {
@@ -519,6 +522,7 @@ impl Default for BackupConfig {
             retention_days: default_backup_retention_days(),
             include_recordings: false,
             notify_on_failure: default_backup_notify_on_failure(),
+            alert_webhook_url: None,
         }
     }
 }

@@ -7,10 +7,45 @@ use anyhow::Result;
 use audio_codec::CodecType;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
-use rustrtc::media::{MediaKind, MediaSample, MediaStreamTrack};
+use rustrtc::media::{MediaKind, MediaSample, MediaStreamTrack, SampleStreamSource};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
+
+/// Monitor mode for the supervisor leg.
+///
+/// Controls how audio flows between the monitor and the call participants.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MonitorMode {
+    /// Monitor hears both sides but cannot speak (default).
+    SilentListen,
+    /// Monitor can speak to leg B (agent) only. Leg A (caller) cannot hear the monitor.
+    Whisper,
+    /// Monitor can speak to both legs (full conference).
+    Barge,
+}
+
+impl Default for MonitorMode {
+    fn default() -> Self {
+        MonitorMode::SilentListen
+    }
+}
+
+/// A monitor (supervisor) leg that can silently listen to both sides of a call.
+///
+/// The monitor receives a copy of audio from both leg A and leg B via a shared
+/// `SampleStreamSource`. The monitor's `PeerConnection` handles RTP packetization
+/// and sequence numbering for the outbound stream.
+pub struct MonitorLeg {
+    /// The sample source feeding the monitor's PeerConnection track.
+    pub source: SampleStreamSource,
+    /// The codec the monitor expects to receive.
+    pub codec: CodecType,
+    /// The RTP codec parameters for the monitor's track.
+    pub params: rustrtc::RtpCodecParameters,
+    /// The current monitor mode.
+    pub mode: MonitorMode,
+}
 
 pub struct MediaBridge {
     pub leg_a: Arc<dyn MediaPeer>,
@@ -31,6 +66,10 @@ pub struct MediaBridge {
     sipflow_backend: Option<Arc<dyn SipFlowBackend>>,
     quality: Arc<CallQuality>,
     quality_config: Option<QualityConfig>,
+    /// Optional monitor (supervisor) leg. Protected by a Mutex so it can be
+    /// attached/detached at runtime without interrupting the bridge loop.
+    /// Each `forward_track` task holds an Arc clone and checks on every packet.
+    monitor: Arc<Mutex<Option<MonitorLeg>>>,
 }
 
 impl MediaBridge {
@@ -90,6 +129,146 @@ impl MediaBridge {
             sipflow_backend,
             quality: Arc::new(CallQuality::new()),
             quality_config,
+            monitor: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Attach a monitor (supervisor) leg to the bridge.
+    ///
+    /// The monitor receives a copy of processed audio from both sides of the call.
+    /// The `track` parameter is the MediaPeer for the monitor's media stream, and
+    /// `codec` is the codec the monitor's RTP stream should use.
+    ///
+    /// This can be called while the bridge is running; forward_track tasks will
+    /// pick up the new monitor on their next packet.
+    pub fn attach_monitor(
+        &self,
+        peer: Arc<dyn MediaPeer>,
+        codec: CodecType,
+    ) -> Result<()> {
+        let params = rustrtc::RtpCodecParameters {
+            payload_type: codec.payload_type(),
+            clock_rate: codec.clock_rate(),
+            channels: codec.channels() as u8,
+            ..Default::default()
+        };
+
+        // Create a sample track for the monitor. The SampleStreamSource is used
+        // by forward_track tasks to push audio; the SampleStreamTrack feeds the
+        // monitor's PeerConnection sender.
+        let (source, track, _feedback_rx) =
+            rustrtc::media::track::sample_track(MediaKind::Audio, 200);
+
+        // Spawn a task to set up the monitor's PeerConnection sender.
+        // We need the PeerConnection from the monitor peer's track.
+        let call_id = self.call_id.clone();
+        let monitor_arc = self.monitor.clone();
+
+        // Store the monitor leg first so forward_tracks can start sending
+        {
+            let mut guard = self.monitor.lock().unwrap();
+            *guard = Some(MonitorLeg {
+                source,
+                codec,
+                params: params.clone(),
+                mode: MonitorMode::SilentListen,
+            });
+        }
+
+        // Set up the PeerConnection track asynchronously
+        let track_target: Arc<dyn MediaStreamTrack> = track;
+        crate::utils::spawn(async move {
+            let tracks = peer.get_tracks().await;
+            if let Some(t) = tracks.first() {
+                let pc = t.lock().await.get_peer_connection().await;
+                if let Some(pc) = pc {
+                    // Try to reuse existing transceiver
+                    let transceivers = pc.get_transceivers();
+                    let existing = transceivers
+                        .iter()
+                        .find(|t| t.kind() == rustrtc::MediaKind::Audio);
+
+                    if let Some(transceiver) = existing {
+                        let ssrc = transceiver
+                            .sender()
+                            .map(|s| s.ssrc())
+                            .unwrap_or_else(|| rand::random::<u32>());
+                        let new_sender =
+                            rustrtc::RtpSender::builder(track_target, ssrc)
+                                .params(params)
+                                .build();
+                        transceiver.set_sender(Some(new_sender));
+                        info!(call_id, "Monitor leg attached via existing transceiver");
+                    } else {
+                        match pc.add_track(track_target, params) {
+                            Ok(_) => {
+                                info!(call_id, "Monitor leg attached via new track");
+                            }
+                            Err(e) => {
+                                warn!(call_id, "Failed to add monitor track: {}", e);
+                                // Clear the monitor since we couldn't set up the PC
+                                let mut guard = monitor_arc.lock().unwrap();
+                                *guard = None;
+                            }
+                        }
+                    }
+                } else {
+                    warn!(call_id, "Monitor peer has no PeerConnection");
+                    let mut guard = monitor_arc.lock().unwrap();
+                    *guard = None;
+                }
+            } else {
+                warn!(call_id, "Monitor peer has no tracks");
+                let mut guard = monitor_arc.lock().unwrap();
+                *guard = None;
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Detach the monitor leg from the bridge.
+    ///
+    /// After this call, forward_track tasks will stop sending audio to the
+    /// monitor on their next packet. The SampleStreamSource is dropped, which
+    /// will cause the monitor's PeerConnection track to end.
+    pub fn detach_monitor(&self) -> Result<()> {
+        let mut guard = self.monitor.lock().unwrap();
+        if guard.is_some() {
+            *guard = None;
+            info!(call_id = %self.call_id, "Monitor leg detached");
+        }
+        Ok(())
+    }
+
+    /// Returns true if a monitor leg is currently attached.
+    pub fn has_monitor(&self) -> bool {
+        self.monitor.lock().unwrap().is_some()
+    }
+
+    /// Get the current monitor mode, if a monitor is attached.
+    pub fn monitor_mode(&self) -> Option<MonitorMode> {
+        self.monitor.lock().unwrap().as_ref().map(|m| m.mode)
+    }
+
+    /// Set the monitor mode. Only effective if a monitor is attached.
+    ///
+    /// Currently only `SilentListen` is fully implemented. `Whisper` and `Barge`
+    /// modes set the mode flag but do not yet alter audio routing.
+    pub fn set_monitor_mode(&self, mode: MonitorMode) -> Result<()> {
+        let mut guard = self.monitor.lock().unwrap();
+        if let Some(ref mut monitor) = *guard {
+            let old_mode = monitor.mode;
+            monitor.mode = mode;
+            info!(
+                call_id = %self.call_id,
+                ?old_mode,
+                ?mode,
+                "Monitor mode changed"
+            );
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("No monitor leg attached"))
         }
     }
 
@@ -139,6 +318,7 @@ impl MediaBridge {
             let input_gain = self.input_gain;
             let output_gain = self.output_gain;
             let quality = self.quality.clone();
+            let monitor = self.monitor.clone();
 
             // Prepare watchdog config
             let watchdog_quality = self.quality.clone();
@@ -196,6 +376,7 @@ impl MediaBridge {
                         input_gain,
                         output_gain,
                         quality,
+                        monitor,
                     ) => {}
                 }
             });
@@ -203,6 +384,7 @@ impl MediaBridge {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn bridge_pcs(
         leg_a: Arc<dyn MediaPeer>,
         leg_b: Arc<dyn MediaPeer>,
@@ -222,6 +404,7 @@ impl MediaBridge {
         input_gain: f32,
         output_gain: f32,
         quality: Arc<CallQuality>,
+        monitor: Arc<Mutex<Option<MonitorLeg>>>,
     ) {
         debug!(
             "bridge_pcs started: codec_a={:?} codec_b={:?} ssrc_a={:?} ssrc_b={:?}",
@@ -302,6 +485,7 @@ impl MediaBridge {
                                             input_gain,
                                             output_gain,
                                             quality.clone(),
+                                            monitor.clone(),
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg A track id={}, skipping", track_id);
@@ -345,6 +529,7 @@ impl MediaBridge {
                                             input_gain,
                                             output_gain,
                                             quality.clone(),
+                                            monitor.clone(),
                                         ));
                                     } else {
                                         debug!("Track event for already started Leg B track id={}, skipping", track_id);
@@ -387,6 +572,7 @@ impl MediaBridge {
                                         input_gain,
                                         output_gain,
                                         quality.clone(),
+                                        monitor.clone(),
                                     ));
                                 }
                             }
@@ -416,6 +602,7 @@ impl MediaBridge {
                                         input_gain,
                                         output_gain,
                                         quality.clone(),
+                                        monitor.clone(),
                                     ));
                                 }
                             }
@@ -429,6 +616,7 @@ impl MediaBridge {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn forward_track(
         source_peer: Arc<dyn MediaPeer>,
         track: Arc<dyn MediaStreamTrack>,
@@ -446,6 +634,7 @@ impl MediaBridge {
         input_gain: f32,
         output_gain: f32,
         quality: Arc<CallQuality>,
+        monitor: Arc<Mutex<Option<MonitorLeg>>>,
     ) {
         let needs_transcoding = source_codec != target_codec;
         let track_id = track.id().to_string();
@@ -539,6 +728,12 @@ impl MediaBridge {
             None
         };
 
+        // Lazy-initialized transcoder for the monitor leg. Created on first use
+        // when the monitor codec differs from the source codec.
+        let mut monitor_transcoder: Option<crate::media::Transcoder> = None;
+        // Track the last known monitor codec so we can detect changes.
+        let mut last_monitor_codec: Option<CodecType> = None;
+
         let mut packet_count: u64 = 0;
         let target_pt = target_params.payload_type;
         let source_clock_rate = source_codec.clock_rate();
@@ -601,10 +796,6 @@ impl MediaBridge {
                         packet_count,
                         "forward_track received"
                     );
-                    // debug!(
-                    //     "forward_track {:?} {} received packet #{} pt={:?}",
-                    //     leg, track_id, packet_count, frame.payload_type
-                    // );
                 }
 
                 if let Some(seq) = frame.sequence_number {
@@ -675,6 +866,21 @@ impl MediaBridge {
                 }
             }
 
+            // Forward a copy of the processed sample to the monitor leg if attached.
+            // This runs on every packet but the fast path (no monitor) is just a
+            // Mutex::lock + Option::is_none check, so overhead is negligible.
+            if !is_dtmf {
+                Self::try_send_to_monitor(
+                    &monitor,
+                    &sample,
+                    source_codec,
+                    &mut monitor_transcoder,
+                    &mut last_monitor_codec,
+                    &call_id,
+                    leg,
+                );
+            }
+
             if let Err(e) = source_target.send(sample).await {
                 warn!(
                     call_id,
@@ -701,6 +907,80 @@ impl MediaBridge {
         );
     }
 
+    /// Send a copy of the processed audio sample to the monitor leg, if one is attached.
+    ///
+    /// Uses `try_send` (non-blocking) so that a slow or blocked monitor leg never
+    /// delays the main call bridge. If the monitor's channel is full, the packet
+    /// is silently dropped.
+    ///
+    /// When the monitor codec differs from the source codec, a per-direction
+    /// transcoder is lazily created and cached in `monitor_transcoder`.
+    fn try_send_to_monitor(
+        monitor: &Arc<Mutex<Option<MonitorLeg>>>,
+        sample: &MediaSample,
+        source_codec: CodecType,
+        monitor_transcoder: &mut Option<crate::media::Transcoder>,
+        last_monitor_codec: &mut Option<CodecType>,
+        call_id: &str,
+        leg: Leg,
+    ) {
+        // Fast path: check if monitor exists. The lock is held very briefly.
+        let guard = monitor.lock().unwrap();
+        let monitor_leg = match guard.as_ref() {
+            Some(m) => m,
+            None => return,
+        };
+
+        // Only forward audio samples in SilentListen mode (both legs to monitor).
+        // Whisper and Barge modes will be extended in future tasks.
+        if monitor_leg.mode != MonitorMode::SilentListen {
+            // For now, all modes forward audio to monitor. The difference will
+            // be in how monitor audio is routed back, which is not yet implemented.
+        }
+
+        let monitor_codec = monitor_leg.codec;
+
+        let monitor_sample = if let MediaSample::Audio(frame) = sample {
+            if source_codec == monitor_codec {
+                // Same codec: clone the sample directly, just fix the PT
+                let mut monitor_frame = frame.clone();
+                monitor_frame.payload_type = Some(monitor_codec.payload_type());
+                // Strip raw_packet since the monitor doesn't need it
+                monitor_frame.raw_packet = None;
+                MediaSample::Audio(monitor_frame)
+            } else {
+                // Different codec: transcode for the monitor
+                // Check if we need to create or recreate the transcoder
+                if last_monitor_codec.as_ref() != Some(&monitor_codec) {
+                    *monitor_transcoder =
+                        Some(crate::media::Transcoder::new(source_codec, monitor_codec));
+                    *last_monitor_codec = Some(monitor_codec);
+                }
+
+                if let Some(tc) = monitor_transcoder {
+                    MediaSample::Audio(tc.transcode(frame))
+                } else {
+                    // Should not happen, but fall back to clone
+                    let mut monitor_frame = frame.clone();
+                    monitor_frame.raw_packet = None;
+                    MediaSample::Audio(monitor_frame)
+                }
+            }
+        } else {
+            return; // Skip non-audio samples
+        };
+
+        // Non-blocking send. If the channel is full, drop the packet rather than
+        // blocking the main bridge. The monitor can tolerate occasional packet loss.
+        if let Err(_e) = monitor_leg.source.try_send(monitor_sample) {
+            debug!(
+                call_id,
+                ?leg,
+                "Monitor leg channel full or closed, dropping packet"
+            );
+        }
+    }
+
     pub fn quality(&self) -> &Arc<CallQuality> {
         &self.quality
     }
@@ -713,6 +993,11 @@ impl MediaBridge {
         let mut guard = self.recorder.lock().unwrap();
         if let Some(ref mut r) = *guard {
             let _ = r.finalize();
+        }
+        // Detach monitor on stop
+        {
+            let mut monitor_guard = self.monitor.lock().unwrap();
+            *monitor_guard = None;
         }
         self.leg_a.stop();
         self.leg_b.stop();
@@ -792,5 +1077,54 @@ mod tests {
 
         // Should log transcoding required
         bridge.start().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_monitor_attach_detach() {
+        let leg_a = Arc::new(MockMediaPeer::new());
+        let leg_b = Arc::new(MockMediaPeer::new());
+        let bridge = MediaBridge::new(
+            leg_a.clone(),
+            leg_b.clone(),
+            rustrtc::RtpCodecParameters::default(),
+            rustrtc::RtpCodecParameters::default(),
+            None,
+            None,
+            CodecType::PCMU,
+            CodecType::PCMU,
+            None,
+            None,
+            None,
+            "test-call-id".to_string(),
+            None,
+            None,
+        );
+
+        // Initially no monitor
+        assert!(!bridge.has_monitor());
+        assert!(bridge.monitor_mode().is_none());
+
+        // Attach a monitor
+        let monitor_peer = Arc::new(MockMediaPeer::new());
+        bridge.attach_monitor(monitor_peer, CodecType::PCMU).unwrap();
+        assert!(bridge.has_monitor());
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::SilentListen));
+
+        // Change mode
+        bridge.set_monitor_mode(MonitorMode::Whisper).unwrap();
+        assert_eq!(bridge.monitor_mode(), Some(MonitorMode::Whisper));
+
+        // Detach
+        bridge.detach_monitor().unwrap();
+        assert!(!bridge.has_monitor());
+        assert!(bridge.monitor_mode().is_none());
+
+        // set_monitor_mode should fail when no monitor attached
+        assert!(bridge.set_monitor_mode(MonitorMode::Barge).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_monitor_mode_default() {
+        assert_eq!(MonitorMode::default(), MonitorMode::SilentListen);
     }
 }
