@@ -1027,7 +1027,7 @@ async fn test_set_var_updates_state() {
     // Setup ActiveCall
     // Use a random port or default config to avoid binding conflicts if any
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1110,7 +1110,7 @@ async fn test_set_var_with_sip_headers() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1200,7 +1200,7 @@ async fn test_http_command_in_stream() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1241,7 +1241,7 @@ async fn test_http_command_in_stream() {
     handler.call = Some(active_call.clone());
 
     // Start mock server
-    let mock_server = MockServer::start().await;
+    let mock_server: wiremock::MockServer = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/api/data"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
@@ -1289,7 +1289,7 @@ async fn test_http_command_post_with_body() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1330,7 +1330,7 @@ async fn test_http_command_post_with_body() {
     handler.call = Some(active_call.clone());
 
     // Start mock server
-    let mock_server = MockServer::start().await;
+    let mock_server: wiremock::MockServer = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/api/submit"))
         .and(body_string("test_payload"))
@@ -1368,7 +1368,7 @@ async fn test_multiple_commands_in_sequence() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1441,7 +1441,7 @@ async fn test_set_var_individual_sip_header() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1531,7 +1531,7 @@ async fn test_bye_headers_with_all_variables() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1621,7 +1621,7 @@ async fn test_bye_headers_with_unset_variables() {
     let rag = Arc::new(RecordingRag::new());
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1714,7 +1714,7 @@ async fn test_set_var_then_bye_headers() {
     let interruption = crate::playbook::InterruptionConfig::default();
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1875,7 +1875,7 @@ async fn test_hangup_before_set_var_still_works() {
     let interruption = crate::playbook::InterruptionConfig::default();
 
     let mut app_config = Config::default();
-    app_config.udp_port = 0;
+    app_config.proxy.udp_port = Some(0);
 
     let app_state = AppStateBuilder::new()
         .with_config(app_config)
@@ -1964,7 +1964,7 @@ async fn test_dynamic_scene_prompt_rendering() {
     use crate::playbook::Scene;
 
     let mut config = Config::default();
-    config.udp_port = 0;
+    config.proxy.udp_port = Some(0);
     let app_state = AppStateBuilder::new()
         .with_config(config)
         .build()
@@ -2098,7 +2098,7 @@ async fn test_dynamic_prompt_with_builtin_vars() {
     use crate::playbook::{BUILTIN_CALL_TYPE, BUILTIN_SESSION_ID, BUILTIN_START_TIME, Scene};
 
     let mut config = Config::default();
-    config.udp_port = 0;
+    config.proxy.udp_port = Some(0);
     let app_state = AppStateBuilder::new()
         .with_config(config)
         .build()

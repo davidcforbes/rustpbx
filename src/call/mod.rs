@@ -31,6 +31,7 @@ pub mod active_sip;
 pub mod command;
 pub use active_call::{ActiveCall, ActiveCallRef, ActiveCallType};
 pub use command::Command as AgentCommand;
+pub use command::{Command, CommandSender, CommandReceiver};
 
 /// Default hold audio that ships with config/sounds.
 pub const DEFAULT_QUEUE_HOLD_AUDIO: &str = "config/sounds/phone-calling.wav";

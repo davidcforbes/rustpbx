@@ -164,6 +164,7 @@ pub enum CallRecordHangupReason {
     Canceled,
     Rejected,
     Failed,
+    InactivityTimeout,
     Other(String),
 }
 
@@ -194,6 +195,7 @@ impl std::str::FromStr for CallRecordHangupReason {
             "canceled" => Ok(Self::Canceled),
             "rejected" => Ok(Self::Rejected),
             "failed" => Ok(Self::Failed),
+            "inactivitytimeout" | "inactivity_timeout" => Ok(Self::InactivityTimeout),
             _ => Ok(Self::Other(s.to_string())),
         }
     }
@@ -214,6 +216,7 @@ impl ToString for CallRecordHangupReason {
             Self::Canceled => "canceled".to_string(),
             Self::Rejected => "rejected".to_string(),
             Self::Failed => "failed".to_string(),
+            Self::InactivityTimeout => "inactivityTimeout".to_string(),
             Self::Other(s) => s.to_string(),
         }
     }

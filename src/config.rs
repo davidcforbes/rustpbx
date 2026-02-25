@@ -213,6 +213,16 @@ pub struct Config {
     pub backup: Option<BackupConfig>,
     #[serde(default)]
     pub monitoring: Option<MonitoringConfig>,
+    #[serde(default)]
+    pub enable_srtp: Option<bool>,
+    #[serde(default)]
+    pub enable_ice_lite: Option<bool>,
+    #[serde(default)]
+    pub rtp_bind_ip: Option<String>,
+    #[serde(default)]
+    pub ambiance: Option<crate::media::ambiance::AmbianceOption>,
+    #[serde(default)]
+    pub invite_handler: Option<InviteHandlerConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -689,6 +699,8 @@ pub struct ProxyConfig {
     pub addons: Option<Vec<String>>,
     #[serde(default)]
     pub transcript: Option<TranscriptToolConfig>,
+    #[serde(default)]
+    pub invite_handler: Option<InviteHandlerConfig>,
 }
 
 /// Configuration for the transcript addon command-line tool.
@@ -895,6 +907,7 @@ impl Default for ProxyConfig {
             sip_flow_max_items: None,
             addons: None,
             transcript: None,
+            invite_handler: None,
         }
     }
 }
@@ -955,6 +968,11 @@ impl Default for Config {
             voicemail: None,
             backup: None,
             monitoring: None,
+            enable_srtp: None,
+            enable_ice_lite: None,
+            rtp_bind_ip: None,
+            ambiance: None,
+            invite_handler: None,
         }
     }
 }
@@ -1020,6 +1038,41 @@ impl Config {
     pub fn config_dir(&self) -> std::path::PathBuf {
         self.proxy.generated_root_dir()
     }
+
+    pub fn codecs(&self) -> Option<&Vec<String>> {
+        self.proxy.codecs.as_ref()
+    }
+
+    pub fn enable_rtp_latching(&self) -> bool {
+        self.proxy.enable_latching
+    }
+
+    pub fn recorder_format(&self) -> crate::media::agent_recorder::RecorderFormat {
+        crate::media::agent_recorder::RecorderFormat::Wav
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+pub enum InviteHandlerConfig {
+    Webhook {
+        url: Option<String>,
+        urls: Option<Vec<String>>,
+        method: Option<String>,
+        headers: Option<HashMap<String, String>>,
+    },
+    Playbook {
+        rules: Vec<PlaybookRule>,
+        default: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PlaybookRule {
+    pub caller: Option<String>,
+    pub callee: Option<String>,
+    pub playbook: String,
 }
 
 #[cfg(test)]

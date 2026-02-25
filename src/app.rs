@@ -67,6 +67,17 @@ pub struct AppStateInner {
     pub backup_service: Option<crate::backup::BackupService>,
     #[cfg(feature = "console")]
     pub console: Option<Arc<crate::console::ConsoleState>>,
+    // AI Voice Agent fields
+    #[cfg(feature = "voice-agent")]
+    pub stream_engine: Arc<crate::media::engine::StreamEngine>,
+    #[cfg(feature = "voice-agent")]
+    pub pending_params: Arc<tokio::sync::Mutex<std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>>>,
+    #[cfg(feature = "voice-agent")]
+    pub pending_playbooks: Arc<tokio::sync::Mutex<std::collections::HashMap<String, String>>>,
+    #[cfg(feature = "voice-agent")]
+    pub active_calls: Arc<std::sync::Mutex<std::collections::HashMap<String, Arc<dyn std::any::Any + Send + Sync>>>>,
+    #[cfg(feature = "voice-agent")]
+    pub invitation: crate::call::active_sip::Invitation,
 }
 
 pub type AppState = Arc<AppStateInner>;
@@ -80,6 +91,8 @@ pub struct AppStateBuilder {
     pub config_loaded_at: Option<DateTime<Utc>>,
     pub config_path: Option<String>,
     pub skip_sip_bind: bool,
+    #[cfg(feature = "voice-agent")]
+    pub stream_engine: Option<crate::media::engine::StreamEngine>,
 }
 
 impl AppStateInner {
@@ -97,6 +110,16 @@ impl AppStateInner {
 
     pub fn sip_server(&self) -> &SipServer {
         &self.sip_server
+    }
+
+    pub fn callrecord_sender(&self) -> Option<&crate::callrecord::CallRecordSender> {
+        self.core.callrecord_sender.as_ref()
+    }
+
+    /// Stub: look up SIP credentials for an outbound callee.
+    /// Returns None until a real credential store is wired up.
+    pub fn find_credentials_for_callee(&self, _callee: &str) -> Option<crate::call::user::SipCredential> {
+        None
     }
 
     pub fn get_dump_events_file(&self, session_id: &String) -> String {
@@ -157,6 +180,8 @@ impl AppStateBuilder {
             config_loaded_at: None,
             config_path: None,
             skip_sip_bind: false,
+            #[cfg(feature = "voice-agent")]
+            stream_engine: None,
         }
     }
 
@@ -196,6 +221,12 @@ impl AppStateBuilder {
     pub fn with_config_metadata(mut self, path: Option<String>, loaded_at: DateTime<Utc>) -> Self {
         self.config_path = path;
         self.config_loaded_at = Some(loaded_at);
+        self
+    }
+
+    #[cfg(feature = "voice-agent")]
+    pub fn with_stream_engine(mut self, engine: crate::media::engine::StreamEngine) -> Self {
+        self.stream_engine = Some(engine);
         self
     }
 
@@ -332,6 +363,11 @@ impl AppStateBuilder {
             None
         };
 
+        #[cfg(feature = "voice-agent")]
+        let stream_engine = Arc::new(self.stream_engine.unwrap_or_default());
+        #[cfg(feature = "voice-agent")]
+        let invitation = crate::call::active_sip::Invitation::new(sip_server.inner.dialog_layer.clone());
+
         let app_state = Arc::new(AppStateInner {
             core: core.clone(),
             sip_server,
@@ -345,6 +381,16 @@ impl AppStateBuilder {
             backup_service: backup_service.clone(),
             #[cfg(feature = "console")]
             console: console_state,
+            #[cfg(feature = "voice-agent")]
+            stream_engine,
+            #[cfg(feature = "voice-agent")]
+            pending_params: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            pending_playbooks: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            active_calls: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            invitation,
         });
 
         if let Some(mut manager) = callrecord_manager {
@@ -372,6 +418,22 @@ impl AppStateBuilder {
             if let Some(ref console_state) = app_state.console {
                 console_state.set_sip_server(Some(app_state.sip_server().get_inner()));
                 console_state.set_app_state(Some(Arc::downgrade(&app_state)));
+            }
+        }
+
+        // Initialize voice-agent invitation handler from config
+        #[cfg(feature = "voice-agent")]
+        {
+            let invite_config = config.invite_handler.as_ref()
+                .or(config.proxy.invite_handler.as_ref());
+            if let Some(handler) = crate::useragent::invitation::default_create_invite_handler(
+                invite_config,
+                Some(app_state.clone()),
+            ) {
+                // Convert Box<dyn InvitationHandler> to Arc
+                let handler: Arc<dyn crate::useragent::invitation::InvitationHandler> = handler.into();
+                app_state.sip_server().inner.set_invite_handler(handler);
+                tracing::info!("Voice agent invitation handler initialized");
             }
         }
 
@@ -588,6 +650,13 @@ pub fn create_router(state: AppState) -> Router {
     #[cfg(feature = "console")]
     if let Some(console_state) = state.console.clone() {
         router = router.merge(crate::console::router(console_state));
+    }
+
+    #[cfg(feature = "voice-agent")]
+    {
+        let voice_agent_routes =
+            crate::handler::voice_agent::voice_agent_router().with_state(state.clone());
+        router = router.nest("/voice-agent/v1", voice_agent_routes);
     }
 
     let access_log_skip_paths = Arc::new(state.config().http_access_skip_paths.clone());

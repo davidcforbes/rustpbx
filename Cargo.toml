@@ -40,6 +40,7 @@ axum = { version = "0.8.8", features = ["ws", "tokio", "multipart"] }
 bytes = "1"
 futures = "0.3.31"
 rustls = { version = "0.23.36", features = ["ring"] }
+ring = "0.17"
 minijinja = { version = "2", features = ["loader", "json"], optional = true }
 serde = { version = "1", features = ["derive"] }
 glob = "0.3.3"
@@ -150,6 +151,8 @@ num_cpus = "1.16"
 # AI Voice Pipeline - Text Processing
 unicode-normalization = "0.1"
 serde_yaml = "0.9.33"
+unic-emoji = "0.9"
+tempfile = "3.24.0"
 
 # Offline AI Models (SenseVoice ASR + Supertonic TTS)
 symphonia = { version = "0.5", optional = true, features = ["all"] }
@@ -159,11 +162,11 @@ hf-hub = { version = "0.4.3", optional = true, features = ["tokio"] }
 ndarray = { version = "0.16.1", optional = true }
 
 [dev-dependencies]
-tempfile = "3.24.0"
 tokio-test = "0.4"
 mockall = "0.14.0"
 warp = { version = "0.4.1", features = ["server", "websocket"] }
 portpicker = "0.1.1"
+wiremock = "0.6"
 
 [[bin]]
 name = "rustpbx"

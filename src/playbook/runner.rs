@@ -241,7 +241,7 @@ pub fn apply_playbook_config(option: &mut CallOption, config: &PlaybookConfig) {
         option.ambiance = Some(ambiance);
     }
     if let Some(recorder) = config.recorder.clone() {
-        option.recorder = Some(recorder);
+        option.recorder = Some(recorder.into());
     }
     if let Some(extra) = config.extra.clone() {
         option.extra = Some(extra);

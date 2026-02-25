@@ -3940,7 +3940,7 @@ impl CallSession {
         // Only create recorder when:
         // 1. Recording is enabled and auto_start is true
         // 2. AND no sipflow backend is configured (to avoid duplicate storage)
-        let has_sipflow_backend = server
+        let _has_sipflow_backend = server
             .sip_flow
             .as_ref()
             .and_then(|sf| sf.backend())

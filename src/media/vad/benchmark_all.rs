@@ -14,10 +14,8 @@ mod tests {
         let chunk_size = 320; // 20ms for common VAD usage
 
         // Generate random audio
-        let mut rng = rand::thread_rng();
-        use rand::Rng;
         let samples_i16: Vec<i16> = (0..total_samples)
-            .map(|_| rng.gen_range(-32768..32767))
+            .map(|_| rand::random::<i16>())
             .collect();
 
         println!("\n--- VAD Benchmark ({}s audio) ---", duration_sec);

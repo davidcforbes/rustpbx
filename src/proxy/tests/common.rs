@@ -100,6 +100,8 @@ pub async fn create_test_server_with_config(
         presence_manager: Arc::new(crate::proxy::presence::PresenceManager::new(None)),
         quality_config: None,
         voicemail_config: None,
+        #[cfg(feature = "voice-agent")]
+        invite_handler: std::sync::RwLock::new(None),
     });
 
     // Add test users

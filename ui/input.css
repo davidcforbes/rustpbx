@@ -1,0 +1,244 @@
+@charset "UTF-8";
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default;
+}
+@source "./src/**/*.rs";
+@source "../../leptos-daisyui-rs/src/**/*.rs";
+
+/* Accordion */
+@source inline("collapse collapse-title collapse-content collapse-arrow collapse-plus collapse-open collapse-close");
+/* Alert */
+@source inline("alert alert-outline alert-dash alert-soft alert-info alert-success alert-warning alert-error alert-vertical alert-horizontal");
+/* Avatar */
+@source inline("avatar avatar-group avatar-online avatar-offline avatar-placeholder");
+/* Badge */
+@source inline("badge badge-outline badge-dash badge-soft badge-ghost badge-neutral badge-primary badge-secondary badge-accent badge-info badge-success badge-warning badge-error badge-xs badge-sm badge-md badge-lg badge-xl");
+/* Breadcrumbs */
+@source inline("breadcrumbs");
+/* Button */
+@source inline("btn btn-neutral btn-primary btn-secondary btn-accent btn-info btn-success btn-warning btn-error btn-outline btn-dash btn-soft btn-ghost btn-link btn-active btn-disabled btn-xs btn-sm btn-md btn-lg btn-xl btn-wide btn-block btn-square btn-circle");
+/* Calendar */
+@source inline("cally pika-single react-day-picker");
+/* Card */
+@source inline("card card-title card-body card-actions card-border card-side image-full card-xs card-sm card-md card-lg card-xl");
+/* Carousel */
+@source inline("carousel carousel-item carousel-start carousel-center carousel-end carousel-horizontal carousel-vertical");
+/* Chat */
+@source inline("chat chat-image chat-header chat-footer chat-bubble chat-start chat-end chat-bubble-neutral chat-bubble-primary chat-bubble-secondary chat-bubble-accent chat-bubble-info chat-bubble-success chat-bubble-warning chat-bubble-error");
+/* Checkbox */
+@source inline("checkbox checkbox-primary checkbox-secondary checkbox-accent checkbox-neutral checkbox-success checkbox-warning checkbox-info checkbox-error checkbox-xs checkbox-sm checkbox-md checkbox-lg checkbox-xl");
+/* DataTable */
+@source inline("animate-pulse");
+/* Collapse */
+@source inline("collapse collapse-title collapse-content collapse-arrow collapse-plus collapse-open collapse-close");
+/* Countdown */
+@source inline("countdown");
+/* Diff */
+@source inline("diff diff-item-1 diff-item-2 diff-resizer");
+/* Divider */
+@source inline("divider divider-neutral divider-primary divider-secondary divider-accent divider-success divider-warning divider-info divider-error divider-vertical divider-horizontal divider-start divider-end");
+/* Dock */
+@source inline("dock dock-label dock-active dock-xs dock-sm dock-md dock-lg dock-xl");
+/* Drawer */
+@source inline("drawer drawer-toggle drawer-content drawer-side drawer-overlay drawer-end drawer-open");
+/* Dropdown */
+@source inline("dropdown dropdown-content dropdown-start dropdown-center dropdown-end dropdown-top dropdown-bottom dropdown-left dropdown-right dropdown-hover dropdown-open");
+/* Fieldset */
+@source inline("fieldset label fieldset-legend");
+/* File-Input */
+@source inline("file-input file-input-ghost file-input-neutral file-input-primary file-input-secondary file-input-accent file-input-info file-input-success file-input-warning file-input-error file-input-xs file-input-sm file-input-md file-input-lg file-input-xl");
+/* FAB (Floating Action Button) */
+@source inline("fab fab-close fab-main-action fab-flower fab-flower-bottom-right fab-flower-bottom-left fab-flower-top-right fab-flower-top-left");
+/* Filter */
+@source inline("filter filter-reset");
+/* Footer */
+@source inline("footer footer-title footer-center footer-horizontal footer-vertical");
+/* Hero */
+@source inline("hero hero-content hero-overlay");
+/* Hover 3D */
+@source inline("hover-3d");
+/* Hover Gallery */
+@source inline("hover-gallery hover-gallery-item");
+/* Indicator */
+@source inline("indicator indicator-item indicator-start indicator-center indicator-end indicator-top indicator-middle indicator-bottom");
+/* Input */
+@source inline("input input-ghost input-neutral input-primary input-secondary input-accent input-info input-success input-warning input-error input-xs input-sm input-md input-lg input-xl");
+/* Join */
+@source inline("join join-item join-vertical join-horizontal");
+/* Kbd */
+@source inline("kbd kbd-xs kbd-sm kbd-md kbd-lg kbd-xl");
+/* Label */
+@source inline("label floating-label");
+/* Link */
+@source inline("link link-hover link-neutral link-primary link-secondary link-accent link-success link-info link-warning link-error");
+/* List */
+@source inline("list list-row list-col-wrap list-col-grow");
+/* Loading */
+@source inline("loading loading-spinner loading-dots loading-ring loading-ball loading-bars loading-infinity loading-xs loading-sm loading-md loading-lg loading-xl text-primary text-secondary text-accent text-success text-info text-warning text-error");
+/* Mask */
+@source inline("mask mask-squircle mask-heart mask-hexagon mask-hexagon-2 mask-decagon mask-pentagon mask-diamond mask-square mask-circle mask-star mask-star-2 mask-triangle mask-triangle-2 mask-triangle-3 mask-triangle-4 mask-half-1 mask-half-2");
+/* Menu */
+@source inline("menu menu-title menu-dropdown menu-dropdown-toggle menu-disabled menu-active menu-focus menu-dropdown-show menu-xs menu-sm menu-md menu-lg menu-xl menu-vertical menu-horizontal");
+/* Mockup-Browser */
+@source inline("mockup-browser mockup-browser-toolbar");
+/* Mockup-Code */
+@source inline("mockup-code");
+/* Mockup-Phone */
+@source inline("mockup-phone mockup-phone-camera mockup-phone-display");
+/* Mockup-Window */
+@source inline("mockup-window");
+/* Modal */
+@source inline("modal modal-box modal-action modal-backdrop modal-toggle modal-open modal-top modal-middle modal-bottom modal-start modal-end");
+/* Navbar */
+@source inline("navbar navbar-start navbar-center navbar-end");
+/* Pagination */
+@source inline("join join-item join-vertical join-horizontal");
+/* Progress */
+@source inline("progress progress-neutral progress-primary progress-secondary progress-accent progress-info progress-success progress-warning progress-error");
+/* Radial-Progress */
+@source inline("radial-progress text-primary text-secondary text-accent text-success text-info text-warning text-error");
+/* Radio */
+@source inline("radio radio-neutral radio-primary radio-secondary radio-accent radio-success radio-warning radio-info radio-error radio-xs radio-sm radio-md radio-lg radio-xl");
+/* Range */
+@source inline("range range-neutral range-primary range-secondary range-accent range-success range-warning range-info range-error range-xs range-sm range-md range-lg range-xl");
+/* Rating */
+@source inline("rating rating-half rating-hidden rating-xs rating-sm rating-md rating-lg rating-xl");
+/* Select */
+@source inline("select select-ghost select-neutral select-primary select-secondary select-accent select-info select-success select-warning select-error select-xs select-sm select-md select-lg select-xl");
+/* Skeleton */
+@source inline("skeleton");
+/* Stack */
+@source inline("stack stack-top stack-bottom stack-start stack-end");
+/* Stat */
+@source inline("stats stat stat-title stat-value stat-desc stat-figure stat-actions stats-horizontal stats-vertical");
+/* Status */
+@source inline("status status-neutral status-primary status-secondary status-accent status-info status-success status-warning status-error status-xs status-sm status-md status-lg status-xl");
+/* Steps */
+@source inline("steps step step-icon step-neutral step-primary step-secondary step-accent step-info step-success step-warning step-error steps-vertical steps-horizontal");
+/* Swap */
+@source inline("swap swap-on swap-off swap-indeterminate swap-active swap-rotate swap-flip");
+/* Tab */
+@source inline("tabs tab tab-content tabs-box tabs-border tabs-lift tab-active tab-disabled tabs-top tabs-bottom");
+/* Table */
+@source inline("table table-zebra table-pin-rows table-pin-cols table-xs table-sm table-md table-lg table-xl");
+/* Textarea */
+@source inline("textarea textarea-ghost textarea-neutral textarea-primary textarea-secondary textarea-accent textarea-info textarea-success textarea-warning textarea-error textarea-xs textarea-sm textarea-md textarea-lg textarea-xl");
+/* Text Rotate */
+@source inline("text-rotate text-rotate-item");
+/* Theme-Controller */
+@source inline("theme-controller");
+/* Timeline */
+@source inline("timeline timeline-start timeline-middle timeline-end timeline-snap-icon timeline-box timeline-compact timeline-vertical timeline-horizontal");
+/* Toast */
+@source inline("toast toast-start toast-center toast-end toast-top toast-middle toast-bottom");
+/* Toggle */
+@source inline("toggle toggle-primary toggle-secondary toggle-accent toggle-neutral toggle-success toggle-warning toggle-info toggle-error toggle-xs toggle-sm toggle-md toggle-lg toggle-xl");
+/* Tooltip */
+@source inline("tooltip tooltip-open tooltip-top tooltip-bottom tooltip-left tooltip-right tooltip-neutral tooltip-primary tooltip-secondary tooltip-accent tooltip-info tooltip-success tooltip-warning tooltip-error");
+/* Validator */
+@source inline("validator validator-hint");
+
+/* 4iiz Custom Colors */
+@theme {
+  --color-iiz-cyan: #00bcd4;
+  --color-iiz-cyan-light: #e0f7fa;
+  --color-iiz-blue: #2196f3;
+  --color-iiz-blue-link: #1e88e5;
+  --color-iiz-green: #4caf50;
+  --color-iiz-red: #f44336;
+  --color-iiz-orange: #ff9800;
+  --color-iiz-gray-bg: #f8f9fa;
+  --color-iiz-gray-border: #e0e0e0;
+  --color-iiz-gray-text: #757575;
+  --color-iiz-dark: #37474f;
+}
+
+/* 4iiz Custom Utility Classes */
+@layer components {
+  .nav-icon-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .side-nav-item {
+    display: block;
+    padding: 0.375rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+  }
+
+  .col-header {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+
+  .activity-row {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .activity-row:hover {
+    background-color: #f0fafa;
+  }
+
+  .tag-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    background-color: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .detail-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    color: #4b5563;
+    width: 100%;
+  }
+
+  .detail-tab:hover {
+    color: var(--color-iiz-cyan);
+    background-color: #f9fafb;
+  }
+
+  .detail-tab.active {
+    color: var(--color-iiz-cyan);
+    font-weight: 500;
+    border-left: 2px solid var(--color-iiz-cyan);
+    background-color: color-mix(in srgb, var(--color-iiz-cyan-light) 30%, transparent);
+  }
+}
+
+/* Slide-in animation for detail panel */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}

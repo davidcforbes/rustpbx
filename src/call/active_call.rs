@@ -8,7 +8,7 @@ use crate::{
         engine::StreamEngine,
         negotiate::strip_ipv6_candidates,
         processor::SubscribeProcessor,
-        recorder::RecorderOption,
+        agent_recorder::RecorderOption,
         stream::{MediaStream, MediaStreamBuilder},
         track::{
             Track, TrackConfig,
@@ -26,9 +26,9 @@ use crate::{
     app::AppState,
     call::{
         CommandReceiver, CommandSender,
-        sip::{DialogStateReceiverGuard, Invitation, InviteDialogStates},
+        active_sip::{DialogStateReceiverGuard, Invitation, InviteDialogStates},
     },
-    callrecord::{CallRecord, CallRecordEvent, CallRecordEventType, CallRecordHangupReason},
+    callrecord::{CallRecord, CallRecordEventType, CallRecordHangupReason},
     useragent::invitation::PendingDialog,
 };
 use anyhow::Result;
@@ -54,9 +54,8 @@ mod tests {
     #[tokio::test]
     async fn test_tts_ssrc_reuse_for_autohangup() -> Result<()> {
         let mut config = Config::default();
-        config.udp_port = 0; // Use random port
-        config.media_cache_path = "/tmp/mediacache".to_string();
-        let stream_engine = Arc::new(StreamEngine::default());
+        config.proxy.udp_port = Some(0); // Use random port
+        let stream_engine = StreamEngine::default();
         let app_state = AppStateBuilder::new()
             .with_config(config)
             .with_stream_engine(stream_engine)
@@ -138,9 +137,8 @@ mod tests {
     #[tokio::test]
     async fn test_tts_new_ssrc_for_different_play_id() -> Result<()> {
         let mut config = Config::default();
-        config.udp_port = 0; // Use random port
-        config.media_cache_path = "/tmp/mediacache".to_string();
-        let stream_engine = Arc::new(StreamEngine::default());
+        config.proxy.udp_port = Some(0); // Use random port
+        let stream_engine = StreamEngine::default();
         let app_state = AppStateBuilder::new()
             .with_config(config)
             .with_stream_engine(stream_engine)
@@ -788,7 +786,7 @@ impl ActiveCall {
             };
             let requested_format = recorder_option
                 .format
-                .unwrap_or(self.app_state.config.recorder_format());
+                .unwrap_or(self.app_state.config().recorder_format());
             let format = requested_format.effective();
             if requested_format != format {
                 warn!(
@@ -1500,14 +1498,14 @@ impl ActiveCall {
                     break;
                 }
                 Ok(cmd) = cmd_receiver.recv() => {
-                    CallRecordEvent::write(CallRecordEventType::Command, cmd, dump_file)
+                    crate::callrecord::write_call_record_event(CallRecordEventType::Command, cmd, dump_file)
                         .await;
                 }
                 Ok(event) = event_receiver.recv() => {
                     if matches!(event, SessionEvent::Binary{..}) {
                         continue;
                     }
-                    CallRecordEvent::write(CallRecordEventType::Event, event, dump_file)
+                    crate::callrecord::write_call_record_event(CallRecordEventType::Event, event, dump_file)
                         .await;
                 }
             };
@@ -1551,7 +1549,7 @@ impl ActiveCall {
             if matches!(event, SessionEvent::Binary { .. }) {
                 continue;
             }
-            CallRecordEvent::write(CallRecordEventType::Event, event, &mut dump_file).await;
+            crate::callrecord::write_call_record_event(CallRecordEventType::Event, event, &mut dump_file).await;
         }
     }
 
@@ -1564,7 +1562,7 @@ impl ActiveCall {
         let mut rtc_config = RtcTrackConfig::default();
         // Per-call flag takes precedence over global config.
         let use_srtp = enable_srtp
-            .or(self.app_state.config.enable_srtp)
+            .or(self.app_state.config().enable_srtp)
             .unwrap_or(false);
         rtc_config.mode = if use_srtp {
             rustrtc::TransportMode::Srtp
@@ -1572,7 +1570,7 @@ impl ActiveCall {
             rustrtc::TransportMode::Rtp
         };
 
-        if let Some(codecs) = &self.app_state.config.codecs {
+        if let Some(codecs) = self.app_state.config().codecs() {
             let mut codec_types = Vec::new();
             for c in codecs {
                 match c.to_lowercase().as_str() {
@@ -1600,19 +1598,19 @@ impl ActiveCall {
 
         rtc_config.rtp_port_range = self
             .app_state
-            .config
+            .config()
             .rtp_start_port
-            .zip(self.app_state.config.rtp_end_port);
+            .zip(self.app_state.config().rtp_end_port);
 
-        if let Some(ref external_ip) = self.app_state.config.external_ip {
+        if let Some(ref external_ip) = self.app_state.config().external_ip {
             rtc_config.external_ip = Some(external_ip.clone());
         }
-        if let Some(ref bind_ip) = self.app_state.config.rtp_bind_ip {
+        if let Some(ref bind_ip) = self.app_state.config().rtp_bind_ip {
             rtc_config.bind_ip = Some(bind_ip.clone());
         }
 
-        rtc_config.enable_latching = self.app_state.config.enable_rtp_latching;
-        rtc_config.enable_ice_lite = self.app_state.config.enable_ice_lite;
+        rtc_config.enable_latching = Some(self.app_state.config().enable_rtp_latching());
+        rtc_config.enable_ice_lite = self.app_state.config().enable_ice_lite;
 
         let mut track = RtcTrack::new(
             self.cancel_token.child_token(),
@@ -1862,7 +1860,7 @@ impl ActiveCall {
                 .and_then(|o| o.ambiance.clone())
                 .unwrap_or_default();
 
-            if let Some(global) = &self.app_state.config.ambiance {
+            if let Some(global) = &self.app_state.config().ambiance {
                 opt.merge(global);
             }
 
@@ -1948,9 +1946,9 @@ impl ActiveCall {
 
         let mut rtc_config = RtcTrackConfig::default();
         rtc_config.mode = rustrtc::TransportMode::WebRtc; // WebRTC
-        rtc_config.ice_servers = self.app_state.config.ice_servers.clone();
+        rtc_config.ice_servers = self.app_state.config().ice_servers.clone();
 
-        if let Some(codecs) = &self.app_state.config.codecs {
+        if let Some(codecs) = self.app_state.config().codecs() {
             let mut codec_types = Vec::new();
             for c in codecs {
                 match c.to_lowercase().as_str() {
@@ -1972,10 +1970,10 @@ impl ActiveCall {
             }
         }
 
-        if let Some(ref external_ip) = self.app_state.config.external_ip {
+        if let Some(ref external_ip) = self.app_state.config().external_ip {
             rtc_config.external_ip = Some(external_ip.clone());
         }
-        if let Some(ref bind_ip) = self.app_state.config.rtp_bind_ip {
+        if let Some(ref bind_ip) = self.app_state.config().rtp_bind_ip {
             rtc_config.bind_ip = Some(bind_ip.clone());
         }
 
@@ -2225,15 +2223,15 @@ impl ActiveCall {
         let mut media_track = if Self::is_webrtc_sdp(&offer) {
             let mut rtc_config = RtcTrackConfig::default();
             rtc_config.mode = rustrtc::TransportMode::WebRtc;
-            rtc_config.ice_servers = self.app_state.config.ice_servers.clone();
-            if let Some(ref external_ip) = self.app_state.config.external_ip {
+            rtc_config.ice_servers = self.app_state.config().ice_servers.clone();
+            if let Some(ref external_ip) = self.app_state.config().external_ip {
                 rtc_config.external_ip = Some(external_ip.clone());
             }
-            if let Some(ref bind_ip) = self.app_state.config.rtp_bind_ip {
+            if let Some(ref bind_ip) = self.app_state.config().rtp_bind_ip {
                 rtc_config.bind_ip = Some(bind_ip.clone());
             }
-            rtc_config.enable_latching = self.app_state.config.enable_rtp_latching;
-            rtc_config.enable_ice_lite = self.app_state.config.enable_ice_lite;
+            rtc_config.enable_latching = Some(self.app_state.config().enable_rtp_latching());
+            rtc_config.enable_ice_lite = self.app_state.config().enable_ice_lite;
 
             let webrtc_track = RtcTrack::new(
                 self.cancel_token.child_token(),
@@ -2325,7 +2323,7 @@ impl ActiveCall {
 impl Drop for ActiveCall {
     fn drop(&mut self) {
         info!(session_id = self.session_id, "dropping active call");
-        if let Some(sender) = self.app_state.callrecord_sender.as_ref() {
+        if let Some(sender) = self.app_state.callrecord_sender() {
             if let Some(record) = self.get_callrecord() {
                 if let Err(e) = sender.send(record) {
                     warn!(
@@ -2404,7 +2402,7 @@ impl ActiveCallState {
         &self,
         app_state: AppState,
         session_id: String,
-        call_type: ActiveCallType,
+        _call_type: ActiveCallType,
     ) -> CallRecord {
         let option = self.option.clone().unwrap_or_default();
         let recorder = if option.recorder.is_some() {
@@ -2426,32 +2424,11 @@ impl ActiveCallState {
             vec![]
         };
 
-        let dump_event_file = app_state.get_dump_events_file(&session_id);
-        let dump_event_file = if std::path::Path::new(&dump_event_file).exists() {
-            Some(dump_event_file)
-        } else {
-            None
-        };
-
-        let refer_callrecord = self.refer_callstate.as_ref().and_then(|rc| {
-            if let Ok(rc) = rc.try_read() {
-                Some(Box::new(rc.build_callrecord(
-                    app_state.clone(),
-                    rc.session_id.clone(),
-                    ActiveCallType::B2bua,
-                )))
-            } else {
-                None
-            }
-        });
-
         let caller = option.caller.clone().unwrap_or_default();
         let callee = option.callee.clone().unwrap_or_default();
 
         CallRecord {
-            option: Some(option),
             call_id: session_id,
-            call_type,
             start_time: self.start_time,
             ring_time: self.ring_time.clone(),
             answer_time: self.answer_time.clone(),
@@ -2461,10 +2438,8 @@ impl ActiveCallState {
             hangup_reason: self.hangup_reason.clone(),
             hangup_messages: Vec::new(),
             status_code: self.last_status_code,
-            extras: self.extras.clone(),
-            dump_event_file,
             recorder,
-            refer_callrecord,
+            ..Default::default()
         }
     }
 }

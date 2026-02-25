@@ -6,7 +6,7 @@ use crate::transcription::{
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use audio_codec::{Sample, samples_to_bytes};
-use aws_lc_rs::hmac;
+use ring::hmac;
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono;
 use futures::{SinkExt, StreamExt};

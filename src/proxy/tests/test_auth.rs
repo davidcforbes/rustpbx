@@ -470,6 +470,8 @@ async fn test_guest_call_allowed_extension() {
         presence_manager: Arc::new(crate::proxy::presence::PresenceManager::new(None)),
         quality_config: None,
         voicemail_config: None,
+        #[cfg(feature = "voice-agent")]
+        invite_handler: std::sync::RwLock::new(None),
     });
 
     let module = AuthModule::new(server_inner);

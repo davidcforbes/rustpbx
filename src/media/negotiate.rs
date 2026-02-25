@@ -314,6 +314,56 @@ impl MediaNegotiator {
     }
 }
 
+/// Parse a single rtpmap attribute value string like "0 PCMU/8000" or "0 PCMU/8000/1"
+/// Returns (payload_type, codec_type, clock_rate, channels)
+pub fn parse_rtpmap(value: &str) -> Result<(u8, CodecType, u32, u16)> {
+    let (pt_str, codec_str) = value
+        .split_once(' ')
+        .ok_or_else(|| anyhow!("invalid rtpmap format: {}", value))?;
+    let pt: u8 = pt_str
+        .parse()
+        .map_err(|_| anyhow!("invalid payload type: {}", pt_str))?;
+    let parts: Vec<&str> = codec_str.split('/').collect();
+    if parts.len() < 2 {
+        return Err(anyhow!("invalid rtpmap codec format: {}", codec_str));
+    }
+    let codec_name = parts[0];
+    let mut clock_rate: u32 = parts[1].parse().unwrap_or(8000);
+    let channels: u16 = if parts.len() >= 3 {
+        parts[2].parse().unwrap_or(1)
+    } else {
+        1
+    };
+    let codec = CodecType::try_from(codec_name)
+        .map_err(|_| anyhow!("unknown codec: {}", codec_name))?;
+    if codec == CodecType::G722 && clock_rate != 8000 {
+        clock_rate = 8000;
+    }
+    Ok((pt, codec, clock_rate, channels))
+}
+
+pub fn strip_ipv6_candidates(sdp: &str) -> String {
+    sdp.lines()
+        .filter(|line| !(line.starts_with("a=candidate:") && line.contains(" IP6 ")))
+        .collect::<Vec<_>>()
+        .join("\r\n")
+        + "\r\n"
+}
+
+pub fn detect_hold_state_from_sdp(sdp: &str) -> bool {
+    sdp.contains("a=inactive") || sdp.contains("a=sendonly")
+}
+
+/// Intersect the offer and answer SessionDescriptions to filter answer media sections
+/// to only include codecs present in the offer.
+pub fn intersect_answer(
+    _offer: &rustrtc::SessionDescription,
+    _answer: &mut rustrtc::SessionDescription,
+) {
+    // For now, this is a no-op stub. The answer already contains only codecs
+    // that the answerer supports, and further filtering can be added later.
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

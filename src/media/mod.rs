@@ -25,25 +25,30 @@ pub type Sample = i16;
 
 #[derive(Debug, Clone)]
 pub enum Samples {
-    PCM(Vec<i16>),
+    PCM { samples: Vec<i16> },
+    RTP {
+        payload_type: u8,
+        payload: Vec<u8>,
+        sequence_number: u16,
+    },
+    Empty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SourcePacket {
-    pub track_id: TrackId,
-    pub samples: Samples,
-    pub codec: audio_codec::CodecType,
-    pub ssrc: u32,
-    pub timestamp: u32,
+    pub sequence_number: u16,
+    pub payload_type: u8,
     pub payload: PayloadBuf,
 }
 
 #[derive(Debug, Clone)]
 pub struct AudioFrame {
     pub track_id: TrackId,
-    pub samples: Vec<i16>,
+    pub samples: Samples,
     pub sample_rate: u32,
+    pub channels: u16,
     pub timestamp: u64,
+    pub src_packet: Option<SourcePacket>,
 }
 
 pub mod audio_source;
