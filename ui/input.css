@@ -212,5 +212,33 @@
     border-radius: 0.375rem;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
+    color: #4b5563;
+    width: 100%;
   }
+
+  .detail-tab:hover {
+    color: var(--color-iiz-cyan);
+    background-color: #f9fafb;
+  }
+
+  .detail-tab.active {
+    color: var(--color-iiz-cyan);
+    font-weight: 500;
+    border-left: 2px solid var(--color-iiz-cyan);
+    background-color: color-mix(in srgb, var(--color-iiz-cyan-light) 30%, transparent);
+  }
+}
+
+/* Slide-in animation for detail panel */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
 }

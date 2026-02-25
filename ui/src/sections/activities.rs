@@ -2,7 +2,7 @@ use leptos::ev;
 use leptos::prelude::*;
 use leptos_icons::Icon;
 
-use crate::components::FilterBar;
+use crate::components::{CallDetailPanel, FilterBar};
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -261,10 +261,10 @@ pub fn ActivitiesSideNav() -> impl IntoView {
 #[component]
 pub fn CallsPage() -> impl IntoView {
     let calls = mock_calls();
-    let selected_id = RwSignal::new(Option::<String>::None);
+    let selected_call = RwSignal::new(Option::<CallRecord>::None);
 
     view! {
-        <div class="flex flex-col h-full">
+        <div class="flex flex-col h-full relative">
             // Top filter bar
             <FilterBar />
 
@@ -294,15 +294,21 @@ pub fn CallsPage() -> impl IntoView {
                 {calls
                     .into_iter()
                     .map(|call| {
-                        let call_id_click = call.id.clone();
+                        let call_for_click = call.clone();
                         let call_id_sel = call.id.clone();
-                        let is_selected = move || selected_id.get() == Some(call_id_sel.clone());
+                        let is_selected = move || {
+                            selected_call
+                                .get()
+                                .as_ref()
+                                .map(|c| c.id == call_id_sel)
+                                .unwrap_or(false)
+                        };
                         view! {
                             <CallRow
                                 call=call
                                 selected=Signal::derive(is_selected)
                                 on_click=move |_| {
-                                    selected_id.set(Some(call_id_click.clone()));
+                                    selected_call.set(Some(call_for_click.clone()));
                                 }
                             />
                         }
@@ -324,6 +330,20 @@ pub fn CallsPage() -> impl IntoView {
                     </button>
                 </div>
             </div>
+
+            // Detail panel (slide-out)
+            <Show when=move || selected_call.get().is_some()>
+                {move || {
+                    selected_call.get().map(|call| {
+                        view! {
+                            <CallDetailPanel
+                                call=call
+                                on_close=move |_| selected_call.set(None)
+                            />
+                        }
+                    })
+                }}
+            </Show>
         </div>
     }
 }
