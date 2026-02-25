@@ -25,6 +25,13 @@ pub mod user;
 pub use cookie::{CalleeDisplayName, TenantId, TransactionCookie, TrunkContext};
 pub use user::SipUser;
 
+// AI Voice Agent call management (from active-call)
+pub mod active_call;
+pub mod active_sip;
+pub mod command;
+pub use active_call::{ActiveCall, ActiveCallRef, ActiveCallType};
+pub use command::Command as AgentCommand;
+
 /// Default hold audio that ships with config/sounds.
 pub const DEFAULT_QUEUE_HOLD_AUDIO: &str = "config/sounds/phone-calling.wav";
 /// Default prompt played when a queue cannot find an available agent.
