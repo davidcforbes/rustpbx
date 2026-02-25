@@ -1178,4 +1178,163 @@ mod tests {
         // No match with port, return first realm if configured
         assert_eq!(config.select_realm("other.com:5060"), "example.com");
     }
+
+    // ── InviteHandlerConfig ──────────────────────────────────────────────
+
+    #[test]
+    fn test_invite_handler_config_webhook_deserialize() {
+        let toml_str = r#"
+            type = "webhook"
+            url = "https://hook.example.com/incoming"
+            method = "POST"
+        "#;
+        let cfg: InviteHandlerConfig = toml::from_str(toml_str).unwrap();
+        match cfg {
+            InviteHandlerConfig::Webhook { url, method, .. } => {
+                assert_eq!(url.as_deref(), Some("https://hook.example.com/incoming"));
+                assert_eq!(method.as_deref(), Some("POST"));
+            }
+            _ => panic!("expected Webhook variant"),
+        }
+    }
+
+    #[test]
+    fn test_invite_handler_config_playbook_deserialize() {
+        let toml_str = r#"
+            type = "playbook"
+            default = "default-greeting"
+
+            [[rules]]
+            caller = "+1707*"
+            playbook = "local-greeting"
+
+            [[rules]]
+            callee = "1001"
+            playbook = "extension-1001"
+        "#;
+        let cfg: InviteHandlerConfig = toml::from_str(toml_str).unwrap();
+        match cfg {
+            InviteHandlerConfig::Playbook { rules, default } => {
+                assert_eq!(default.as_deref(), Some("default-greeting"));
+                assert_eq!(rules.len(), 2);
+                assert_eq!(rules[0].caller.as_deref(), Some("+1707*"));
+                assert_eq!(rules[0].playbook, "local-greeting");
+                assert_eq!(rules[1].callee.as_deref(), Some("1001"));
+                assert_eq!(rules[1].playbook, "extension-1001");
+            }
+            _ => panic!("expected Playbook variant"),
+        }
+    }
+
+    #[test]
+    fn test_invite_handler_config_webhook_with_headers() {
+        let toml_str = r#"
+            type = "webhook"
+            url = "https://hook.example.com"
+
+            [headers]
+            Authorization = "Bearer token123"
+            X-Custom = "value"
+        "#;
+        let cfg: InviteHandlerConfig = toml::from_str(toml_str).unwrap();
+        match cfg {
+            InviteHandlerConfig::Webhook { headers, .. } => {
+                let h = headers.unwrap();
+                assert_eq!(h.get("Authorization").unwrap(), "Bearer token123");
+                assert_eq!(h.get("X-Custom").unwrap(), "value");
+            }
+            _ => panic!("expected Webhook variant"),
+        }
+    }
+
+    #[test]
+    fn test_invite_handler_config_playbook_empty_rules() {
+        let toml_str = r#"
+            type = "playbook"
+            rules = []
+            default = "fallback"
+        "#;
+        let cfg: InviteHandlerConfig = toml::from_str(toml_str).unwrap();
+        match cfg {
+            InviteHandlerConfig::Playbook { rules, default } => {
+                assert!(rules.is_empty());
+                assert_eq!(default.as_deref(), Some("fallback"));
+            }
+            _ => panic!("expected Playbook variant"),
+        }
+    }
+
+    // ── PlaybookRule ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_playbook_rule_deserialize() {
+        let json = r#"{"caller": "+1*", "callee": "1001", "playbook": "greeting"}"#;
+        let rule: PlaybookRule = serde_json::from_str(json).unwrap();
+        assert_eq!(rule.caller.as_deref(), Some("+1*"));
+        assert_eq!(rule.callee.as_deref(), Some("1001"));
+        assert_eq!(rule.playbook, "greeting");
+    }
+
+    #[test]
+    fn test_playbook_rule_serialize_roundtrip() {
+        let rule = PlaybookRule {
+            caller: Some("+1707*".to_string()),
+            callee: None,
+            playbook: "test-playbook".to_string(),
+        };
+        let json = serde_json::to_string(&rule).unwrap();
+        let parsed: PlaybookRule = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.caller, rule.caller);
+        assert_eq!(parsed.callee, rule.callee);
+        assert_eq!(parsed.playbook, rule.playbook);
+    }
+
+    // ── RecordingPolicy ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_recording_policy_default_disabled() {
+        let policy = RecordingPolicy::default();
+        assert!(!policy.enabled);
+        assert!(policy.directions.is_empty());
+        assert!(policy.caller_allow.is_empty());
+        assert!(policy.caller_deny.is_empty());
+    }
+
+    #[test]
+    fn test_recording_policy_deserialize() {
+        let json = r#"{
+            "enabled": true,
+            "directions": ["inbound", "internal"],
+            "caller_allow": ["+1707*"],
+            "callee_deny": ["911"]
+        }"#;
+        let policy: RecordingPolicy = serde_json::from_str(json).unwrap();
+        assert!(policy.enabled);
+        assert_eq!(policy.directions.len(), 2);
+        assert_eq!(policy.caller_allow, vec!["+1707*"]);
+        assert_eq!(policy.callee_deny, vec!["911"]);
+    }
+
+    // ── RecordingDirection ───────────────────────────────────────────────
+
+    #[test]
+    fn test_recording_direction_matches_inbound() {
+        assert!(RecordingDirection::Inbound.matches(&crate::call::DialDirection::Inbound));
+        assert!(!RecordingDirection::Inbound.matches(&crate::call::DialDirection::Outbound));
+        assert!(!RecordingDirection::Inbound.matches(&crate::call::DialDirection::Internal));
+    }
+
+    #[test]
+    fn test_recording_direction_matches_outbound() {
+        assert!(RecordingDirection::Outbound.matches(&crate::call::DialDirection::Outbound));
+        assert!(!RecordingDirection::Outbound.matches(&crate::call::DialDirection::Inbound));
+        assert!(!RecordingDirection::Outbound.matches(&crate::call::DialDirection::Internal));
+    }
+
+    #[test]
+    fn test_recording_direction_matches_internal() {
+        assert!(RecordingDirection::Internal.matches(&crate::call::DialDirection::Internal));
+        assert!(!RecordingDirection::Internal.matches(&crate::call::DialDirection::Inbound));
+        assert!(!RecordingDirection::Internal.matches(&crate::call::DialDirection::Outbound));
+    }
 }

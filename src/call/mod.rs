@@ -947,3 +947,143 @@ impl RoutingState {
         return r;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── TransferEndpoint::parse ──────────────────────────────────────────
+
+    #[test]
+    fn test_transfer_endpoint_parse_uri() {
+        let ep = TransferEndpoint::parse("sip:1001@example.com").unwrap();
+        assert_eq!(ep, TransferEndpoint::Uri("sip:1001@example.com".to_string()));
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_queue() {
+        let ep = TransferEndpoint::parse("queue:support").unwrap();
+        assert_eq!(ep, TransferEndpoint::Queue("support".to_string()));
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_queue_case_insensitive() {
+        let ep = TransferEndpoint::parse("QUEUE:Sales").unwrap();
+        assert_eq!(ep, TransferEndpoint::Queue("Sales".to_string()));
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_empty_returns_none() {
+        assert!(TransferEndpoint::parse("").is_none());
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_whitespace_only_returns_none() {
+        assert!(TransferEndpoint::parse("   ").is_none());
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_queue_empty_name_returns_none() {
+        assert!(TransferEndpoint::parse("queue:").is_none());
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_queue_whitespace_name_returns_none() {
+        assert!(TransferEndpoint::parse("queue:   ").is_none());
+    }
+
+    #[test]
+    fn test_transfer_endpoint_parse_trims_whitespace() {
+        let ep = TransferEndpoint::parse("  1001  ").unwrap();
+        assert_eq!(ep, TransferEndpoint::Uri("1001".to_string()));
+    }
+
+    #[test]
+    fn test_transfer_endpoint_display_uri() {
+        let ep = TransferEndpoint::Uri("sip:user@host".to_string());
+        assert_eq!(ep.to_string(), "sip:user@host");
+    }
+
+    #[test]
+    fn test_transfer_endpoint_display_queue() {
+        let ep = TransferEndpoint::Queue("billing".to_string());
+        assert_eq!(ep.to_string(), "queue:billing");
+    }
+
+    // ── CallForwardingConfig ─────────────────────────────────────────────
+
+    #[test]
+    fn test_call_forwarding_config_new_clamps_timeout() {
+        let cfg = CallForwardingConfig::new(
+            CallForwardingMode::Always,
+            TransferEndpoint::Uri("1001".to_string()),
+            1, // below minimum
+        );
+        assert_eq!(cfg.timeout, Duration::from_secs(CALL_FORWARDING_TIMEOUT_MIN_SECS));
+    }
+
+    #[test]
+    fn test_call_forwarding_config_new_clamps_high_timeout() {
+        let cfg = CallForwardingConfig::new(
+            CallForwardingMode::WhenBusy,
+            TransferEndpoint::Uri("1001".to_string()),
+            999, // above maximum
+        );
+        assert_eq!(cfg.timeout, Duration::from_secs(CALL_FORWARDING_TIMEOUT_MAX_SECS));
+    }
+
+    #[test]
+    fn test_call_forwarding_config_new_accepts_valid_timeout() {
+        let cfg = CallForwardingConfig::new(
+            CallForwardingMode::WhenNoAnswer,
+            TransferEndpoint::Queue("support".to_string()),
+            30,
+        );
+        assert_eq!(cfg.timeout, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_clamp_timeout_negative_returns_default() {
+        assert_eq!(
+            CallForwardingConfig::clamp_timeout(-5),
+            CALL_FORWARDING_TIMEOUT_DEFAULT_SECS
+        );
+    }
+
+    #[test]
+    fn test_clamp_timeout_zero_returns_default() {
+        assert_eq!(
+            CallForwardingConfig::clamp_timeout(0),
+            CALL_FORWARDING_TIMEOUT_DEFAULT_SECS
+        );
+    }
+
+    #[test]
+    fn test_clamp_timeout_within_range() {
+        assert_eq!(CallForwardingConfig::clamp_timeout(60), 60);
+    }
+
+    #[test]
+    fn test_clamp_timeout_above_max() {
+        assert_eq!(
+            CallForwardingConfig::clamp_timeout(300),
+            CALL_FORWARDING_TIMEOUT_MAX_SECS
+        );
+    }
+
+    #[test]
+    fn test_clamp_timeout_at_min_boundary() {
+        assert_eq!(
+            CallForwardingConfig::clamp_timeout(CALL_FORWARDING_TIMEOUT_MIN_SECS as i64),
+            CALL_FORWARDING_TIMEOUT_MIN_SECS
+        );
+    }
+
+    #[test]
+    fn test_clamp_timeout_at_max_boundary() {
+        assert_eq!(
+            CallForwardingConfig::clamp_timeout(CALL_FORWARDING_TIMEOUT_MAX_SECS as i64),
+            CALL_FORWARDING_TIMEOUT_MAX_SECS
+        );
+    }
+}
