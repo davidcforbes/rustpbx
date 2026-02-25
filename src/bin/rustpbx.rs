@@ -306,6 +306,9 @@ async fn main() -> Result<()> {
             .with_config(config.clone())
             .with_config_metadata(next_config_path.clone(), Utc::now());
 
+        #[cfg(feature = "voice-agent")]
+        let state_builder = state_builder.with_stream_engine(rustpbx::media::engine::StreamEngine::default());
+
         let (app_reload_requested, app_config_path) = {
             let state = match state_builder.build().await {
                 Ok(state) => state,

@@ -630,6 +630,13 @@ pub fn create_router(state: AppState) -> Router {
         router = router.merge(crate::console::router(console_state));
     }
 
+    #[cfg(feature = "voice-agent")]
+    {
+        let voice_agent_routes =
+            crate::handler::voice_agent::voice_agent_router().with_state(state.clone());
+        router = router.nest("/voice-agent/v1", voice_agent_routes);
+    }
+
     let access_log_skip_paths = Arc::new(state.config().http_access_skip_paths.clone());
 
     router = router.layer(middleware::from_fn_with_state(

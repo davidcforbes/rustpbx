@@ -221,6 +221,8 @@ pub struct Config {
     pub rtp_bind_ip: Option<String>,
     #[serde(default)]
     pub ambiance: Option<crate::media::ambiance::AmbianceOption>,
+    #[serde(default)]
+    pub invite_handler: Option<InviteHandlerConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -697,6 +699,8 @@ pub struct ProxyConfig {
     pub addons: Option<Vec<String>>,
     #[serde(default)]
     pub transcript: Option<TranscriptToolConfig>,
+    #[serde(default)]
+    pub invite_handler: Option<InviteHandlerConfig>,
 }
 
 /// Configuration for the transcript addon command-line tool.
@@ -903,6 +907,7 @@ impl Default for ProxyConfig {
             sip_flow_max_items: None,
             addons: None,
             transcript: None,
+            invite_handler: None,
         }
     }
 }
@@ -967,6 +972,7 @@ impl Default for Config {
             enable_ice_lite: None,
             rtp_bind_ip: None,
             ambiance: None,
+            invite_handler: None,
         }
     }
 }
