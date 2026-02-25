@@ -542,3 +542,416 @@ impl Recorder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── RecorderFormat ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_recorder_format_default_is_wav() {
+        assert_eq!(RecorderFormat::default(), RecorderFormat::Wav);
+    }
+
+    #[test]
+    fn test_recorder_format_extension_always_wav() {
+        assert_eq!(RecorderFormat::Wav.extension(), "wav");
+        assert_eq!(RecorderFormat::Pcm.extension(), "wav");
+        assert_eq!(RecorderFormat::Pcmu.extension(), "wav");
+        assert_eq!(RecorderFormat::Pcma.extension(), "wav");
+        assert_eq!(RecorderFormat::G722.extension(), "wav");
+    }
+
+    #[test]
+    fn test_recorder_format_all_supported() {
+        assert!(RecorderFormat::Wav.is_supported());
+        assert!(RecorderFormat::Pcm.is_supported());
+        assert!(RecorderFormat::Pcmu.is_supported());
+        assert!(RecorderFormat::Pcma.is_supported());
+        assert!(RecorderFormat::G722.is_supported());
+    }
+
+    #[test]
+    fn test_recorder_format_effective_returns_self() {
+        assert_eq!(RecorderFormat::Pcmu.effective(), RecorderFormat::Pcmu);
+        assert_eq!(RecorderFormat::G722.effective(), RecorderFormat::G722);
+    }
+
+    #[test]
+    fn test_recorder_format_serde_roundtrip() {
+        let json = serde_json::to_string(&RecorderFormat::Pcmu).unwrap();
+        assert_eq!(json, r#""pcmu""#);
+        let parsed: RecorderFormat = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, RecorderFormat::Pcmu);
+    }
+
+    // ── RecorderOption ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_recorder_option_defaults() {
+        let opt = RecorderOption::default();
+        assert_eq!(opt.recorder_file, "");
+        assert_eq!(opt.samplerate, 16000);
+        assert_eq!(opt.ptime, 200);
+        assert!(opt.format.is_none());
+    }
+
+    #[test]
+    fn test_recorder_option_new_sets_file() {
+        let opt = RecorderOption::new("recording.wav".to_string());
+        assert_eq!(opt.recorder_file, "recording.wav");
+        assert_eq!(opt.samplerate, 16000);
+        assert_eq!(opt.ptime, 200);
+        assert!(opt.format.is_none());
+    }
+
+    #[test]
+    fn test_resolved_format_uses_explicit() {
+        let opt = RecorderOption {
+            format: Some(RecorderFormat::Pcmu),
+            ..Default::default()
+        };
+        assert_eq!(opt.resolved_format(RecorderFormat::Wav), RecorderFormat::Pcmu);
+    }
+
+    #[test]
+    fn test_resolved_format_falls_back_to_default() {
+        let opt = RecorderOption::default();
+        assert_eq!(opt.resolved_format(RecorderFormat::G722), RecorderFormat::G722);
+    }
+
+    #[test]
+    fn test_ensure_path_extension_adds_wav() {
+        let mut opt = RecorderOption::new("recording".to_string());
+        opt.ensure_path_extension(RecorderFormat::Wav);
+        assert_eq!(opt.recorder_file, "recording.wav");
+        assert_eq!(opt.format, Some(RecorderFormat::Wav));
+    }
+
+    #[test]
+    fn test_ensure_path_extension_no_double_extension() {
+        let mut opt = RecorderOption::new("recording.wav".to_string());
+        opt.ensure_path_extension(RecorderFormat::Wav);
+        assert_eq!(opt.recorder_file, "recording.wav");
+    }
+
+    #[test]
+    fn test_ensure_path_extension_empty_filename_noop() {
+        let mut opt = RecorderOption::new("".to_string());
+        opt.ensure_path_extension(RecorderFormat::Wav);
+        assert_eq!(opt.recorder_file, "");
+        assert_eq!(opt.format, Some(RecorderFormat::Wav));
+    }
+
+    #[test]
+    fn test_ensure_path_extension_case_insensitive() {
+        let mut opt = RecorderOption::new("recording.WAV".to_string());
+        opt.ensure_path_extension(RecorderFormat::Wav);
+        assert_eq!(opt.recorder_file, "recording.WAV");
+    }
+
+    #[test]
+    fn test_recorder_option_camelcase_deserialization() {
+        let json = r#"{
+            "recorderFile": "test.wav",
+            "samplerate": 8000,
+            "ptime": 100,
+            "format": "pcmu"
+        }"#;
+        let opt: RecorderOption = serde_json::from_str(json).unwrap();
+        assert_eq!(opt.recorder_file, "test.wav");
+        assert_eq!(opt.samplerate, 8000);
+        assert_eq!(opt.ptime, 100);
+        assert_eq!(opt.format, Some(RecorderFormat::Pcmu));
+    }
+
+    #[test]
+    fn test_recorder_option_deserialization_defaults() {
+        // Field-level #[serde(default)] uses type defaults (u32 → 0),
+        // not the struct-level Default impl values.
+        let json = r#"{}"#;
+        let opt: RecorderOption = serde_json::from_str(json).unwrap();
+        assert_eq!(opt.recorder_file, "");
+        assert_eq!(opt.samplerate, 0);
+        assert_eq!(opt.ptime, 0);
+        assert!(opt.format.is_none());
+    }
+
+    // ── extract_samples ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_extract_samples_basic() {
+        let mut buf = vec![1, 2, 3, 4, 5];
+        let extracted = Recorder::extract_samples(&mut buf, 3);
+        assert_eq!(extracted, vec![1, 2, 3]);
+        assert_eq!(buf, vec![4, 5]);
+    }
+
+    #[test]
+    fn test_extract_samples_empty_buffer() {
+        let mut buf: PcmBuf = vec![];
+        let extracted = Recorder::extract_samples(&mut buf, 5);
+        assert!(extracted.is_empty());
+    }
+
+    #[test]
+    fn test_extract_samples_zero_size() {
+        let mut buf = vec![1, 2, 3];
+        let extracted = Recorder::extract_samples(&mut buf, 0);
+        assert!(extracted.is_empty());
+        assert_eq!(buf, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_extract_samples_more_than_available() {
+        let mut buf = vec![10, 20];
+        let extracted = Recorder::extract_samples(&mut buf, 100);
+        assert_eq!(extracted, vec![10, 20]);
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn test_extract_samples_exact_size() {
+        let mut buf = vec![1, 2, 3];
+        let extracted = Recorder::extract_samples(&mut buf, 3);
+        assert_eq!(extracted, vec![1, 2, 3]);
+        assert!(buf.is_empty());
+    }
+
+    // ── mix_buffers ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_mix_buffers_interleaves_channels() {
+        let mono = vec![1, 2, 3];
+        let stereo = vec![10, 20, 30];
+        let mixed = Recorder::mix_buffers(&mono, &stereo);
+        assert_eq!(mixed, vec![1, 10, 2, 20, 3, 30]);
+    }
+
+    #[test]
+    fn test_mix_buffers_empty() {
+        let mono: PcmBuf = vec![];
+        let stereo: PcmBuf = vec![];
+        let mixed = Recorder::mix_buffers(&mono, &stereo);
+        assert!(mixed.is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "Buffer lengths must be equal")]
+    fn test_mix_buffers_panics_on_unequal_lengths() {
+        let mono = vec![1, 2, 3];
+        let stereo = vec![10, 20];
+        Recorder::mix_buffers(&mono, &stereo);
+    }
+
+    // ── Recorder lifecycle ──────────────────────────────────────────────
+
+    #[test]
+    fn test_recorder_new_initializes_correctly() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token.clone(), "session-1".to_string(), opt);
+        assert_eq!(recorder.session_id, "session-1");
+        assert_eq!(recorder.samples_written.load(Ordering::SeqCst), 0);
+        assert!(!token.is_cancelled());
+    }
+
+    #[test]
+    fn test_recorder_stop_cancels_token() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token.clone(), "session-2".to_string(), opt);
+        assert!(!token.is_cancelled());
+        recorder.stop_recording().unwrap();
+        assert!(token.is_cancelled());
+    }
+
+    #[test]
+    fn test_channel_assignment_first_track_gets_channel_0() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-3".to_string(), opt);
+        assert_eq!(recorder.get_channel_index("track-a"), 0);
+    }
+
+    #[test]
+    fn test_channel_assignment_second_track_gets_channel_1() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-4".to_string(), opt);
+        assert_eq!(recorder.get_channel_index("track-a"), 0);
+        assert_eq!(recorder.get_channel_index("track-b"), 1);
+    }
+
+    #[test]
+    fn test_channel_assignment_same_track_returns_same_channel() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-5".to_string(), opt);
+        assert_eq!(recorder.get_channel_index("track-a"), 0);
+        assert_eq!(recorder.get_channel_index("track-a"), 0);
+        assert_eq!(recorder.get_channel_index("track-b"), 1);
+        assert_eq!(recorder.get_channel_index("track-b"), 1);
+    }
+
+    #[test]
+    fn test_channel_assignment_wraps_around_mod_2() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-6".to_string(), opt);
+        assert_eq!(recorder.get_channel_index("t0"), 0);
+        assert_eq!(recorder.get_channel_index("t1"), 1);
+        assert_eq!(recorder.get_channel_index("t2"), 0); // 2 % 2 = 0
+        assert_eq!(recorder.get_channel_index("t3"), 1); // 3 % 2 = 1
+    }
+
+    // ── Test helpers ──────────────────────────────────────────────────────
+
+    fn pcm_frame(track_id: &str, samples: Vec<i16>) -> AudioFrame {
+        AudioFrame {
+            track_id: track_id.to_string(),
+            samples: Samples::PCM { samples },
+            sample_rate: 16000,
+            channels: 1,
+            timestamp: 0,
+            src_packet: None,
+        }
+    }
+
+    fn rtp_frame(track_id: &str, payload_type: u8, payload: Vec<u8>) -> AudioFrame {
+        AudioFrame {
+            track_id: track_id.to_string(),
+            samples: Samples::RTP {
+                payload_type,
+                payload,
+                sequence_number: 0,
+            },
+            sample_rate: 8000,
+            channels: 1,
+            timestamp: 0,
+            src_packet: None,
+        }
+    }
+
+    // ── append_frame / PCM recording ────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_append_frame_pcm_mono_channel() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-7".to_string(), opt);
+
+        recorder.append_frame(pcm_frame("track-a", vec![100, 200, 300])).await.unwrap();
+
+        let mono = recorder.mono_buf.lock().unwrap();
+        assert_eq!(*mono, vec![100, 200, 300]);
+        let stereo = recorder.stereo_buf.lock().unwrap();
+        assert!(stereo.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_append_frame_pcm_stereo_channel() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-8".to_string(), opt);
+
+        // First track goes to mono (channel 0)
+        recorder.append_frame(pcm_frame("track-a", vec![10])).await.unwrap();
+        // Second track goes to stereo (channel 1)
+        recorder.append_frame(pcm_frame("track-b", vec![20])).await.unwrap();
+
+        let mono = recorder.mono_buf.lock().unwrap();
+        assert_eq!(*mono, vec![10]);
+        let stereo = recorder.stereo_buf.lock().unwrap();
+        assert_eq!(*stereo, vec![20]);
+    }
+
+    #[tokio::test]
+    async fn test_append_frame_ignores_empty_pcm() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-9".to_string(), opt);
+
+        recorder.append_frame(pcm_frame("track-a", vec![])).await.unwrap();
+
+        let mono = recorder.mono_buf.lock().unwrap();
+        assert!(mono.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_append_frame_ignores_rtp() {
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new("test.wav".to_string());
+        let recorder = Recorder::new(token, "session-10".to_string(), opt);
+
+        recorder.append_frame(rtp_frame("track-a", 0, vec![0x80, 0x00])).await.unwrap();
+
+        let mono = recorder.mono_buf.lock().unwrap();
+        assert!(mono.is_empty());
+    }
+
+    // ── WAV file recording integration ──────────────────────────────────
+
+    #[tokio::test]
+    async fn test_process_recording_creates_wav_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("output.wav");
+
+        let token = CancellationToken::new();
+        let opt = RecorderOption {
+            recorder_file: file_path.to_string_lossy().to_string(),
+            samplerate: 16000,
+            ptime: 200,
+            ..Default::default()
+        };
+        let recorder = Recorder::new(token.clone(), "session-wav".to_string(), opt);
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tx.send(pcm_frame("caller", vec![1000; 160])).unwrap();
+        tx.send(pcm_frame("callee", vec![2000; 160])).unwrap();
+
+        // Cancel after a short delay to stop recording
+        let token_clone = token.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            token_clone.cancel();
+        });
+
+        recorder.process_recording(&file_path, rx).await.unwrap();
+
+        // Verify file was created and has WAV header
+        let data = tokio::fs::read(&file_path).await.unwrap();
+        assert!(data.len() > 44, "WAV file should be larger than header");
+        assert_eq!(&data[0..4], b"RIFF");
+        assert_eq!(&data[8..12], b"WAVE");
+        assert_eq!(&data[12..16], b"fmt ");
+    }
+
+    #[tokio::test]
+    async fn test_process_recording_rtp_creates_wav_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("rtp_output.wav");
+
+        let token = CancellationToken::new();
+        let opt = RecorderOption::new(file_path.to_string_lossy().to_string());
+        let recorder = Recorder::new(token, "session-rtp".to_string(), opt);
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        // Send RTP frames (PCMU payload type 0)
+        tx.send(rtp_frame("rtp-track", 0, vec![0x7F; 160])).unwrap();
+        tx.send(rtp_frame("rtp-track", 0, vec![0x7F; 160])).unwrap();
+        drop(tx); // Close channel to end recording
+
+        recorder.process_recording(&file_path, rx).await.unwrap();
+
+        let data = tokio::fs::read(&file_path).await.unwrap();
+        assert!(data.len() > 44);
+        assert_eq!(&data[0..4], b"RIFF");
+        // PCMU format tag is 0x0007
+        assert_eq!(data[20], 0x07);
+        assert_eq!(data[21], 0x00);
+    }
+}

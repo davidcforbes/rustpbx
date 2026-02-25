@@ -16,7 +16,7 @@ pub struct CreateCallRequest {
     pub option: Option<crate::CallOption>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CallInfo {
     pub session_id: String,
@@ -112,4 +112,75 @@ pub fn voice_agent_router() -> Router<AppState> {
         .route("/calls/{session_id}", delete(hangup_call))
         .route("/calls/{session_id}/command", post(send_command))
         .route("/ws", get(ws_handler))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Serialization / Deserialization ─────────────────────────────────
+
+    #[test]
+    fn test_create_call_request_deserialize_empty() {
+        let json = r#"{}"#;
+        let req: CreateCallRequest = serde_json::from_str(json).unwrap();
+        assert!(req.playbook.is_none());
+        assert!(req.option.is_none());
+    }
+
+    #[test]
+    fn test_create_call_request_deserialize_with_playbook() {
+        let json = r#"{"playbook": "greeting"}"#;
+        let req: CreateCallRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.playbook.as_deref(), Some("greeting"));
+    }
+
+    #[test]
+    fn test_create_call_request_deserialize_with_both_fields() {
+        let json = r#"{"playbook": "welcome", "option": {}}"#;
+        let req: CreateCallRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.playbook.as_deref(), Some("welcome"));
+        assert!(req.option.is_some());
+    }
+
+    #[test]
+    fn test_call_info_serialize_camel_case() {
+        let info = CallInfo {
+            session_id: "abc-123".to_string(),
+            status: "active".to_string(),
+        };
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(json["sessionId"], "abc-123");
+        assert_eq!(json["status"], "active");
+        // Verify it uses camelCase, not snake_case
+        assert!(json.get("session_id").is_none());
+    }
+
+    #[test]
+    fn test_call_info_deserialize_camel_case() {
+        let json = r#"{"sessionId": "xyz-789", "status": "created"}"#;
+        let info: CallInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(info.session_id, "xyz-789");
+        assert_eq!(info.status, "created");
+    }
+
+    #[test]
+    fn test_call_info_roundtrip() {
+        let original = CallInfo {
+            session_id: "test-id".to_string(),
+            status: "active".to_string(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let parsed: CallInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.session_id, original.session_id);
+        assert_eq!(parsed.status, original.status);
+    }
+
+    // ── Router configuration ────────────────────────────────────────────
+
+    #[test]
+    fn test_voice_agent_router_builds_without_panic() {
+        // Verify the router can be constructed (routes are valid)
+        let _router = voice_agent_router();
+    }
 }
