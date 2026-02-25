@@ -197,9 +197,11 @@ pub async fn trigger_call_record_transcript(
             .into_response();
     }
 
+    let needs_local_model = command == "sensevoice-cli";
+
     let models_path = match resolve_models_path(&transcript_cfg) {
         Some(path) => path,
-        None => {
+        None if needs_local_model => {
             return (
                 StatusCode::FAILED_DEPENDENCY,
                 Json(json!({
@@ -208,20 +210,23 @@ pub async fn trigger_call_record_transcript(
             )
                 .into_response();
         }
+        None => String::new(),
     };
 
-    let model_file = model_file_path(&models_path);
-    if tokio::fs::metadata(&model_file).await.is_err() {
-        return (
-            StatusCode::FAILED_DEPENDENCY,
-            Json(json!({
-                "message": format!(
-                    "SenseVoice model not found at {}. Please download the model manually to this path.",
-                    model_file.display()
-                )
-            })),
-        )
-            .into_response();
+    if needs_local_model {
+        let model_file = model_file_path(&models_path);
+        if tokio::fs::metadata(&model_file).await.is_err() {
+            return (
+                StatusCode::FAILED_DEPENDENCY,
+                Json(json!({
+                    "message": format!(
+                        "SenseVoice model not found at {}. Please download the model manually to this path.",
+                        model_file.display()
+                    )
+                })),
+            )
+                .into_response();
+        }
     }
 
     let transcript_storage_path = if let Some(cdr_ref) = cdr_data.as_ref() {
