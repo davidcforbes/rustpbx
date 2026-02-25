@@ -12,7 +12,7 @@
 | [03 - Numbers](03-numbers.md) | Number Management | 10 | All well-defined |
 | [04 - Flows](04-flows.md) | Routing, Automation, Engagement | 23 | 22 well-defined, 1 stub |
 | [05 - AI Tools](05-ai-tools.md) | AI Insights & Agents | 5 | 4 well-defined, 1 stub |
-| [06 - Reports](06-reports.md) | Analytics, Connect, Usage, Settings | 30 | 10 well-defined, 20 need definition |
+| [06 - Reports](06-reports.md) | Analytics, Connect, Usage, Settings | 30 | 29 well-defined, 1 needs definition |
 | [07 - Trust Center](07-trust-center.md) | Compliance & Registration | 8 | All well-defined |
 | [08 - Shared Components](08-shared-components.md) | FilterBar, CallDetailPanel | 2 | Well-defined |
 | [09 - Summary & Gaps](09-summary-and-gaps.md) | Status classification & open items | - | - |
@@ -46,9 +46,9 @@ URL-based section detection syncs the icon nav and side panel with the current p
 | Numbers | 10 | 10 | 0 | 0 |
 | Flows | 23 | 22 | 0 | 1 |
 | AI Tools | 5 | 4 | 0 | 1 |
-| Reports | 30 | 10 | 20 | 0 |
+| Reports | 30 | 29 | 1 | 0 |
 | Trust Center | 8 | 8 | 0 | 0 |
-| **TOTAL** | **87** | **65** | **20** | **2** |
+| **TOTAL** | **87** | **84** | **1** | **2** |
 
 ## Status Definitions
 
