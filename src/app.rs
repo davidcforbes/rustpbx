@@ -76,6 +76,8 @@ pub struct AppStateInner {
     pub pending_playbooks: Arc<tokio::sync::Mutex<std::collections::HashMap<String, String>>>,
     #[cfg(feature = "voice-agent")]
     pub active_calls: Arc<std::sync::Mutex<std::collections::HashMap<String, Arc<dyn std::any::Any + Send + Sync>>>>,
+    #[cfg(feature = "voice-agent")]
+    pub invitation: crate::call::active_sip::Invitation,
 }
 
 pub type AppState = Arc<AppStateInner>;
@@ -363,6 +365,8 @@ impl AppStateBuilder {
 
         #[cfg(feature = "voice-agent")]
         let stream_engine = Arc::new(self.stream_engine.unwrap_or_default());
+        #[cfg(feature = "voice-agent")]
+        let invitation = crate::call::active_sip::Invitation::new(sip_server.inner.dialog_layer.clone());
 
         let app_state = Arc::new(AppStateInner {
             core: core.clone(),
@@ -385,6 +389,8 @@ impl AppStateBuilder {
             pending_playbooks: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             #[cfg(feature = "voice-agent")]
             active_calls: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            invitation,
         });
 
         if let Some(mut manager) = callrecord_manager {
@@ -412,6 +418,22 @@ impl AppStateBuilder {
             if let Some(ref console_state) = app_state.console {
                 console_state.set_sip_server(Some(app_state.sip_server().get_inner()));
                 console_state.set_app_state(Some(Arc::downgrade(&app_state)));
+            }
+        }
+
+        // Initialize voice-agent invitation handler from config
+        #[cfg(feature = "voice-agent")]
+        {
+            let invite_config = config.invite_handler.as_ref()
+                .or(config.proxy.invite_handler.as_ref());
+            if let Some(handler) = crate::useragent::invitation::default_create_invite_handler(
+                invite_config,
+                Some(app_state.clone()),
+            ) {
+                // Convert Box<dyn InvitationHandler> to Arc
+                let handler: Arc<dyn crate::useragent::invitation::InvitationHandler> = handler.into();
+                app_state.sip_server().inner.set_invite_handler(handler);
+                tracing::info!("Voice agent invitation handler initialized");
             }
         }
 

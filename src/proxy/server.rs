@@ -77,6 +77,8 @@ pub struct SipServerInner {
     pub presence_manager: Arc<PresenceManager>,
     pub quality_config: Option<QualityConfig>,
     pub voicemail_config: Option<VoicemailConfig>,
+    #[cfg(feature = "voice-agent")]
+    pub invite_handler: std::sync::RwLock<Option<Arc<dyn crate::useragent::invitation::InvitationHandler>>>,
 }
 
 pub type SipServerRef = Arc<SipServerInner>;
@@ -542,6 +544,8 @@ impl SipServerBuilder {
             presence_manager,
             quality_config: self.quality_config,
             voicemail_config: self.voicemail_config,
+            #[cfg(feature = "voice-agent")]
+            invite_handler: std::sync::RwLock::new(None),
         });
 
         let inner_weak = Arc::downgrade(&inner);
@@ -825,6 +829,18 @@ impl Drop for SipServerInner {
 }
 
 impl SipServerInner {
+    #[cfg(feature = "voice-agent")]
+    pub fn set_invite_handler(&self, handler: Arc<dyn crate::useragent::invitation::InvitationHandler>) {
+        if let Ok(mut h) = self.invite_handler.write() {
+            *h = Some(handler);
+        }
+    }
+
+    #[cfg(feature = "voice-agent")]
+    pub fn get_invite_handler(&self) -> Option<Arc<dyn crate::useragent::invitation::InvitationHandler>> {
+        self.invite_handler.read().ok().and_then(|h| h.clone())
+    }
+
     pub fn default_contact_uri(&self) -> Option<rsip::Uri> {
         let addr = self.endpoint.get_addrs().first()?.clone();
         let mut params = Vec::new();

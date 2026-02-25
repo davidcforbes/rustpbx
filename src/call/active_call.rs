@@ -54,9 +54,8 @@ mod tests {
     #[tokio::test]
     async fn test_tts_ssrc_reuse_for_autohangup() -> Result<()> {
         let mut config = Config::default();
-        config.udp_port = 0; // Use random port
-        config.media_cache_path = "/tmp/mediacache".to_string();
-        let stream_engine = Arc::new(StreamEngine::default());
+        config.proxy.udp_port = Some(0); // Use random port
+        let stream_engine = StreamEngine::default();
         let app_state = AppStateBuilder::new()
             .with_config(config)
             .with_stream_engine(stream_engine)
@@ -138,9 +137,8 @@ mod tests {
     #[tokio::test]
     async fn test_tts_new_ssrc_for_different_play_id() -> Result<()> {
         let mut config = Config::default();
-        config.udp_port = 0; // Use random port
-        config.media_cache_path = "/tmp/mediacache".to_string();
-        let stream_engine = Arc::new(StreamEngine::default());
+        config.proxy.udp_port = Some(0); // Use random port
+        let stream_engine = StreamEngine::default();
         let app_state = AppStateBuilder::new()
             .with_config(config)
             .with_stream_engine(stream_engine)

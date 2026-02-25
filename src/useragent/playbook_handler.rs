@@ -153,118 +153,189 @@ impl InvitationHandler for PlaybookInvitationHandler {
                 let cancel_token_clone = cancel_token.clone();
 
                 crate::spawn(async move {
-                    use crate::call::{ActiveCallType, Command};
-                    use bytes::Bytes;
+                    use crate::call::ActiveCallType;
+                    use crate::call::active_call::{ActiveCall, ActiveCallGuard};
+                    use crate::media::track::TrackConfig;
+                    use crate::playbook::Playbook;
+                    use crate::playbook::runner::PlaybookRunner;
                     use std::path::PathBuf;
 
-                    // Pre-validate playbook file exists (for SIP calls)
-                    // Remove from pending to get the playbook name
+                    // Retrieve the playbook name from pending
                     let playbook_name = {
-                        let pending = app_state.pending_playbooks.lock().await;
-                        pending.get(&session_id).cloned()
+                        let mut pending = app_state.pending_playbooks.lock().await;
+                        pending.remove(&session_id)
                     };
 
-                    if let Some(name_or_content) = playbook_name {
-                        if !name_or_content.trim().starts_with("---") {
-                            // It's a file path, check if it exists
-                            let path = if name_or_content.starts_with("config/playbook/") {
-                                PathBuf::from(&name_or_content)
-                            } else {
-                                PathBuf::from("config/playbook").join(&name_or_content)
-                            };
+                    let name_or_content = match playbook_name {
+                        Some(n) => n,
+                        None => {
+                            warn!(session_id, "No playbook found in pending, rejecting");
+                            if let Err(e) = dialog.reject(
+                                Some(rsip::StatusCode::ServiceUnavailable),
+                                Some("No Playbook".to_string()),
+                            ) {
+                                warn!(session_id, "Failed to reject SIP dialog: {}", e);
+                            }
+                            return;
+                        }
+                    };
 
-                            if !path.exists() {
-                                warn!(session_id, path=?path, "Playbook file not found, rejecting SIP call");
-                                // Reject the SIP dialog with 503
+                    // Load the playbook (from file or inline YAML)
+                    let playbook = if name_or_content.trim().starts_with("---") {
+                        // Inline YAML content
+                        match Playbook::parse(&name_or_content) {
+                            Ok(pb) => pb,
+                            Err(e) => {
+                                warn!(session_id, "Failed to parse inline playbook: {}", e);
                                 if let Err(e) = dialog.reject(
                                     Some(rsip::StatusCode::ServiceUnavailable),
-                                    Some("Playbook Not Found".to_string()),
+                                    Some("Invalid Playbook".to_string()),
                                 ) {
                                     warn!(session_id, "Failed to reject SIP dialog: {}", e);
                                 }
-                                // Clean up pending playbook
-                                app_state.pending_playbooks.lock().await.remove(&session_id);
                                 return;
                             }
                         }
-                    }
+                    } else {
+                        // File path
+                        let path = if name_or_content.starts_with("config/playbook/") {
+                            PathBuf::from(&name_or_content)
+                        } else {
+                            PathBuf::from("config/playbook").join(&name_or_content)
+                        };
 
-                    let (_audio_sender, audio_receiver) =
-                        tokio::sync::mpsc::unbounded_channel::<Bytes>();
-                    let (command_sender, command_receiver) =
-                        tokio::sync::mpsc::unbounded_channel::<Command>();
-                    let (event_sender, _event_receiver) =
-                        tokio::sync::mpsc::unbounded_channel::<crate::event::SessionEvent>();
+                        if !path.exists() {
+                            warn!(session_id, path=?path, "Playbook file not found, rejecting SIP call");
+                            if let Err(e) = dialog.reject(
+                                Some(rsip::StatusCode::ServiceUnavailable),
+                                Some("Playbook Not Found".to_string()),
+                            ) {
+                                warn!(session_id, "Failed to reject SIP dialog: {}", e);
+                            }
+                            return;
+                        }
 
-                    // Don't accept dialog here - let ActiveCall handle it after creating the track
-                    // This ensures proper SDP answer is generated
+                        match Playbook::load(&path).await {
+                            Ok(pb) => pb,
+                            Err(e) => {
+                                warn!(session_id, path=?path, "Failed to load playbook: {}", e);
+                                if let Err(e) = dialog.reject(
+                                    Some(rsip::StatusCode::ServiceUnavailable),
+                                    Some("Playbook Load Error".to_string()),
+                                ) {
+                                    warn!(session_id, "Failed to reject SIP dialog: {}", e);
+                                }
+                                return;
+                            }
+                        }
+                    };
 
-                    // Send Accept command immediately to trigger SDP negotiation
-                    // This must be done before call_handler_core consumes the receiver
-                    if let Err(e) = command_sender.send(Command::Accept {
+                    // Retrieve extras (custom SIP headers, caller, callee) from pending_params
+                    let extras = {
+                        let mut params = app_state.pending_params.lock().await;
+                        params.remove(&session_id)
+                    };
+
+                    // Process extract_headers from playbook's SIP config
+                    let extras = if let Some(ref sip_config) = playbook.config.sip {
+                        if let Some(ref extract_list) = sip_config.extract_headers {
+                            let mut e = extras.unwrap_or_default();
+                            let sip_header_keys: Vec<String> = extract_list.clone();
+                            e.insert(
+                                "_sip_header_keys".to_string(),
+                                serde_json::to_value(&sip_header_keys).unwrap_or_default(),
+                            );
+                            Some(e)
+                        } else {
+                            extras
+                        }
+                    } else {
+                        extras
+                    };
+
+                    // Render playbook templates with variables
+                    let playbook = if let Some(ref vars) = extras {
+                        match playbook.render(vars) {
+                            Ok(rendered) => rendered,
+                            Err(e) => {
+                                warn!(session_id, "Failed to render playbook: {}", e);
+                                playbook
+                            }
+                        }
+                    } else {
+                        playbook
+                    };
+
+                    // Get hangup headers template from SIP config
+                    let sip_hangup_headers = playbook.config.sip.as_ref()
+                        .and_then(|s| s.hangup_headers.clone());
+
+                    // Create ActiveCall
+                    let track_config = TrackConfig::default();
+                    let active_call = std::sync::Arc::new(ActiveCall::new(
+                        ActiveCallType::Sip,
+                        cancel_token_clone.clone(),
+                        session_id.clone(),
+                        app_state.invitation.clone(),
+                        app_state.clone(),
+                        track_config,
+                        None, // no websocket audio
+                        false, // dump_events
+                        None, // server_side_track_id
+                        extras,
+                        sip_hangup_headers,
+                    ));
+
+                    // Register as pending dialog so ActiveCall can accept the SIP invite
+                    let dialog_id_parsed = dialog.id();
+                    let (_, state_receiver) = tokio::sync::mpsc::unbounded_channel();
+                    let pending = crate::useragent::invitation::PendingDialog {
+                        token: cancel_token_clone.clone(),
+                        dialog,
+                        state_receiver,
+                    };
+                    app_state.invitation.add_pending(dialog_id_parsed, pending);
+
+                    // Create receiver BEFORE serve() (broadcast doesn't cache)
+                    let receiver = active_call.new_receiver();
+
+                    // Create ActiveCallGuard to track the call
+                    let _guard = ActiveCallGuard::new(active_call.clone());
+
+                    // Send Accept command to trigger SDP negotiation
+                    if let Err(e) = active_call.enqueue_command(crate::call::Command::Accept {
                         option: Default::default(),
-                    }) {
+                    }).await {
                         warn!(session_id, "Failed to send accept command: {}", e);
                         return;
                     }
 
-                    // TODO: call_handler_core for voice agent integration
-                    // Start call handler core (stub — awaits cancellation for now)
-                    let _session_id_inner = session_id.clone();
-                    let _app_state_inner = app_state.clone();
-                    let cancel_inner = cancel_token_clone.clone();
-                    let _audio_receiver = audio_receiver;
-                    let _command_receiver = command_receiver;
-                    let _event_sender_inner = event_sender.clone();
-                    let handler_task = crate::spawn(async move {
-                        cancel_inner.cancelled().await;
-                    });
+                    // Create PlaybookRunner
+                    let runner = match PlaybookRunner::new(playbook, active_call.clone()) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            warn!(session_id, "Failed to create PlaybookRunner: {}", e);
+                            cancel_token_clone.cancel();
+                            return;
+                        }
+                    };
 
-                    // Wait for call to complete or cancellation
+                    info!(session_id, "Starting voice agent call handler");
+
+                    // Run ActiveCall::serve() and PlaybookRunner in parallel
                     tokio::select! {
-                        _ = handler_task => {
+                        result = active_call.serve(receiver) => {
+                            if let Err(e) = result {
+                                warn!(session_id, "ActiveCall serve error: {}", e);
+                            }
                             info!(session_id, "SIP call handler completed");
+                        }
+                        _ = runner.run() => {
+                            info!(session_id, "PlaybookRunner completed");
                         }
                         _ = cancel_token_clone.cancelled() => {
                             info!(session_id, "SIP call cancelled");
                         }
-                    }
-
-                    // Attempt to retrieve custom headers for BYE
-                    let headers = {
-                        let mut params = app_state.pending_params.lock().await;
-                        // remove returns the map of extras for this session
-                        if let Some(extras) = params.remove(&session_id) {
-                            if let Some(h_val) = extras.get("_hangup_headers") {
-                                if let Ok(h_map) = serde_json::from_value::<
-                                    std::collections::HashMap<String, String>,
-                                >(h_val.clone())
-                                {
-                                    Some(h_map)
-                                } else if let serde_json::Value::String(s) = h_val {
-                                    // Handle case where set_var stores it as a string
-                                    serde_json::from_str::<std::collections::HashMap<String, String>>(s).ok()
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    };
-
-                    let sip_headers = headers.map(|h_map| {
-                        h_map
-                            .into_iter()
-                            .map(|(k, v)| rsip::Header::Other(k.into(), v.into()))
-                            .collect::<Vec<_>>()
-                    });
-
-                    // Terminate the SIP dialog
-                    if let Err(e) = dialog.bye_with_headers(sip_headers).await {
-                        warn!(session_id, "Failed to send BYE: {}", e);
                     }
                 });
 

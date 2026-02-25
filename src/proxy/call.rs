@@ -1069,6 +1069,44 @@ impl ProxyModule for CallModule {
                     return Ok(ProxyAction::Abort);
                 }
 
+                // Check voice-agent invitation handler before B2BUA routing
+                #[cfg(feature = "voice-agent")]
+                if let Some(handler) = self.inner.server.get_invite_handler() {
+                    let local_contact = self.inner.server.default_contact_uri();
+                    let (state_tx, state_rx) = tokio::sync::mpsc::unbounded_channel();
+                    match self.inner.dialog_layer.get_or_create_server_invite(
+                        tx,
+                        state_tx,
+                        None,
+                        local_contact,
+                    ) {
+                        Ok(server_dialog) => {
+                            let session_id = dialog_id.to_string();
+                            let routing_state = self.inner.routing_state.clone();
+                            let cancel = self.inner.server.cancel_token.child_token();
+                            match handler.on_invite(
+                                session_id.clone(),
+                                cancel,
+                                server_dialog,
+                                routing_state,
+                            ).await {
+                                Ok(()) => {
+                                    info!(%dialog_id, "INVITE handled by voice agent");
+                                    return Ok(ProxyAction::Abort);
+                                }
+                                Err(e) => {
+                                    debug!(%dialog_id, "Voice agent declined invite: {}, falling through to B2BUA", e);
+                                    // Fall through to normal B2BUA handling
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!(%dialog_id, "Failed to create server dialog for voice agent: {}", e);
+                            // Fall through to normal B2BUA handling
+                        }
+                    }
+                }
+
                 if let Err(e) = self.handle_invite(token, tx, cookie).await {
                     if tx.last_response.is_none() {
                         let code = rsip::StatusCode::ServerInternalError;
