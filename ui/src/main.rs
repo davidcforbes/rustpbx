@@ -11,6 +11,10 @@ use leptos_router::{
     path,
 };
 use sections::activities::{ActivitiesSideNav, CallsPage, PlaceholderPage};
+use sections::numbers::{
+    BuyNumbersPage, CallSettingsPage, NumbersPlaceholderPage, NumbersSideNav,
+    ReceivingNumbersPage, TrackingNumbersPage, TrackingSourcesPage,
+};
 
 fn main() {
     console_error_panic_hook::set_once();
@@ -106,6 +110,9 @@ fn App() -> impl IntoView {
                         <Show when=move || section.get() == Some("activities".to_string())>
                             <ActivitiesSideNav />
                         </Show>
+                        <Show when=move || section.get() == Some("numbers".to_string())>
+                            <NumbersSideNav />
+                        </Show>
                     </AppShellSidePanel>
 
                     <AppShellContent class="bg-iiz-gray-bg">
@@ -122,6 +129,16 @@ fn App() -> impl IntoView {
                             <Route path=path!("/contacts/blocked") view=PlaceholderPage />
                             <Route path=path!("/contacts/do-not-call") view=PlaceholderPage />
                             <Route path=path!("/contacts/do-not-text") view=PlaceholderPage />
+                            <Route path=path!("/numbers/tracking") view=TrackingNumbersPage />
+                            <Route path=path!("/numbers/buy") view=BuyNumbersPage />
+                            <Route path=path!("/numbers/receiving") view=ReceivingNumbersPage />
+                            <Route path=path!("/numbers/call-settings") view=CallSettingsPage />
+                            <Route path=path!("/numbers/sources") view=TrackingSourcesPage />
+                            <Route path=path!("/numbers/text") view=|| view! { <NumbersPlaceholderPage title="Text Numbers" /> } />
+                            <Route path=path!("/numbers/port") view=|| view! { <NumbersPlaceholderPage title="Port Numbers" /> } />
+                            <Route path=path!("/numbers/pools") view=|| view! { <NumbersPlaceholderPage title="Number Pools" /> } />
+                            <Route path=path!("/numbers/targets") view=|| view! { <NumbersPlaceholderPage title="Target Numbers" /> } />
+                            <Route path=path!("/numbers/code") view=|| view! { <NumbersPlaceholderPage title="Tracking Code" /> } />
                         </Routes>
                     </AppShellContent>
                 </AppShell>
