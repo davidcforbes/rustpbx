@@ -19,3 +19,13 @@ pub mod storage;
 pub mod utils;
 pub mod version; // Admin console
 pub mod voicemail;
+
+// AI Voice Agent modules (from active-call)
+pub mod event;
+pub mod net_tool;
+pub mod synthesis;
+pub mod transcription;
+pub mod playbook;
+#[cfg(feature = "offline")]
+pub mod offline;
+pub mod useragent;
