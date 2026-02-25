@@ -1,11 +1,15 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
 
+use super::PhoneDrawer;
+
 /// Top filter bar for activity pages.
 /// Matches the 4iiz prototype top bar layout with search, filter, date range,
 /// source selector, view toggles, and action buttons.
 #[component]
 pub fn FilterBar() -> impl IntoView {
+    let show_phone = RwSignal::new(false);
+
     view! {
         <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
             // Back button
@@ -71,8 +75,11 @@ pub fn FilterBar() -> impl IntoView {
                         <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsGear /></span>
                     </button>
                 </div>
-                // Phone button
-                <button class="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white border-none gap-1">
+                // Phone button — toggles the softphone drawer
+                <button
+                    class="btn btn-sm bg-emerald-500 hover:bg-emerald-600 text-white border-none gap-1"
+                    on:click=move |_| show_phone.update(|v| *v = !*v)
+                >
                     <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsTelephoneFill /></span>
                     "Phone"
                 </button>
@@ -91,5 +98,10 @@ pub fn FilterBar() -> impl IntoView {
                 </div>
             </div>
         </header>
+
+        // Phone drawer overlay
+        <Show when=move || show_phone.get()>
+            <PhoneDrawer on_close=move |_| show_phone.set(false) />
+        </Show>
     }
 }
