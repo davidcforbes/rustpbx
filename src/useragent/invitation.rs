@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    call::{RoutingState, sip::Invitation},
+    call::{RoutingState, active_sip::Invitation},
     config::InviteHandlerConfig,
     useragent::{playbook_handler::PlaybookInvitationHandler, webhook::WebhookInvitationHandler},
 };
@@ -95,10 +95,15 @@ pub fn default_create_invite_handler(
             } else {
                 vec![]
             };
+            let header_pairs = headers.as_ref().map(|h| {
+                h.iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect::<Vec<(String, String)>>()
+            });
             Some(Box::new(WebhookInvitationHandler::new(
                 all_urls,
                 method.clone(),
-                headers.clone(),
+                header_pairs,
             )))
         }
         Some(InviteHandlerConfig::Playbook { rules, default }) => {
@@ -109,7 +114,7 @@ pub fn default_create_invite_handler(
                     return None;
                 }
             };
-            let rules = rules.clone().unwrap_or_default();
+            let rules = rules.clone();
             match PlaybookInvitationHandler::new(rules, default.clone(), app_state) {
                 Ok(handler) => Some(Box::new(handler)),
                 Err(e) => {

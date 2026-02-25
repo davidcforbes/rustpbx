@@ -110,6 +110,17 @@ impl Default for RecorderOption {
     }
 }
 
+impl From<crate::media::recorder::RecorderOption> for RecorderOption {
+    fn from(opt: crate::media::recorder::RecorderOption) -> Self {
+        Self {
+            recorder_file: opt.recorder_file,
+            samplerate: opt.samplerate,
+            ptime: opt.ptime,
+            format: None,
+        }
+    }
+}
+
 pub struct Recorder {
     session_id: String,
     option: RecorderOption,

@@ -342,3 +342,11 @@ pub fn check_authorization_headers(
 
     Ok(None)
 }
+
+/// Lightweight credential record used by `find_credentials_for_callee`.
+#[derive(Clone, Debug)]
+pub struct SipCredential {
+    pub username: String,
+    pub password: String,
+    pub realm: Option<String>,
+}

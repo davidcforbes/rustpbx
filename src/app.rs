@@ -67,6 +67,15 @@ pub struct AppStateInner {
     pub backup_service: Option<crate::backup::BackupService>,
     #[cfg(feature = "console")]
     pub console: Option<Arc<crate::console::ConsoleState>>,
+    // AI Voice Agent fields
+    #[cfg(feature = "voice-agent")]
+    pub stream_engine: Arc<crate::media::engine::StreamEngine>,
+    #[cfg(feature = "voice-agent")]
+    pub pending_params: Arc<tokio::sync::Mutex<std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>>>,
+    #[cfg(feature = "voice-agent")]
+    pub pending_playbooks: Arc<tokio::sync::Mutex<std::collections::HashMap<String, String>>>,
+    #[cfg(feature = "voice-agent")]
+    pub active_calls: Arc<std::sync::Mutex<std::collections::HashMap<String, Arc<dyn std::any::Any + Send + Sync>>>>,
 }
 
 pub type AppState = Arc<AppStateInner>;
@@ -80,6 +89,8 @@ pub struct AppStateBuilder {
     pub config_loaded_at: Option<DateTime<Utc>>,
     pub config_path: Option<String>,
     pub skip_sip_bind: bool,
+    #[cfg(feature = "voice-agent")]
+    pub stream_engine: Option<crate::media::engine::StreamEngine>,
 }
 
 impl AppStateInner {
@@ -97,6 +108,16 @@ impl AppStateInner {
 
     pub fn sip_server(&self) -> &SipServer {
         &self.sip_server
+    }
+
+    pub fn callrecord_sender(&self) -> Option<&crate::callrecord::CallRecordSender> {
+        self.core.callrecord_sender.as_ref()
+    }
+
+    /// Stub: look up SIP credentials for an outbound callee.
+    /// Returns None until a real credential store is wired up.
+    pub fn find_credentials_for_callee(&self, _callee: &str) -> Option<crate::call::user::SipCredential> {
+        None
     }
 
     pub fn get_dump_events_file(&self, session_id: &String) -> String {
@@ -157,6 +178,8 @@ impl AppStateBuilder {
             config_loaded_at: None,
             config_path: None,
             skip_sip_bind: false,
+            #[cfg(feature = "voice-agent")]
+            stream_engine: None,
         }
     }
 
@@ -196,6 +219,12 @@ impl AppStateBuilder {
     pub fn with_config_metadata(mut self, path: Option<String>, loaded_at: DateTime<Utc>) -> Self {
         self.config_path = path;
         self.config_loaded_at = Some(loaded_at);
+        self
+    }
+
+    #[cfg(feature = "voice-agent")]
+    pub fn with_stream_engine(mut self, engine: crate::media::engine::StreamEngine) -> Self {
+        self.stream_engine = Some(engine);
         self
     }
 
@@ -332,6 +361,9 @@ impl AppStateBuilder {
             None
         };
 
+        #[cfg(feature = "voice-agent")]
+        let stream_engine = Arc::new(self.stream_engine.unwrap_or_default());
+
         let app_state = Arc::new(AppStateInner {
             core: core.clone(),
             sip_server,
@@ -345,6 +377,14 @@ impl AppStateBuilder {
             backup_service: backup_service.clone(),
             #[cfg(feature = "console")]
             console: console_state,
+            #[cfg(feature = "voice-agent")]
+            stream_engine,
+            #[cfg(feature = "voice-agent")]
+            pending_params: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            pending_playbooks: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            #[cfg(feature = "voice-agent")]
+            active_calls: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
         });
 
         if let Some(mut manager) = callrecord_manager {

@@ -2,7 +2,7 @@ use super::{SynthesisClient, SynthesisOption, SynthesisType};
 use crate::synthesis::{Subtitle, SynthesisEvent};
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_lc_rs::hmac;
+use ring::hmac;
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::Duration;
 use futures::{

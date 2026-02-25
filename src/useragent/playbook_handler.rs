@@ -208,19 +208,17 @@ impl InvitationHandler for PlaybookInvitationHandler {
                         return;
                     }
 
-                    // Start call handler core
-                    let handler_task = crate::spawn(crate::handler::handler::call_handler_core(
-                        ActiveCallType::Sip,
-                        session_id.clone(),
-                        app_state.clone(),
-                        cancel_token_clone.clone(),
-                        audio_receiver,
-                        None, // server_side_track
-                        true, // dump_events
-                        20,   // ping_interval
-                        command_receiver,
-                        event_sender.clone(),
-                    ));
+                    // TODO: call_handler_core for voice agent integration
+                    // Start call handler core (stub — awaits cancellation for now)
+                    let _session_id_inner = session_id.clone();
+                    let _app_state_inner = app_state.clone();
+                    let cancel_inner = cancel_token_clone.clone();
+                    let _audio_receiver = audio_receiver;
+                    let _command_receiver = command_receiver;
+                    let _event_sender_inner = event_sender.clone();
+                    let handler_task = crate::spawn(async move {
+                        cancel_inner.cancelled().await;
+                    });
 
                     // Wait for call to complete or cancellation
                     tokio::select! {
