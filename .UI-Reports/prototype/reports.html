@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4iiz - Reports</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'iiz': {
+                            'cyan': '#00bcd4',
+                            'cyan-light': '#e0f7fa',
+                            'blue': '#2196f3',
+                            'blue-link': '#1e88e5',
+                            'green': '#4caf50',
+                            'red': '#f44336',
+                            'orange': '#ff9800',
+                            'gray-bg': '#f8f9fa',
+                            'gray-border': '#e0e0e0',
+                            'gray-text': '#757575',
+                            'dark': '#37474f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .activity-row:hover { background-color: #f0fafa; }
+        .activity-row { border-bottom: 1px solid #f0f0f0; }
+        .nav-icon-btn { @apply flex flex-col items-center gap-0.5 px-2 py-3 text-xs rounded-lg transition-colors; }
+        .nav-icon-btn.active { @apply text-iiz-cyan bg-iiz-cyan-light; }
+        .nav-icon-btn:not(.active) { @apply text-gray-500 hover:text-iiz-cyan hover:bg-gray-50; }
+        .side-nav-item { @apply block px-4 py-1.5 text-sm rounded-md transition-colors cursor-pointer; }
+        .side-nav-item.active { @apply text-iiz-cyan font-medium; }
+        .side-nav-item:not(.active) { @apply text-gray-600 hover:text-iiz-cyan hover:bg-gray-50; }
+        .col-header { @apply text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer select-none; }
+        .col-header:hover { @apply text-gray-700; }
+        .col-header .sort-icon { @apply inline-block ml-0.5 opacity-0 transition-opacity; }
+        .col-header:hover .sort-icon { @apply opacity-100; }
+        .source-badge { @apply inline-flex items-center justify-center text-[10px] font-bold text-white rounded px-1.5 py-0.5 min-w-[28px]; }
+        .time-tab { @apply px-4 py-1 text-sm rounded cursor-pointer transition-colors; }
+        .time-tab.active { @apply bg-iiz-cyan text-white; }
+        .time-tab:not(.active) { @apply bg-white text-gray-500 hover:text-gray-700 border border-gray-200; }
+        .chart-bar { @apply rounded-t-sm transition-all; }
+    </style>
+</head>
+<body class="bg-white min-h-screen" x-data="reportsApp()">
+
+<!-- ============================================================ -->
+<!-- LAYOUT: Icon Nav | Side Panel | Top Bar + Content             -->
+<!-- ============================================================ -->
+<div class="flex h-screen overflow-hidden">
+
+    <!-- LEFT ICON NAV (persistent) -->
+    <nav class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-2 flex-shrink-0">
+        <!-- Logo -->
+        <div class="mb-4 py-2">
+            <svg viewBox="0 0 40 20" class="w-10 h-5 text-iiz-cyan" fill="currentColor">
+                <text x="0" y="16" font-size="16" font-weight="bold" font-family="system-ui">4iiz</text>
+            </svg>
+        </div>
+
+        <!-- Nav Icons -->
+        <div class="flex flex-col gap-1 flex-1">
+            <button class="nav-icon-btn" title="Activities">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+                <span class="text-[10px]">Activities</span>
+            </button>
+            <button class="nav-icon-btn" title="Numbers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+                </svg>
+                <span class="text-[10px]">Numbers</span>
+            </button>
+            <button class="nav-icon-btn" title="Flows">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+                <span class="text-[10px]">Flows</span>
+            </button>
+            <button class="nav-icon-btn" title="AI Tools">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                </svg>
+                <span class="text-[10px]">AI Tools</span>
+            </button>
+            <button class="nav-icon-btn active" title="Reports">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span class="text-[10px]">Reports</span>
+            </button>
+            <button class="nav-icon-btn" title="Trust Center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                </svg>
+                <span class="text-[10px]">Trust<br>Center</span>
+            </button>
+        </div>
+
+        <!-- Bottom icons -->
+        <div class="flex flex-col gap-1 mt-auto pb-2">
+            <button class="nav-icon-btn" title="Help">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                </svg>
+                <span class="text-[10px]">Help</span>
+            </button>
+            <button class="nav-icon-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                <span class="text-[10px]">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SECONDARY NAV PANEL -->
+    <aside class="w-48 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto" x-show="!sidebarCollapsed" x-transition>
+        <!-- Section Header -->
+        <div class="px-4 pt-4 pb-2">
+            <div class="flex items-center gap-2 text-iiz-cyan">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span class="text-lg font-light">Reports</span>
+            </div>
+        </div>
+
+        <nav class="px-2 pb-4">
+            <!-- ANALYTICS -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                    Analytics
+                </h3>
+                <a :class="reportPage === 'activity' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'activity'">Activity Reports</a>
+                <a :class="reportPage === 'roi' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'roi'">ROI Reports</a>
+                <a :class="reportPage === 'accuracy' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'accuracy'">Accuracy Reports</a>
+                <a :class="reportPage === 'activitymap' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'activitymap'">Activity Map</a>
+                <a :class="reportPage === 'overview' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'overview'">Overview</a>
+                <a :class="reportPage === 'todaysmissed' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'todaysmissed'">Today's Missed Calls</a>
+                <a :class="reportPage === 'positivedaily' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'positivedaily'">Positive Daily Reports</a>
+                <a :class="reportPage === 'googleca' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'googleca'">Google CA Report</a>
+                <a :class="reportPage === 'saturdaycalls' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'saturdaycalls'">saturday calls</a>
+                <a :class="reportPage === 'dailycalls' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'dailycalls'">Daily Calls</a>
+                <a :class="reportPage === 'weeklymissed' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'weeklymissed'">Weekly Missed Calls</a>
+                <a :class="reportPage === 'primingcalls' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'primingcalls'">Priming Calls</a>
+                <a :class="reportPage === 'missedcalls' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'missedcalls'">Missed Calls</a>
+                <a :class="reportPage === 'misseddaily1st' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'misseddaily1st'">Missed Calls Daily - First Contact</a>
+                <a :class="reportPage === 'csdailymissed' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'csdailymissed'">Customer Service Daily Missed Calls</a>
+                <a :class="reportPage === 'csdailymissed2' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'csdailymissed2'">Customer Service Daily Missed Calls - 2.0</a>
+                <a :class="reportPage === 'primingmissed' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'primingmissed'">Priming Missed Calls</a>
+                <a :class="reportPage === 'dailycollection' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'dailycollection'">Daily Collection Calls</a>
+                <a :class="reportPage === 'powerbi' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'powerbi'">Power BI - Total Inbound</a>
+                <a :class="reportPage === 'realtime' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'realtime'">real time</a>
+                <a :class="reportPage === 'appointments' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'appointments'">Appointments</a>
+            </div>
+
+            <!-- CONNECT -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+                    Connect
+                </h3>
+                <a :class="reportPage === 'realtimeagents' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'realtimeagents'">Real-time Agents</a>
+                <a :class="reportPage === 'coaching' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'coaching'">Coaching</a>
+                <a :class="reportPage === 'queuereport' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'queuereport'">Queue Report</a>
+                <a :class="reportPage === 'agentactivity' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'agentactivity'">Agent Activity</a>
+            </div>
+
+            <!-- USAGE -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" /></svg>
+                    Usage
+                </h3>
+                <a :class="reportPage === 'agencyusage' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'agencyusage'">Agency Usage</a>
+            </div>
+
+            <!-- REPORT SETTINGS -->
+            <div>
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /></svg>
+                    Report Settings
+                </h3>
+                <a :class="reportPage === 'customreports' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'customreports'">Custom Reports</a>
+                <a :class="reportPage === 'notifications' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'notifications'">Notifications</a>
+                <a :class="reportPage === 'scoring' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'scoring'">Scoring</a>
+                <a :class="reportPage === 'tags' ? 'active' : ''" class="side-nav-item" @click="reportPage = 'tags'">Tags</a>
+            </div>
+        </nav>
+
+        <!-- Collapse toggle -->
+        <button class="absolute left-[255px] top-1/2 -translate-y-1/2 w-5 h-8 bg-white border border-gray-200 rounded-r-md flex items-center justify-center text-gray-400 hover:text-gray-600 z-10"
+                @click="sidebarCollapsed = !sidebarCollapsed">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+        </button>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- ============================================================ -->
+        <!-- TOP BAR: Activity Report                                      -->
+        <!-- ============================================================ -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+            <div class="flex items-center gap-3 flex-1">
+                <!-- Filter -->
+                <button class="btn btn-sm btn-ghost text-gray-500 gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                    Filter
+                </button>
+                <!-- Search -->
+                <div class="flex items-center border border-gray-200 rounded-md px-2 py-1 bg-white">
+                    <input type="text" placeholder="Search" class="text-sm outline-none w-40 bg-transparent">
+                    <button class="text-gray-400 hover:text-gray-600 ml-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /></svg>
+                    </button>
+                    <button class="text-gray-400 hover:text-gray-600 ml-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-gray-500 hover:text-gray-700 cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <a class="text-sm text-gray-500 hover:text-gray-700 cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
+                    Call Log
+                </a>
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="text-sm text-gray-500 hover:text-gray-700 cursor-pointer flex items-center gap-1">
+                        Export
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                        <li><a>Export CSV</a></li>
+                        <li><a>Export PDF</a></li>
+                        <li><a>Export Excel</a></li>
+                    </ul>
+                </div>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Schedules...</button>
+            </div>
+            <!-- Account -->
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT AREA                                                  -->
+        <!-- ============================================================ -->
+        <main class="flex-1 overflow-y-auto bg-iiz-gray-bg">
+
+            <!-- ======================================================== -->
+            <!-- ACTIVITY REPORT PAGE                                      -->
+            <!-- ======================================================== -->
+            <div x-show="reportPage === 'activity'" x-cloak>
+                <!-- View selector + Time range tabs -->
+                <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-600">View by</span>
+                        <select class="select select-sm select-bordered text-sm font-medium">
+                            <option>Tracking Source</option>
+                            <option>Agent</option>
+                            <option>Campaign</option>
+                            <option>Keyword</option>
+                        </select>
+                        <button class="btn btn-sm btn-circle btn-ghost text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <template x-for="tab in timeRangeTabs" :key="tab">
+                            <button class="time-tab" :class="activeTimeTab === tab ? 'active' : ''" @click="activeTimeTab = tab" x-text="tab"></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Chart Area -->
+                <div class="px-6 py-4 bg-white border-b border-gray-100">
+                    <div class="relative">
+                        <!-- Chart type toggles -->
+                        <div class="absolute top-0 right-0 flex gap-1">
+                            <button class="btn btn-xs btn-ghost text-gray-400 hover:text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                            </button>
+                        </div>
+
+                        <!-- Y-axis labels -->
+                        <div class="flex">
+                            <div class="flex flex-col justify-between text-xs text-gray-400 pr-2 h-[250px] w-8 text-right">
+                                <span>6k</span>
+                                <span>5k</span>
+                                <span>4k</span>
+                                <span>3k</span>
+                                <span>2k</span>
+                                <span>1k</span>
+                                <span>0</span>
+                            </div>
+                            <!-- Bars -->
+                            <div class="flex-1 flex items-end gap-[2px] h-[250px] border-l border-b border-gray-200 pl-1 relative">
+                                <!-- Grid lines -->
+                                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div class="border-t border-gray-100 border-dashed"></div>
+                                    <div></div>
+                                </div>
+                                <!-- Bar groups -->
+                                <template x-for="bar in chartData" :key="bar.date">
+                                    <div class="flex-1 flex flex-col items-center relative group">
+                                        <span class="text-[9px] text-gray-500 absolute -top-4 whitespace-nowrap" x-text="bar.total.toLocaleString()"></span>
+                                        <div class="w-full flex flex-col-reverse">
+                                            <div class="chart-bar bg-iiz-green w-full" :style="'height:' + (bar.answered / 6000 * 250) + 'px'"></div>
+                                            <div class="chart-bar bg-iiz-red w-full" :style="'height:' + (bar.missed / 6000 * 250) + 'px'"></div>
+                                            <div class="chart-bar bg-gray-300 w-full rounded-t-sm" :style="'height:' + (bar.other / 6000 * 250) + 'px'"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- X-axis labels -->
+                        <div class="flex ml-10 mt-1">
+                            <template x-for="(bar, index) in chartData" :key="'x-'+bar.date">
+                                <div class="flex-1 text-center">
+                                    <span class="text-[9px] text-gray-400" x-show="index % 2 === 0" x-text="bar.date"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="px-6 py-2 bg-white overflow-x-auto">
+                    <table class="table table-sm w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="col-header">Source <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Total <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Period Unique <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Globally Unique <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Ring Time <span class="text-[9px] normal-case">(minutes)</span> <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Talk Time <span class="text-[9px] normal-case">(minutes)</span> <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Total Time <span class="text-[9px] normal-case">(minutes)</span> <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Score <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Conversions <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Conv. Rate <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Revenue <span class="sort-icon">&#8597;</span></th>
+                                <th class="col-header text-right">Social Selling New Leads <span class="sort-icon">&#8597;</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Totals row -->
+                            <tr class="bg-gray-50 font-semibold border-b border-gray-200">
+                                <td class="py-2">
+                                    <div class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                                        <span>totals</span>
+                                    </div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">110,050</div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">31,721</div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">9,671</div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">0:27 <span class="text-[10px] text-gray-400 font-normal">avg</span></div>
+                                    <div class="text-[10px] text-gray-400 font-normal">51,342.78 <span class="text-[9px]">total</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">2:18 <span class="text-[10px] text-gray-400 font-normal">avg</span></div>
+                                    <div class="text-[10px] text-gray-400 font-normal">254,905.82 <span class="text-[9px]">total</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">2:52 <span class="text-[10px] text-gray-400 font-normal">avg</span></div>
+                                    <div class="text-[10px] text-gray-400 font-normal">316,130.67 <span class="text-[9px]">total</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">0.00 <span class="text-[10px] text-gray-400 font-normal">avg</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">0 <span class="text-[10px] text-gray-400 font-normal">total</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">0.00% <span class="text-[10px] text-gray-400 font-normal">rate</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">$0.00 <span class="text-[10px] text-gray-400 font-normal">total</span></div>
+                                </td>
+                                <td class="text-right py-2">
+                                    <div class="font-bold">3,892 <span class="text-[10px] text-gray-400 font-normal">total</span></div>
+                                    <div class="text-[10px] text-gray-400 font-normal">0 <span class="text-[9px]">total</span></div>
+                                </td>
+                            </tr>
+
+                            <!-- Source rows -->
+                            <template x-for="source in sources" :key="source.name">
+                                <tr class="activity-row">
+                                    <td class="py-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="source-badge" :style="'background-color:' + source.badgeColor" x-text="source.badgePct"></span>
+                                            <span class="text-sm font-medium text-iiz-blue-link" x-text="source.name"></span>
+                                        </div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm font-semibold" x-text="source.total.toLocaleString()"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.totalPct"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm" x-text="source.periodUnique.toLocaleString()"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.periodUniquePct"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm" x-text="source.globallyUnique.toLocaleString()"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.globallyUniquePct"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm" x-text="source.ringTime"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.ringTimeTotal"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm" x-text="source.talkTime"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.talkTimeTotal"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm" x-text="source.totalTime"></div>
+                                        <div class="text-[10px] text-gray-400" x-text="source.totalTimeTotal"></div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm text-gray-400">No rating</div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm text-iiz-cyan">0</div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm">0.00%</div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm">0.00</div>
+                                    </td>
+                                    <td class="text-right py-2">
+                                        <div class="text-sm">0.00 <span class="text-[10px] text-gray-400">P&amp;R</span></div>
+                                        <div class="text-[10px] text-gray-400">0 <span class="text-[9px]">total</span></div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- PLACEHOLDER PAGES: ANALYTICS                              -->
+            <!-- ======================================================== -->
+            <template x-for="page in placeholderPages" :key="page.key">
+                <div x-show="reportPage === page.key" x-cloak class="p-6">
+                    <div class="card bg-white shadow-sm border border-gray-200">
+                        <div class="card-body text-center py-16">
+                            <div class="flex justify-center mb-4">
+                                <div class="w-16 h-16 rounded-full bg-iiz-cyan-light flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-iiz-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+                                </div>
+                            </div>
+                            <h2 class="text-xl font-semibold text-gray-700" x-text="'Report \u2014 ' + page.label"></h2>
+                            <p class="text-sm text-gray-400 mt-2" x-text="page.section + ' section'"></p>
+                            <p class="text-xs text-gray-300 mt-4">This report view would display filtered analytics data with charts and tables.</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+        </main>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ALPINE.JS APP                                                 -->
+<!-- ============================================================ -->
+<script>
+function reportsApp() {
+    return {
+        reportPage: 'activity',
+        sidebarCollapsed: false,
+        activeTimeTab: 'Day',
+        timeRangeTabs: ['Hour', 'Day', 'Week', 'Month', 'Quarter', 'Year'],
+
+        // ---- CHART DATA (30 days: Jan 26 - Feb 23) ----
+        chartData: [
+            { date: 'Jan 26', total: 4705, answered: 3800, missed: 600, other: 305 },
+            { date: 'Jan 27', total: 4790, answered: 3900, missed: 580, other: 310 },
+            { date: 'Jan 28', total: 4522, answered: 3650, missed: 560, other: 312 },
+            { date: 'Jan 29', total: 4293, answered: 3450, missed: 540, other: 303 },
+            { date: 'Jan 30', total: 769, answered: 600, missed: 110, other: 59 },
+            { date: 'Feb 1', total: 2282, answered: 1800, missed: 320, other: 162 },
+            { date: 'Feb 2', total: 4715, answered: 3830, missed: 580, other: 305 },
+            { date: 'Feb 3', total: 4718, answered: 3850, missed: 570, other: 298 },
+            { date: 'Feb 4', total: 4574, answered: 3700, missed: 560, other: 314 },
+            { date: 'Feb 5', total: 4255, answered: 3420, missed: 540, other: 295 },
+            { date: 'Feb 6', total: 3945, answered: 3180, missed: 500, other: 265 },
+            { date: 'Feb 7', total: 4448, answered: 3600, missed: 550, other: 298 },
+            { date: 'Feb 8', total: 1076, answered: 850, missed: 150, other: 76 },
+            { date: 'Feb 9', total: 2023, answered: 1600, missed: 280, other: 143 },
+            { date: 'Feb 10', total: 4870, answered: 3950, missed: 600, other: 320 },
+            { date: 'Feb 11', total: 4755, answered: 3860, missed: 590, other: 305 },
+            { date: 'Feb 12', total: 4757, answered: 3870, missed: 580, other: 307 },
+            { date: 'Feb 13', total: 4369, answered: 3530, missed: 540, other: 299 },
+            { date: 'Feb 14', total: 1903, answered: 1510, missed: 260, other: 133 },
+            { date: 'Feb 15', total: 5032, answered: 4100, missed: 620, other: 312 },
+            { date: 'Feb 16', total: 4679, answered: 3800, missed: 580, other: 299 },
+            { date: 'Feb 17', total: 4605, answered: 3730, missed: 570, other: 305 },
+            { date: 'Feb 18', total: 4759, answered: 3870, missed: 580, other: 309 },
+            { date: 'Feb 19', total: 4724, answered: 3840, missed: 580, other: 304 },
+            { date: 'Feb 20', total: 1704, answered: 1350, missed: 240, other: 114 },
+            { date: 'Feb 21', total: 2448, answered: 1950, missed: 330, other: 168 },
+            { date: 'Feb 22', total: 4989, answered: 4060, missed: 610, other: 319 },
+            { date: 'Feb 23', total: 3967, answered: 3210, missed: 490, other: 267 },
+            { date: 'Feb 24', total: 578, answered: 450, missed: 85, other: 43 },
+        ],
+
+        // ---- SOURCE DATA (14 rows from screenshot) ----
+        sources: [
+            {
+                name: 'Google Organic', badgePct: '73%', badgeColor: '#4caf50',
+                total: 80374, totalPct: '73.03%',
+                periodUnique: 19988, periodUniquePct: '18.16%',
+                globallyUnique: 6260, globallyUniquePct: '5.69%',
+                ringTime: '0:27 P&R', ringTimeTotal: '36,907.68 total',
+                talkTime: '2:17 P&R', talkTimeTotal: '184,298.03 total',
+                totalTime: '2:49 P&R', totalTimeTotal: '227,174.75 total',
+            },
+            {
+                name: 'Customer Service Line', badgePct: '20%', badgeColor: '#ff9800',
+                total: 22270, totalPct: '20.24%',
+                periodUnique: 6809, periodUniquePct: '6.19%',
+                globallyUnique: 425, globallyUniquePct: '0.39%',
+                ringTime: '0:27 P&R', ringTimeTotal: '10,282.52 total',
+                talkTime: '1:31 P&R', talkTimeTotal: '33,959.67 total',
+                totalTime: '2:02 P&R', totalTimeTotal: '45,570.70 total',
+            },
+            {
+                name: 'Tiktok Organic', badgePct: '2%', badgeColor: '#f44336',
+                total: 2526, totalPct: '2.30%',
+                periodUnique: 1746, periodUniquePct: '1.59%',
+                globallyUnique: 1219, globallyUniquePct: '1.11%',
+                ringTime: '0:30 P&R', ringTimeTotal: '1,280.38 total',
+                talkTime: '5:57 P&R', talkTimeTotal: '15,045.52 total',
+                totalTime: '6:51 P&R', totalTimeTotal: '17,321.80 total',
+            },
+            {
+                name: 'Facebook Paid', badgePct: '3%', badgeColor: '#f44336',
+                total: 1942, totalPct: '1.76%',
+                periodUnique: 1178, periodUniquePct: '1.07%',
+                globallyUnique: 771, globallyUniquePct: '0.70%',
+                ringTime: '0:28 P&R', ringTimeTotal: '914.60 total',
+                talkTime: '4:13 P&R', talkTimeTotal: '8,190.37 total',
+                totalTime: '4:56 P&R', totalTimeTotal: '9,581.32 total',
+            },
+            {
+                name: 'Facebook Organic', badgePct: '1%', badgeColor: '#4caf50',
+                total: 701, totalPct: '0.64%',
+                periodUnique: 556, periodUniquePct: '0.51%',
+                globallyUnique: 410, globallyUniquePct: '0.37%',
+                ringTime: '0:30 P&R', ringTimeTotal: '354.27 total',
+                talkTime: '5:36 P&R', talkTimeTotal: '3,925.70 total',
+                totalTime: '6:27 P&R', totalTimeTotal: '4,527.32 total',
+            },
+            {
+                name: 'Book of Truths Trum', badgePct: '1%', badgeColor: '#4caf50',
+                total: 625, totalPct: '0.57%',
+                periodUnique: 326, periodUniquePct: '0.30%',
+                globallyUnique: 81, globallyUniquePct: '0.07%',
+                ringTime: '0:59 P&R', ringTimeTotal: '616.12 total',
+                talkTime: '4:22 P&R', talkTimeTotal: '2,738.40 total',
+                totalTime: '5:49 P&R', totalTimeTotal: '3,639.60 total',
+            },
+            {
+                name: 'Radio La Ley', badgePct: '0%', badgeColor: '#9e9e9e',
+                total: 425, totalPct: '0.39%',
+                periodUnique: 302, periodUniquePct: '0.27%',
+                globallyUnique: 136, globallyUniquePct: '0.12%',
+                ringTime: '0:37 P&R', ringTimeTotal: '263.80 total',
+                talkTime: '4:35 P&R', talkTimeTotal: '1,949.45 total',
+                totalTime: '5:37 P&R', totalTimeTotal: '2,387.57 total',
+            },
+            {
+                name: 'Website', badgePct: '0%', badgeColor: '#f44336',
+                total: 288, totalPct: '0.26%',
+                periodUnique: 194, periodUniquePct: '0.18%',
+                globallyUnique: 88, globallyUniquePct: '0.08%',
+                ringTime: '0:47 P&R', ringTimeTotal: '227.57 total',
+                talkTime: '4:30 P&R', talkTimeTotal: '1,296.07 total',
+                totalTime: '5:37 P&R', totalTimeTotal: '1,621.87 total',
+            },
+            {
+                name: 'Instagram Organic', badgePct: '0%', badgeColor: '#f44336',
+                total: 187, totalPct: '0.17%',
+                periodUnique: 127, periodUniquePct: '0.12%',
+                globallyUnique: 86, globallyUniquePct: '0.08%',
+                ringTime: '0:33 P&R', ringTimeTotal: '103.23 total',
+                talkTime: '6:54 P&R', talkTimeTotal: '1,290.73 total',
+                totalTime: '7:53 P&R', totalTimeTotal: '1,474.53 total',
+            },
+            {
+                name: 'Yelp Organic', badgePct: '0%', badgeColor: '#9e9e9e',
+                total: 173, totalPct: '0.16%',
+                periodUnique: 119, periodUniquePct: '0.11%',
+                globallyUnique: 59, globallyUniquePct: '0.05%',
+                ringTime: '0:34 P&R', ringTimeTotal: '99.85 total',
+                talkTime: '2:30 P&R', talkTimeTotal: '434.25 total',
+                totalTime: '3:18 P&R', totalTimeTotal: '573.08 total',
+            },
+            {
+                name: 'Mass SMS', badgePct: '0%', badgeColor: '#4caf50',
+                total: 167, totalPct: '0.15%',
+                periodUnique: 129, periodUniquePct: '0.12%',
+                globallyUnique: 8, globallyUniquePct: '0.01%',
+                ringTime: '0:33 P&R', ringTimeTotal: '92.50 total',
+                talkTime: '3:59 P&R', talkTimeTotal: '666.83 total',
+                totalTime: '4:53 P&R', totalTimeTotal: '816.37 total',
+            },
+            {
+                name: 'WhatsApp', badgePct: '0%', badgeColor: '#f44336',
+                total: 110, totalPct: '0.10%',
+                periodUnique: 68, periodUniquePct: '0.06%',
+                globallyUnique: 38, globallyUniquePct: '0.03%',
+                ringTime: '0:39 P&R', ringTimeTotal: '71.80 total',
+                talkTime: '3:53 P&R', talkTimeTotal: '427.67 total',
+                totalTime: '4:56 P&R', totalTimeTotal: '543.30 total',
+            },
+            {
+                name: 'Mystery Shopper', badgePct: '0%', badgeColor: '#4caf50',
+                total: 74, totalPct: '0.07%',
+                periodUnique: 35, periodUniquePct: '0.03%',
+                globallyUnique: 4, globallyUniquePct: '0.00%',
+                ringTime: '0:17 P&R', ringTimeTotal: '21.83 total',
+                talkTime: '1:20 P&R', talkTimeTotal: '99.70 total',
+                totalTime: '1:48 P&R', totalTimeTotal: '133.25 total',
+            },
+            {
+                name: 'Google Ads', badgePct: '0%', badgeColor: '#f44336',
+                total: 67, totalPct: '0.06%',
+                periodUnique: 45, periodUniquePct: '0.04%',
+                globallyUnique: 20, globallyUniquePct: '0.02%',
+                ringTime: '0:37 P&R', ringTimeTotal: '41.97 total',
+                talkTime: '4:42 P&R', talkTimeTotal: '315.52 total',
+                totalTime: '5:42 P&R', totalTimeTotal: '381.95 total',
+            },
+        ],
+
+        // ---- PLACEHOLDER PAGES ----
+        placeholderPages: [
+            { key: 'roi', label: 'ROI Reports', section: 'Analytics' },
+            { key: 'accuracy', label: 'Accuracy Reports', section: 'Analytics' },
+            { key: 'activitymap', label: 'Activity Map', section: 'Analytics' },
+            { key: 'overview', label: 'Overview', section: 'Analytics' },
+            { key: 'todaysmissed', label: "Today's Missed Calls", section: 'Analytics' },
+            { key: 'positivedaily', label: 'Positive Daily Reports', section: 'Analytics' },
+            { key: 'googleca', label: 'Google CA Report', section: 'Analytics' },
+            { key: 'saturdaycalls', label: 'saturday calls', section: 'Analytics' },
+            { key: 'dailycalls', label: 'Daily Calls', section: 'Analytics' },
+            { key: 'weeklymissed', label: 'Weekly Missed Calls', section: 'Analytics' },
+            { key: 'primingcalls', label: 'Priming Calls', section: 'Analytics' },
+            { key: 'missedcalls', label: 'Missed Calls', section: 'Analytics' },
+            { key: 'misseddaily1st', label: 'Missed Calls Daily - First Contact', section: 'Analytics' },
+            { key: 'csdailymissed', label: 'Customer Service Daily Missed Calls', section: 'Analytics' },
+            { key: 'csdailymissed2', label: 'Customer Service Daily Missed Calls - 2.0', section: 'Analytics' },
+            { key: 'primingmissed', label: 'Priming Missed Calls', section: 'Analytics' },
+            { key: 'dailycollection', label: 'Daily Collection Calls', section: 'Analytics' },
+            { key: 'powerbi', label: 'Power BI - Total Inbound', section: 'Analytics' },
+            { key: 'realtime', label: 'real time', section: 'Analytics' },
+            { key: 'appointments', label: 'Appointments', section: 'Analytics' },
+            { key: 'realtimeagents', label: 'Real-time Agents', section: 'Connect' },
+            { key: 'coaching', label: 'Coaching', section: 'Connect' },
+            { key: 'queuereport', label: 'Queue Report', section: 'Connect' },
+            { key: 'agentactivity', label: 'Agent Activity', section: 'Connect' },
+            { key: 'agencyusage', label: 'Agency Usage', section: 'Usage' },
+            { key: 'customreports', label: 'Custom Reports', section: 'Report Settings' },
+            { key: 'notifications', label: 'Notifications', section: 'Report Settings' },
+            { key: 'scoring', label: 'Scoring', section: 'Report Settings' },
+            { key: 'tags', label: 'Tags', section: 'Report Settings' },
+        ],
+    }
+}
+</script>
+</body>
+</html>

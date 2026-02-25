@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4iiz - Numbers</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'iiz': {
+                            'cyan': '#00bcd4',
+                            'cyan-light': '#e0f7fa',
+                            'blue': '#2196f3',
+                            'blue-link': '#1e88e5',
+                            'green': '#4caf50',
+                            'red': '#f44336',
+                            'orange': '#ff9800',
+                            'gray-bg': '#f8f9fa',
+                            'gray-border': '#e0e0e0',
+                            'gray-text': '#757575',
+                            'dark': '#37474f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .activity-row:hover { background-color: #f0fafa; }
+        .activity-row { border-bottom: 1px solid #f0f0f0; }
+        .nav-icon-btn { @apply flex flex-col items-center gap-0.5 px-2 py-3 text-xs rounded-lg transition-colors; }
+        .nav-icon-btn.active { @apply text-iiz-cyan bg-iiz-cyan-light; }
+        .nav-icon-btn:not(.active) { @apply text-gray-500 hover:text-iiz-cyan hover:bg-gray-50; }
+        .side-nav-item { @apply block px-4 py-1.5 text-sm rounded-md transition-colors cursor-pointer; }
+        .side-nav-item.active { @apply text-iiz-cyan font-medium; }
+        .side-nav-item:not(.active) { @apply text-gray-600 hover:text-iiz-cyan hover:bg-gray-50; }
+        .col-header { @apply text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer select-none; }
+        .col-header:hover { @apply text-gray-700; }
+        .col-header .sort-icon { @apply inline-block ml-0.5 opacity-0 transition-opacity; }
+        .col-header:hover .sort-icon { @apply opacity-100; }
+        .tag-badge { @apply inline-block px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600; }
+        .feature-yes { @apply text-green-600 text-xs font-medium; }
+        .feature-no { @apply text-red-400 text-xs; }
+    </style>
+</head>
+<body class="bg-white min-h-screen" x-data="numbersApp()">
+
+<!-- ============================================================ -->
+<!-- LAYOUT: Icon Nav | Side Panel | Top Bar + Content             -->
+<!-- ============================================================ -->
+<div class="flex h-screen overflow-hidden">
+
+    <!-- LEFT ICON NAV (persistent) -->
+    <nav class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-2 flex-shrink-0">
+        <!-- Logo -->
+        <div class="mb-4 py-2">
+            <svg viewBox="0 0 40 20" class="w-10 h-5 text-iiz-cyan" fill="currentColor">
+                <text x="0" y="16" font-size="16" font-weight="bold" font-family="system-ui">4iiz</text>
+            </svg>
+        </div>
+
+        <!-- Nav Icons -->
+        <div class="flex flex-col gap-1 flex-1">
+            <button class="nav-icon-btn" title="Activities">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+                <span class="text-[10px]">Activities</span>
+            </button>
+            <button class="nav-icon-btn active" title="Numbers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+                </svg>
+                <span class="text-[10px]">Numbers</span>
+            </button>
+            <button class="nav-icon-btn" title="Flows">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+                <span class="text-[10px]">Flows</span>
+            </button>
+            <button class="nav-icon-btn" title="AI Tools">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                </svg>
+                <span class="text-[10px]">AI Tools</span>
+            </button>
+            <button class="nav-icon-btn" title="Reports">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                <span class="text-[10px]">Reports</span>
+            </button>
+            <button class="nav-icon-btn" title="Trust Center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                </svg>
+                <span class="text-[10px]">Trust<br>Center</span>
+            </button>
+        </div>
+
+        <!-- Bottom icons -->
+        <div class="flex flex-col gap-1 mt-auto pb-2">
+            <button class="nav-icon-btn" title="Help">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                </svg>
+                <span class="text-[10px]">Help</span>
+            </button>
+            <button class="nav-icon-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                <span class="text-[10px]">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SECONDARY NAV PANEL -->
+    <aside class="w-48 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto" x-show="!sidebarCollapsed" x-transition>
+        <!-- Section Header -->
+        <div class="px-4 pt-4 pb-2">
+            <div class="flex items-center gap-2 text-iiz-cyan">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" />
+                </svg>
+                <span class="text-lg font-light">Numbers</span>
+            </div>
+        </div>
+
+        <nav class="px-2 pb-4">
+            <!-- Management -->
+            <div class="mb-4">
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
+                    Management
+                </h3>
+                <a :class="numbersPage === 'buy' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'buy'">Buy Numbers</a>
+                <a :class="numbersPage === 'tracking' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'tracking'">Tracking Numbers</a>
+                <a :class="numbersPage === 'receiving' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'receiving'">Receiving Numbers</a>
+                <a :class="numbersPage === 'text' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'text'">Text Numbers</a>
+                <a :class="numbersPage === 'port' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'port'">Port Numbers</a>
+                <a :class="numbersPage === 'callsettings' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'callsettings'">Call Settings</a>
+            </div>
+
+            <!-- Dynamic Numbers -->
+            <div>
+                <h3 class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" /></svg>
+                    Dynamic Numbers
+                </h3>
+                <a :class="numbersPage === 'pools' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'pools'">Number Pools</a>
+                <a :class="numbersPage === 'targets' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'targets'">Target Numbers</a>
+                <a :class="numbersPage === 'sources' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'sources'">Tracking Sources</a>
+                <a :class="numbersPage === 'code' ? 'active' : ''" class="side-nav-item" @click="numbersPage = 'code'">Tracking Code</a>
+            </div>
+        </nav>
+
+        <!-- Collapse toggle -->
+        <button class="absolute left-[255px] top-1/2 -translate-y-1/2 w-5 h-8 bg-white border border-gray-200 rounded-r-md flex items-center justify-center text-gray-400 hover:text-gray-600 z-10"
+                @click="sidebarCollapsed = !sidebarCollapsed">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+        </button>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- ============================================================ -->
+        <!-- TOP BAR: Buy Numbers                                          -->
+        <!-- ============================================================ -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'buy'">
+            <div class="flex-1">
+                <div class="breadcrumbs text-sm">
+                    <ul>
+                        <li><a class="text-iiz-cyan">Tracking Numbers</a></li>
+                        <li>Buy</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">New Number Pool</button>
+                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">Buy Bulk</button>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Request a Number...</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Tracking Numbers -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'tracking'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Tracking Numbers</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">Numbers used to track which advertising channels your customers are using</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Released Numbers</a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Number Log</a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Buy Numbers</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Receiving Numbers -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'receiving'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Receiving Numbers</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">numbers ultimately dialed to reach an agent or business</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Restore</a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">New Receiving Number</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Text Numbers -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'text'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Text Message Numbers</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">choose which numbers can send and receive text messages</p>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Port Numbers -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'port'" x-cloak>
+            <div class="flex-1">
+                <div class="breadcrumbs text-sm">
+                    <ul>
+                        <li><a class="text-iiz-cyan">Port Numbers</a></li>
+                        <li><a class="text-iiz-cyan">New</a></li>
+                        <li>General</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <a class="text-sm text-iiz-blue-link hover:underline cursor-pointer">Give us feedback!</a>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Call Settings -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'callsettings'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Call Settings</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">Adjust common settings for groups of tracking numbers</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Restore</a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">New Call Settings</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Number Pools -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'pools'" x-cloak>
+            <div class="flex-1">
+                <div class="breadcrumbs text-sm">
+                    <ul>
+                        <li><a class="text-iiz-cyan">Number Pools</a></li>
+                        <li><a class="text-iiz-cyan">New</a></li>
+                        <li>General</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Target Numbers -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'targets'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Target Numbers</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">Numbers to replace with tracking numbers on your website</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Restore</a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">New Target Number</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Tracking Sources -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'sources'" x-cloak>
+            <div class="flex-1">
+                <h1 class="text-lg font-semibold">Tracking Sources</h1>
+                <p class="text-xs text-gray-400 -mt-0.5">Advertising channels you want to track, such as Facebook or Google Organic</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Restore</a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    Info
+                </a>
+                <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">Export</a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">New Tracking Source</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP BAR: Tracking Code -->
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0" x-show="numbersPage === 'code'" x-cloak>
+            <div class="flex-1">
+                <div class="breadcrumbs text-sm">
+                    <ul>
+                        <li><a class="text-iiz-cyan">Tracking Code</a></li>
+                        <li>Tracking Code Installation</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="btn btn-sm btn-outline border-iiz-cyan text-iiz-cyan hover:bg-iiz-cyan hover:text-white">Refresh Tracking Code</button>
+            </div>
+            <div class="flex items-center gap-2 pl-3 border-l border-gray-200">
+                <span class="text-xs text-gray-500 text-right leading-tight">Account ID 155169 - 4iiz<br>chris@forbesassetmanagement.com</span>
+                <div class="avatar placeholder">
+                    <div class="bg-gray-600 text-white w-8 h-8 rounded-full">
+                        <span class="text-xs">CF</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: BUY NUMBERS PAGE                                     -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'buy'">
+            <div class="flex h-full">
+                <!-- Main search area -->
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Country + Regulations -->
+                    <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-iiz-gray-bg">
+                        <select class="select select-sm select-bordered w-64">
+                            <option selected>US +1 United States</option>
+                            <option>CA +1 Canada</option>
+                            <option>GB +44 United Kingdom</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">Regulations</button>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex border-b border-gray-200 px-4">
+                        <button class="px-4 py-3 text-sm font-medium text-iiz-cyan border-b-2 border-iiz-cyan">LOCAL NUMBER</button>
+                        <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">TOLL-FREE</button>
+                        <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">ADDRESS</button>
+                        <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">NEAR NUMBER</button>
+                    </div>
+
+                    <!-- Search filters -->
+                    <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                        <select class="select select-sm select-bordered w-24">
+                            <option selected>Any</option>
+                            <option>Area Code</option>
+                            <option>Rate Center</option>
+                            <option>City</option>
+                        </select>
+                        <input type="text" placeholder="Enter search term..." class="input input-sm input-bordered flex-1 max-w-xs" />
+                        <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Search</button>
+                        <select class="select select-sm select-bordered w-28">
+                            <option selected>contains</option>
+                            <option>starts with</option>
+                            <option>ends with</option>
+                        </select>
+                        <button class="btn btn-sm btn-ghost btn-circle text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" /></svg>
+                        </button>
+                    </div>
+
+                    <!-- Additional Filters -->
+                    <div class="px-4 py-2 border-b border-gray-100">
+                        <button class="text-sm text-iiz-cyan hover:underline flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            Additional Filters
+                        </button>
+                    </div>
+
+                    <!-- Results Header -->
+                    <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                        <div class="grid grid-cols-[2fr_2.5fr_1fr_60px] gap-2 px-4 py-2 items-center">
+                            <div class="col-header">Phone Number <span class="sort-icon">&#9650;</span></div>
+                            <div class="col-header">Rate Center & Features <span class="sort-icon">&#9650;</span></div>
+                            <div class="col-header">Monthly Fee <span class="sort-icon">&#9650;</span></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <!-- Number Results -->
+                    <template x-for="item in buyNumbers" :key="item.id">
+                        <div class="activity-row grid grid-cols-[2fr_2.5fr_1fr_60px] gap-2 px-4 py-3 items-start">
+                            <!-- Phone Number -->
+                            <div>
+                                <div class="text-sm font-medium" x-text="item.formatted"></div>
+                                <div class="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                    <span class="text-xs text-gray-400" x-text="item.e164"></span>
+                                </div>
+                            </div>
+                            <!-- Rate Center & Features -->
+                            <div>
+                                <div class="text-sm text-gray-700" x-text="item.rateCenter"></div>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <span class="text-xs">SMS: <span class="feature-yes">&#10003;</span></span>
+                                    <span class="text-xs">MMS: <span class="feature-yes">&#10003;</span></span>
+                                    <span class="text-xs">HIPAA: <span class="feature-yes">&#10003;</span></span>
+                                    <span class="text-xs">Fax: <span class="feature-no">No</span></span>
+                                    <span class="text-xs">e911: <span class="feature-yes">&#10003;</span></span>
+                                </div>
+                            </div>
+                            <!-- Monthly Fee -->
+                            <div class="text-sm font-medium" x-text="item.fee"></div>
+                            <!-- Add button -->
+                            <div>
+                                <button class="btn btn-sm btn-circle btn-outline border-iiz-cyan text-iiz-cyan hover:bg-iiz-cyan hover:text-white">+</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Purchase Sidebar -->
+                <div class="w-56 border-l border-gray-200 bg-iiz-gray-bg p-4 flex-shrink-0">
+                    <div class="text-center py-8">
+                        <div class="text-3xl font-light text-gray-400">0</div>
+                        <div class="text-sm text-gray-500 mt-1">numbers</div>
+                        <div class="mt-4 text-lg font-semibold text-gray-600">$0.00 <span class="text-sm font-normal text-gray-400">/ month</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: TRACKING NUMBERS PAGE                                -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'tracking'" x-cloak>
+            <!-- Search + Pagination Bar -->
+            <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-iiz-gray-bg">
+                <button class="btn btn-sm btn-ghost text-iiz-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                </button>
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-1 text-sm text-gray-500">
+                    <button class="btn btn-xs btn-ghost">&larr;</button>
+                    <button class="btn btn-xs btn-ghost font-bold text-iiz-cyan">1</button>
+                    <button class="btn btn-xs btn-ghost">2</button>
+                    <button class="btn btn-xs btn-ghost">3</button>
+                    <span class="px-1">...</span>
+                    <button class="btn btn-xs btn-ghost">25</button>
+                    <button class="btn btn-xs btn-ghost">26</button>
+                    <button class="btn btn-xs btn-ghost">&rarr;</button>
+                    <span class="text-gray-400 ml-2">254 Tracking Numbers</span>
+                </div>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[40px_1.2fr_1fr_1.5fr_1fr_1fr_1fr_100px_0.8fr_0.5fr_0.8fr] gap-1 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header">Number <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Tracking Source <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Call Routing <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Text Number <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Target Numbers <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Number Config <span class="sort-icon">&#9650;</span></div>
+                    <div></div>
+                    <div class="col-header">Next Billing <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Active <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Type <span class="sort-icon">&#9650;</span></div>
+                </div>
+            </div>
+
+            <!-- Tracking Number Rows -->
+            <template x-for="item in trackingNumbers" :key="item.id">
+                <div class="activity-row grid grid-cols-[40px_1.2fr_1fr_1.5fr_1fr_1fr_1fr_100px_0.8fr_0.5fr_0.8fr] gap-1 px-4 py-3 items-start">
+                    <!-- Edit -->
+                    <div>
+                        <button class="text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                    </div>
+                    <!-- Number -->
+                    <div class="text-sm font-medium" x-text="item.number"></div>
+                    <!-- Tracking Source -->
+                    <div class="text-sm text-gray-600" x-text="item.source"></div>
+                    <!-- Call Routing -->
+                    <div>
+                        <span class="text-sm text-gray-700" x-text="item.routing"></span>
+                        <span class="tag-badge ml-1" x-text="item.routingType"></span>
+                    </div>
+                    <!-- Text Number -->
+                    <div>
+                        <span class="text-xs text-iiz-cyan" x-text="item.textEnabled"></span>
+                        <template x-if="item.trustCenter">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 inline text-iiz-green ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>
+                        </template>
+                    </div>
+                    <!-- Target Numbers -->
+                    <div class="text-xs text-gray-600" x-text="item.target"></div>
+                    <!-- Number Config -->
+                    <div class="text-xs text-gray-500" x-text="item.config"></div>
+                    <!-- Action icons -->
+                    <div class="flex items-center gap-1">
+                        <button class="btn btn-xs btn-ghost btn-square text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg></button>
+                        <button class="btn btn-xs btn-ghost btn-square text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg></button>
+                        <button class="btn btn-xs btn-ghost btn-square text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg></button>
+                        <button class="btn btn-xs btn-ghost btn-square text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" /></svg></button>
+                    </div>
+                    <!-- Next Billing -->
+                    <div class="text-xs text-gray-600" x-text="item.nextBilling"></div>
+                    <!-- Active -->
+                    <div class="text-xs" :class="item.active ? 'text-iiz-green' : 'text-gray-400'" x-text="item.active ? 'Yes' : 'No'"></div>
+                    <!-- Type -->
+                    <div>
+                        <span class="tag-badge text-[10px]" x-text="item.type"></span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Bottom Pagination -->
+            <div class="border-t border-gray-200 bg-white">
+                <div class="flex items-center justify-end gap-2 px-4 py-2">
+                    <span class="text-xs text-gray-500">Per page:</span>
+                    <select class="select select-xs select-bordered w-16">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: RECEIVING NUMBERS PAGE                               -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'receiving'" x-cloak>
+            <!-- Search + Count Bar -->
+            <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-iiz-gray-bg">
+                <button class="btn btn-sm btn-ghost text-iiz-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                </button>
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1"></div>
+                <span class="text-sm text-gray-400">10 Receiving Numbers</span>
+                <button class="btn btn-xs btn-ghost text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                </button>
+                <button class="btn btn-xs btn-ghost text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
+                </button>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[40px_1.8fr_1fr_40px_0.8fr_0.8fr_1fr_1fr] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header">Receiving Number <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Tracking Numbers <span class="sort-icon">&#9650;</span></div>
+                    <div></div>
+                    <div class="col-header">Geo Routers <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Total Calls <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Updated <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Created <span class="sort-icon">&#9650;</span></div>
+                </div>
+            </div>
+
+            <!-- Receiving Number Rows -->
+            <template x-for="item in receivingNumbers" :key="item.id">
+                <div class="activity-row grid grid-cols-[40px_1.8fr_1fr_40px_0.8fr_0.8fr_1fr_1fr] gap-2 px-4 py-3 items-start">
+                    <!-- Edit -->
+                    <div>
+                        <button class="text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                    </div>
+                    <!-- Receiving Number + Description -->
+                    <div>
+                        <div class="text-sm font-medium" x-text="item.number"></div>
+                        <div class="text-xs text-gray-500" x-text="item.description"></div>
+                    </div>
+                    <!-- Tracking Numbers -->
+                    <div class="text-sm text-iiz-cyan" x-text="item.trackingCount"></div>
+                    <!-- Speaker icon -->
+                    <div>
+                        <button class="btn btn-xs btn-ghost btn-square text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+                        </button>
+                    </div>
+                    <!-- Geo Routers -->
+                    <div class="text-sm text-gray-500" x-text="item.geoRouters"></div>
+                    <!-- Total Calls -->
+                    <div class="text-sm font-medium" x-text="item.totalCalls.toLocaleString()"></div>
+                    <!-- Updated -->
+                    <div class="text-sm text-gray-600" x-text="item.updated"></div>
+                    <!-- Created -->
+                    <div class="text-sm text-gray-600" x-text="item.created"></div>
+                </div>
+            </template>
+
+            <!-- Bottom Per-page -->
+            <div class="border-t border-gray-200 bg-white">
+                <div class="flex items-center justify-end gap-2 px-4 py-2">
+                    <span class="text-xs text-gray-500">Per page:</span>
+                    <select class="select select-xs select-bordered w-16">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: TEXT NUMBERS PAGE                                    -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'text'" x-cloak>
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 px-4 bg-white">
+                <button class="px-4 py-3 text-sm font-medium text-iiz-cyan border-b-2 border-iiz-cyan">Incoming Messages</button>
+                <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">Outgoing Messages</button>
+            </div>
+
+            <div class="p-6 space-y-8">
+                <!-- Section 1: Allow Text Messages -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold">Allow Text Messages</h2>
+                        <a class="text-sm text-iiz-cyan hover:underline cursor-pointer">refresh list</a>
+                    </div>
+
+                    <div class="flex gap-4 items-start">
+                        <!-- Available Panel -->
+                        <div class="flex-1 border border-gray-200 rounded-lg bg-white">
+                            <div class="p-3 border-b border-gray-100">
+                                <input type="text" placeholder="Search available Tracking Numbers" class="input input-sm input-bordered w-full" />
+                            </div>
+                            <div class="p-3 flex items-center justify-between">
+                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">select all</a>
+                                <span class="text-xs text-gray-400">9 / 250</span>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
+                                <template x-for="item in textAvailable" :key="item">
+                                    <label class="flex items-center gap-2 py-1 px-2 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary">
+                                        <span x-text="item"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Transfer Arrows -->
+                        <div class="flex flex-col gap-2 pt-16">
+                            <button class="btn btn-sm btn-outline border-gray-300">&rarr;</button>
+                            <button class="btn btn-sm btn-outline border-gray-300">&larr;</button>
+                        </div>
+
+                        <!-- Assigned Panel -->
+                        <div class="flex-1 border border-gray-200 rounded-lg bg-white">
+                            <div class="p-3 border-b border-gray-100">
+                                <div class="text-sm font-medium text-gray-700">Assigned Tracking Numbers</div>
+                            </div>
+                            <div class="p-3 flex items-center justify-between">
+                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">unselect all</a>
+                                <span class="text-xs text-gray-400">241 / 250</span>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
+                                <template x-for="item in textAssigned.slice(0, 10)" :key="item">
+                                    <label class="flex items-center gap-2 py-1 px-2 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked>
+                                        <span x-text="item"></span>
+                                    </label>
+                                </template>
+                                <div class="text-xs text-gray-400 text-center py-2">... and 231 more</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Save Settings</button>
+                    </div>
+                </div>
+
+                <!-- Section 2: Outgoing Long Text Messages -->
+                <div>
+                    <h2 class="text-lg font-semibold mb-2">Outgoing Long Text Messages</h2>
+                    <p class="text-sm text-gray-500 mb-4">Standard SMS messages are 160 characters. Long text messages can be up to 1600 characters (10 message segments). You will be billed per segment sent.</p>
+
+                    <div class="flex gap-4 items-start">
+                        <!-- Available Panel -->
+                        <div class="flex-1 border border-gray-200 rounded-lg bg-white">
+                            <div class="p-3 border-b border-gray-100">
+                                <input type="text" placeholder="Search available Tracking Numbers" class="input input-sm input-bordered w-full" />
+                            </div>
+                            <div class="p-3 flex items-center justify-between">
+                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">select all</a>
+                                <span class="text-xs text-gray-400">7 / 250</span>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
+                                <template x-for="item in longTextAvailable" :key="item">
+                                    <label class="flex items-center gap-2 py-1 px-2 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary">
+                                        <span x-text="item"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Transfer Arrows -->
+                        <div class="flex flex-col gap-2 pt-16">
+                            <button class="btn btn-sm btn-outline border-gray-300">&rarr;</button>
+                            <button class="btn btn-sm btn-outline border-gray-300">&larr;</button>
+                        </div>
+
+                        <!-- Assigned Panel -->
+                        <div class="flex-1 border border-gray-200 rounded-lg bg-white">
+                            <div class="p-3 border-b border-gray-100">
+                                <div class="text-sm font-medium text-gray-700">Assigned Tracking Numbers</div>
+                            </div>
+                            <div class="p-3 flex items-center justify-between">
+                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">unselect all</a>
+                                <span class="text-xs text-gray-400">243 / 250</span>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto px-3 pb-3 space-y-1">
+                                <template x-for="item in longTextAssigned.slice(0, 10)" :key="item">
+                                    <label class="flex items-center gap-2 py-1 px-2 hover:bg-gray-50 rounded text-sm cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked>
+                                        <span x-text="item"></span>
+                                    </label>
+                                </template>
+                                <div class="text-xs text-gray-400 text-center py-2">... and 233 more</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: PORT NUMBERS PAGE                                    -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'port'" x-cloak>
+            <div class="max-w-2xl mx-auto p-6 space-y-6">
+                <!-- Name field -->
+                <div>
+                    <label class="label text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" placeholder="Provide a friendly name to remember this order for future reference" class="input input-bordered w-full" />
+                    <p class="text-xs text-gray-400 mt-1">Provide a friendly name to remember this order for future reference</p>
+                </div>
+
+                <!-- Section 1: User Details -->
+                <div class="collapse collapse-arrow border border-gray-200 rounded-lg bg-white" x-data="{ open: true }">
+                    <input type="checkbox" class="peer" checked />
+                    <div class="collapse-title text-base font-semibold flex items-center gap-2">
+                        <span class="bg-iiz-cyan text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span>
+                        User Details
+                    </div>
+                    <div class="collapse-content space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="label text-sm text-gray-600">First Name <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">Last Name <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label text-sm text-gray-600">Business Name <span class="text-red-500">*</span></label>
+                            <input type="text" class="input input-bordered input-error w-full" placeholder="Required" />
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="label text-sm text-gray-600">Service Account Number</label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">Account PIN Number</label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Billing Details -->
+                <div class="collapse collapse-arrow border border-gray-200 rounded-lg bg-white">
+                    <input type="checkbox" class="peer" />
+                    <div class="collapse-title text-base font-semibold flex items-center gap-2">
+                        <span class="bg-gray-300 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span>
+                        Billing Details
+                    </div>
+                    <div class="collapse-content space-y-4">
+                        <div>
+                            <label class="label text-sm text-gray-600">Billing Address <span class="text-red-500">*</span></label>
+                            <input type="text" class="input input-bordered w-full" />
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="label text-sm text-gray-600">City <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">State <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">ZIP Code <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button class="btn bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: CALL SETTINGS PAGE                                   -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'callsettings'" x-cloak>
+            <!-- Search + Count Bar -->
+            <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-iiz-gray-bg">
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1"></div>
+                <span class="text-sm text-gray-400">2 Call Settings</span>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[40px_1.2fr_0.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_0.6fr_0.7fr_0.7fr_0.7fr_1fr_1fr] gap-1 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header">Name <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Default <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Greeting <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Whisper <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Inbound Rec <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Outbound Rec <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Transcribe <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Caller ID <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Enhanced ID <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Override ID <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header text-center">Spam <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Updated <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Created <span class="sort-icon">&#9650;</span></div>
+                </div>
+            </div>
+
+            <!-- Call Settings Rows -->
+            <template x-for="item in callSettings" :key="item.id">
+                <div class="activity-row grid grid-cols-[40px_1.2fr_0.6fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_0.6fr_0.7fr_0.7fr_0.7fr_1fr_1fr] gap-1 px-4 py-3 items-center">
+                    <!-- Edit -->
+                    <div>
+                        <button class="text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                    </div>
+                    <!-- Name -->
+                    <div class="text-sm font-medium" x-text="item.name"></div>
+                    <!-- Checkmark columns -->
+                    <div class="text-center"><span x-show="item.isDefault" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.greeting" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.whisper" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.inboundRec" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.outboundRec" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.transcribe" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.callerId" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.enhancedId" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.overrideId" class="text-iiz-green">&#10003;</span></div>
+                    <div class="text-center"><span x-show="item.spam" class="text-iiz-green">&#10003;</span></div>
+                    <!-- Updated -->
+                    <div class="text-sm text-gray-600" x-text="item.updated"></div>
+                    <!-- Created -->
+                    <div class="text-sm text-gray-600" x-text="item.created"></div>
+                </div>
+            </template>
+
+            <!-- Bottom Per-page -->
+            <div class="border-t border-gray-200 bg-white">
+                <div class="flex items-center justify-end gap-2 px-4 py-2">
+                    <span class="text-xs text-gray-500">Per page:</span>
+                    <select class="select select-xs select-bordered w-16">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: NUMBER POOLS PAGE                                    -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'pools'" x-cloak>
+            <div class="max-w-2xl mx-auto p-6 space-y-6">
+                <!-- General Card -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title text-base">General</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label text-sm text-gray-600">Name <span class="text-red-500">*</span></label>
+                                <input type="text" class="input input-bordered input-error w-full" placeholder="Required" />
+                                <div class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                    Name is required
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+                                <textarea class="textarea textarea-bordered w-full" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tracking Card -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title text-base">Tracking</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700">Custom tracking source</label>
+                                <input type="checkbox" class="toggle toggle-sm" />
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">Visitor Type</label>
+                                <select class="select select-bordered w-full">
+                                    <option selected>All Visitors</option>
+                                    <option>PPC Visitors</option>
+                                    <option>Organic Visitors</option>
+                                </select>
+                                <p class="text-xs text-gray-400 mt-1">PPC regex pattern help available</p>
+                            </div>
+                            <div>
+                                <label class="label text-sm text-gray-600">Estimated Visitor Count</label>
+                                <input type="number" class="input input-bordered w-32" value="1" min="1" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Numbers Management Card -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title text-base">Numbers Management</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700">Auto management</label>
+                                <input type="checkbox" class="toggle toggle-sm toggle-success" checked />
+                            </div>
+
+                            <div>
+                                <label class="label text-sm text-gray-600">Target Accuracy</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="range" min="80" max="100" value="99" class="range range-sm range-primary flex-1" />
+                                    <span class="text-sm font-medium w-12 text-right">99%</span>
+                                </div>
+                            </div>
+
+                            <div class="alert bg-iiz-cyan-light border-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-iiz-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                <div>
+                                    <p class="text-sm">Based on your current visitor count, we recommend <strong>1 tracking number(s)</strong> to maintain maximum accuracy.</p>
+                                    <p class="text-xs text-gray-500 mt-1">Estimated cost: $1.26/mo</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label text-sm text-gray-600">Country code</label>
+                                    <select class="select select-bordered w-full">
+                                        <option selected>US +1</option>
+                                        <option>CA +1</option>
+                                        <option>GB +44</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label text-sm text-gray-600">Number type</label>
+                                    <div class="flex items-center gap-4 mt-2">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="numtype" class="radio radio-sm radio-primary" checked />
+                                            <span class="text-sm">Local</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="numtype" class="radio radio-sm radio-primary" />
+                                            <span class="text-sm">Toll Free</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label text-sm text-gray-600">Area code</label>
+                                    <select class="select select-bordered w-full">
+                                        <option selected>205</option>
+                                        <option>212</option>
+                                        <option>213</option>
+                                        <option>276</option>
+                                        <option>310</option>
+                                        <option>415</option>
+                                        <option>919</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-3 pt-8">
+                                    <label class="text-sm text-gray-700">Allow Overlay</label>
+                                    <input type="checkbox" class="toggle toggle-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: TARGET NUMBERS PAGE                                  -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'targets'" x-cloak>
+            <!-- Search + Count Bar -->
+            <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-iiz-gray-bg">
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1"></div>
+                <span class="text-sm text-gray-400">4 Target Numbers</span>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[40px_1.5fr_0.8fr_3fr_1fr_1fr] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header">Name <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Type <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Tracking Numbers <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Updated <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Created <span class="sort-icon">&#9650;</span></div>
+                </div>
+            </div>
+
+            <!-- Target Number Rows -->
+            <template x-for="item in targetNumbers" :key="item.id">
+                <div class="activity-row grid grid-cols-[40px_1.5fr_0.8fr_3fr_1fr_1fr] gap-2 px-4 py-3 items-start">
+                    <!-- Edit -->
+                    <div>
+                        <button class="text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                    </div>
+                    <!-- Name -->
+                    <div>
+                        <div class="text-sm font-medium" x-text="item.number"></div>
+                        <div class="text-xs text-gray-500" x-text="item.description"></div>
+                    </div>
+                    <!-- Type -->
+                    <div><span class="tag-badge" x-text="item.type"></span></div>
+                    <!-- Tracking Numbers -->
+                    <div class="text-xs text-gray-600 leading-relaxed">
+                        <span x-text="item.trackingNumbers"></span>
+                        <template x-if="item.moreCount > 0">
+                            <a class="text-iiz-cyan hover:underline cursor-pointer ml-1" x-text="'+' + item.moreCount + ' more'"></a>
+                        </template>
+                    </div>
+                    <!-- Updated -->
+                    <div class="text-sm text-gray-600" x-text="item.updated"></div>
+                    <!-- Created -->
+                    <div class="text-sm text-gray-600" x-text="item.created"></div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: TRACKING SOURCES PAGE                                -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'sources'" x-cloak>
+            <!-- Search + Pagination Bar -->
+            <div class="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-iiz-gray-bg">
+                <div class="join">
+                    <input type="text" placeholder="Search" class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1"></div>
+                <div class="flex items-center gap-1 text-sm text-gray-500">
+                    <button class="btn btn-xs btn-ghost">&larr;</button>
+                    <button class="btn btn-xs btn-ghost font-bold text-iiz-cyan">1</button>
+                    <button class="btn btn-xs btn-ghost">2</button>
+                    <button class="btn btn-xs btn-ghost">3</button>
+                    <button class="btn btn-xs btn-ghost">4</button>
+                    <button class="btn btn-xs btn-ghost">5</button>
+                    <button class="btn btn-xs btn-ghost">&rarr;</button>
+                    <span class="text-gray-400 ml-2">46 Tracking Sources</span>
+                </div>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[40px_1.5fr_1fr_0.6fr_0.8fr_0.6fr_0.6fr_0.8fr_1fr_1fr] gap-2 px-4 py-2 items-center">
+                    <div></div>
+                    <div class="col-header">Tracking Source Name <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Type <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Position <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Numbers <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Last Touch <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Geo <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Exclusions <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Updated <span class="sort-icon">&#9650;</span></div>
+                    <div class="col-header">Created <span class="sort-icon">&#9650;</span></div>
+                </div>
+            </div>
+
+            <!-- Tracking Source Rows -->
+            <template x-for="item in trackingSources" :key="item.id">
+                <div class="activity-row grid grid-cols-[40px_1.5fr_1fr_0.6fr_0.8fr_0.6fr_0.6fr_0.8fr_1fr_1fr] gap-2 px-4 py-3 items-center">
+                    <!-- Edit -->
+                    <div>
+                        <button class="text-gray-400 hover:text-iiz-cyan">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                    </div>
+                    <!-- Name -->
+                    <div class="text-sm font-medium" x-text="item.name"></div>
+                    <!-- Type -->
+                    <div><span class="tag-badge" x-text="item.type"></span></div>
+                    <!-- Position -->
+                    <div class="text-sm text-gray-600" x-text="item.position"></div>
+                    <!-- Numbers -->
+                    <div>
+                        <a class="text-sm text-iiz-cyan hover:underline cursor-pointer" x-text="item.numbers"></a>
+                    </div>
+                    <!-- Last Touch -->
+                    <div class="text-center">
+                        <template x-if="item.lastTouch">
+                            <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" checked disabled />
+                        </template>
+                    </div>
+                    <!-- Geo -->
+                    <div class="text-sm text-gray-500" x-text="item.geo"></div>
+                    <!-- Exclusions -->
+                    <div class="text-sm text-gray-500" x-text="item.exclusions"></div>
+                    <!-- Updated -->
+                    <div class="text-sm text-gray-600" x-text="item.updated"></div>
+                    <!-- Created -->
+                    <div class="text-sm text-gray-600" x-text="item.created"></div>
+                </div>
+            </template>
+
+            <!-- Bottom Per-page -->
+            <div class="border-t border-gray-200 bg-white">
+                <div class="flex items-center justify-end gap-2 px-4 py-2">
+                    <span class="text-xs text-gray-500">Per page:</span>
+                    <select class="select select-xs select-bordered w-16">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- CONTENT: TRACKING CODE PAGE                                   -->
+        <!-- ============================================================ -->
+        <div class="flex-1 overflow-y-auto" x-show="numbersPage === 'code'" x-cloak>
+            <div class="max-w-3xl mx-auto p-6 space-y-6">
+                <!-- Info Panel -->
+                <div class="alert bg-blue-50 border border-blue-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    <div>
+                        <p class="text-sm text-gray-700">The tracking code enables dynamic number insertion on your website. When a visitor arrives, the tracking code replaces your target numbers with tracking numbers, allowing you to attribute phone calls to the correct advertising source.</p>
+                    </div>
+                </div>
+
+                <!-- Important Setup Notes -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="font-semibold text-sm text-gray-700 mb-2">Important Setup Notes</h3>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li class="flex items-start gap-2">
+                                <span class="text-iiz-orange mt-0.5">&#9679;</span>
+                                <span>Avoid conflicts with other call tracking scripts on the same page. Only one tracking code should be active per page.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-iiz-orange mt-0.5">&#9679;</span>
+                                <span>Hardcoded phone numbers on your website must exactly match the target numbers configured in your account.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-iiz-orange mt-0.5">&#9679;</span>
+                                <span>Phone numbers inside embedded elements (iframes) require separate tracking code installation within the iframe source.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Tracking Code Script -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="font-semibold text-sm text-gray-700 mb-3">Tracking Code Script</h3>
+                        <div class="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400 relative">
+                            <code>&lt;script async src="//155169.tctm.co/t.js"&gt;&lt;/script&gt;</code>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/90 text-white border-none" @click="navigator.clipboard.writeText('<script async src=&quot;//155169.tctm.co/t.js&quot;></script>')">Copy to Clipboard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Developer -->
+                <div class="card bg-white border border-gray-200 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="font-semibold text-sm text-gray-700 mb-3">Email Developer</h3>
+                        <div class="flex items-center gap-3">
+                            <input type="email" placeholder="developer@example.com" class="input input-bordered input-sm flex-1" />
+                            <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">Send Instructions</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Installation Tabs -->
+                <div>
+                    <div class="flex border-b border-gray-200">
+                        <button class="px-4 py-3 text-sm font-medium text-iiz-cyan border-b-2 border-iiz-cyan">STANDARD</button>
+                        <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">DEVELOPER RESOURCES</button>
+                        <button class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">TESTING</button>
+                    </div>
+
+                    <div class="p-4 bg-white border border-t-0 border-gray-200 rounded-b-lg">
+                        <!-- Website Builder Logos -->
+                        <div class="grid grid-cols-5 gap-4 mb-6">
+                            <div class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-iiz-cyan cursor-pointer transition-colors">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg font-bold text-gray-500">AMP</div>
+                                <span class="text-xs text-gray-600">AMP</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-iiz-cyan cursor-pointer transition-colors">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg font-bold text-gray-500">GTM</div>
+                                <span class="text-xs text-gray-600">Google Tag Manager</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-iiz-cyan cursor-pointer transition-colors">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg font-bold text-gray-500">M</div>
+                                <span class="text-xs text-gray-600">Magento</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-iiz-cyan cursor-pointer transition-colors">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg font-bold text-gray-500">Wix</div>
+                                <span class="text-xs text-gray-600">Wix</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-iiz-cyan cursor-pointer transition-colors">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-lg font-bold text-gray-500">WP</div>
+                                <span class="text-xs text-gray-600">WordPress</span>
+                            </div>
+                        </div>
+
+                        <!-- Manual Installation -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-2">Not Using One of These Platforms?</h4>
+                            <p class="text-sm text-gray-600 mb-3">Add the tracking code manually by placing it just before the closing <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">&lt;/body&gt;</code> tag on every page of your website.</p>
+                            <ol class="list-decimal list-inside space-y-1 text-sm text-gray-600">
+                                <li>Copy the tracking code script above</li>
+                                <li>Open your website's HTML template or theme file</li>
+                                <li>Paste the code just before the closing <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">&lt;/body&gt;</code> tag</li>
+                                <li>Save and publish your changes</li>
+                            </ol>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <button class="text-sm text-iiz-cyan hover:underline flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                Advanced Options
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end MAIN CONTENT AREA -->
+
+</div><!-- end flex layout -->
+
+<script>
+function numbersApp() {
+    return {
+        numbersPage: 'buy',
+        sidebarCollapsed: false,
+
+        // ---- BUY NUMBERS DATA ----
+        buyNumbers: [
+            { id: 1, formatted: '(276) 285-5069', e164: '+12762855069', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 2, formatted: '(276) 285-5075', e164: '+12762855075', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 3, formatted: '(276) 285-5076', e164: '+12762855076', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 4, formatted: '(276) 285-5078', e164: '+12762855078', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 5, formatted: '(276) 285-5079', e164: '+12762855079', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 6, formatted: '(276) 285-5080', e164: '+12762855080', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 7, formatted: '(276) 285-5081', e164: '+12762855081', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+            { id: 8, formatted: '(276) 285-5082', e164: '+12762855082', rateCenter: 'Bristol, VA 24201', fee: '$1.26' },
+        ],
+
+        // ---- TRACKING NUMBERS DATA ----
+        trackingNumbers: [
+            { id: 1, number: '(910) 991-0047', source: 'Test source', routing: 'SYSTANGO TESTING', routingType: 'Queue', textEnabled: 'Allow Texting', trustCenter: true, target: 'Account Level', config: 'Inbound Rec, Outbound Rec, Caller ID', nextBilling: '2026-03-23', active: true, type: 'Offsite Static' },
+            { id: 2, number: '(980) 553-2289', source: 'Facebook Paid', routing: 'Check if New Lead or Current Client', routingType: 'Smart Router', textEnabled: 'Allow Texting', trustCenter: true, target: '(855) 563-5818', config: 'Inbound Rec, Outbound Rec, Caller ID', nextBilling: '2026-03-13', active: true, type: 'Onsite Dynamic' },
+            { id: 3, number: '(855) 614-1888', source: 'Customer Service Line', routing: 'Rescue Team', routingType: 'Queue', textEnabled: 'Allow Texting', trustCenter: true, target: 'Account Level', config: 'Inbound Rec, Outbound Rec, Caller ID', nextBilling: '2026-03-01', active: true, type: 'Offsite Static' },
+            { id: 4, number: '(919) 290-4449', source: 'WhatsApp', routing: 'Customer Service Queue (Official)', routingType: 'Queue', textEnabled: 'Allow Texting', trustCenter: false, target: 'Account Level', config: 'Inbound Rec, Outbound Rec, Caller ID', nextBilling: '2026-03-01', active: true, type: 'Offsite Static' },
+            { id: 5, number: '(832) 558-3313', source: 'Facebook West Houston Office', routing: 'Check if New Lead or...', routingType: 'Smart Router', textEnabled: 'Allow Texting', trustCenter: true, target: '(855) 563-5818', config: 'Inbound Rec, Outbound Rec, Caller ID', nextBilling: '2026-03-01', active: true, type: 'Onsite Dynamic' },
+        ],
+
+        // ---- RECEIVING NUMBERS DATA ----
+        receivingNumbers: [
+            { id: 1, number: '(252) 235-4100', description: 'CASE MANAGERS QUEUE', trackingCount: '2 Numbers', geoRouters: '', totalCalls: 182, updated: '2025-12-20 10:30 AM', created: '2023-08-15 02:15 PM' },
+            { id: 2, number: '(844) 707-4320', description: 'RMS-FKM-PAYMENTS', trackingCount: '1 Number', geoRouters: '', totalCalls: 0, updated: '2025-11-05 09:00 AM', created: '2025-11-05 09:00 AM' },
+            { id: 3, number: '(252) 351-2397', description: 'CS QUEUE', trackingCount: '5 Numbers', geoRouters: '', totalCalls: 4119, updated: '2025-10-01 11:22 AM', created: '2020-06-01 03:45 PM' },
+            { id: 4, number: '(888) 361-3349', description: 'SALES QUEUE', trackingCount: '8 Numbers', geoRouters: '', totalCalls: 13228, updated: '2025-09-15 04:10 PM', created: '2020-06-01 03:45 PM' },
+            { id: 5, number: '(888) 359-4517', description: 'After Hours/Overflow Service DO NOT USE', trackingCount: '3 Numbers', geoRouters: '', totalCalls: 11612, updated: '2024-03-20 08:00 AM', created: '2020-06-01 03:45 PM' },
+            { id: 6, number: '(252) 367-9099', description: 'LexReception DO NOT USE', trackingCount: '1 Number', geoRouters: '', totalCalls: 33, updated: '2023-05-10 01:30 PM', created: '2021-02-10 10:00 AM' },
+            { id: 7, number: '(919) 626-1424', description: 'Old Answering Service DO NOT USE', trackingCount: '0 Numbers', geoRouters: '', totalCalls: 0, updated: '2022-08-15 09:00 AM', created: '2020-06-01 03:45 PM' },
+            { id: 8, number: '(888) 399-8387', description: 'ANSWERHERO', trackingCount: '12 Numbers', geoRouters: '', totalCalls: 73549, updated: '2025-12-01 02:00 PM', created: '2020-06-01 03:45 PM' },
+            { id: 9, number: '(855) 563-5818', description: 'MAIN CS LINE', trackingCount: '15 Numbers', geoRouters: '', totalCalls: 50417, updated: '2025-12-20 11:00 AM', created: '2020-06-01 03:45 PM' },
+            { id: 10, number: '(252) 235-4005', description: 'PRIMING QUEUE', trackingCount: '1 Number', geoRouters: '', totalCalls: 180, updated: '2025-06-18 03:45 PM', created: '2023-01-12 11:30 AM' },
+        ],
+
+        // ---- TEXT NUMBERS DATA ----
+        textAvailable: [
+            '(910) 991-0047 - Test source',
+            '(919) 290-4449 - WhatsApp',
+            '(252) 672-0128 - Direct Mail',
+            '(252) 565-3109 - Radio Ads',
+            '(336) 552-8842 - Billboard',
+            '(252) 439-7003 - TV Commercial',
+            '(919) 435-2218 - Print Ads',
+            '(252) 439-7010 - Referral Program',
+            '(910) 302-5531 - Walk-ins',
+        ],
+        textAssigned: [
+            '(980) 553-2289 - Facebook Paid',
+            '(855) 614-1888 - Customer Service Line',
+            '(832) 558-3313 - Facebook West Houston',
+            '(855) 563-5818 - Google Adwords',
+            '(888) 359-4517 - Google Adwords NC',
+            '(888) 361-3349 - Website',
+            '(252) 351-2397 - Description',
+            '(919) 735-4422 - Google Organic',
+            '(336) 365-2210 - Yelp',
+            '(252) 235-4100 - Case Managers',
+        ],
+        longTextAvailable: [
+            '(910) 991-0047 - Test source',
+            '(919) 290-4449 - WhatsApp',
+            '(252) 672-0128 - Direct Mail',
+            '(252) 565-3109 - Radio Ads',
+            '(336) 552-8842 - Billboard',
+            '(252) 439-7003 - TV Commercial',
+            '(919) 435-2218 - Print Ads',
+        ],
+        longTextAssigned: [
+            '(980) 553-2289 - Facebook Paid',
+            '(855) 614-1888 - Customer Service Line',
+            '(832) 558-3313 - Facebook West Houston',
+            '(855) 563-5818 - Google Adwords',
+            '(888) 359-4517 - Google Adwords NC',
+            '(888) 361-3349 - Website',
+            '(252) 351-2397 - Description',
+            '(919) 735-4422 - Google Organic',
+            '(336) 365-2210 - Yelp',
+            '(252) 235-4100 - Case Managers',
+        ],
+
+        // ---- CALL SETTINGS DATA ----
+        callSettings: [
+            { id: 1, name: 'Account Level', isDefault: true, greeting: true, whisper: false, inboundRec: true, outboundRec: true, transcribe: false, callerId: true, enhancedId: false, overrideId: false, spam: false, updated: '2026-01-15 10:30 AM', created: '2020-06-01 03:45 PM' },
+            { id: 2, name: 'No Call Recording', isDefault: true, greeting: false, whisper: false, inboundRec: true, outboundRec: false, transcribe: false, callerId: true, enhancedId: false, overrideId: false, spam: false, updated: '2025-08-20 02:15 PM', created: '2022-03-10 09:00 AM' },
+        ],
+
+        // ---- TARGET NUMBERS DATA ----
+        targetNumbers: [
+            { id: 1, number: '(252) 351-2397', description: 'Description', type: 'Phone Match', trackingNumbers: '+19109910047, +19805532289, +18556141888, +19192904449, +18325583313', moreCount: 0, updated: '2025-11-20 10:00 AM', created: '2020-06-01 03:45 PM' },
+            { id: 2, number: '(888) 361-3349', description: 'Website', type: 'Phone Match', trackingNumbers: '+19805532289, +18556141888, +18325583313, +18553635818, +18883594517', moreCount: 9, updated: '2025-12-01 02:30 PM', created: '2020-06-01 03:45 PM' },
+            { id: 3, number: '(888) 359-4517', description: 'Google Adwords NC', type: 'Phone Match', trackingNumbers: '+19805532289, +18325583313, +18883613349, +18553635818', moreCount: 0, updated: '2025-10-15 11:45 AM', created: '2020-06-01 03:45 PM' },
+            { id: 4, number: '(855) 563-5818', description: 'Google Adwords', type: 'Phone Match', trackingNumbers: '+19805532289, +18556141888, +18325583313, +18883613349', moreCount: 15, updated: '2025-12-20 09:00 AM', created: '2020-06-01 03:45 PM' },
+        ],
+
+        // ---- TRACKING SOURCES DATA ----
+        trackingSources: [
+            { id: 1, name: 'Direct', type: 'Onsite Dynamic', position: 1, numbers: '13 Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-12-20 11:00 AM', created: '2020-06-01 03:45 PM' },
+            { id: 2, name: 'Woosender', type: 'Offsite Static', position: 2, numbers: 'Assigned', lastTouch: true, geo: '', exclusions: '', updated: '2025-12-18 09:30 AM', created: '2024-05-10 02:00 PM' },
+            { id: 3, name: 'Email Marketing', type: 'Offsite Static', position: 3, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-11-20 10:15 AM', created: '2020-06-01 03:45 PM' },
+            { id: 4, name: 'Newsletter', type: 'Offsite Static', position: 4, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-11-15 04:00 PM', created: '2021-03-22 11:00 AM' },
+            { id: 5, name: 'WhatsApp Organic', type: 'Offsite Static', position: 5, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-10-30 02:45 PM', created: '2024-01-15 10:30 AM' },
+            { id: 6, name: 'YouTube Ads', type: 'Offsite Static', position: 6, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-10-25 01:20 PM', created: '2023-06-08 09:00 AM' },
+            { id: 7, name: 'Yelp', type: 'Offsite Static', position: 7, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-09-15 11:30 AM', created: '2020-06-01 03:45 PM' },
+            { id: 8, name: 'TikTok Organic', type: 'Offsite Static', position: 8, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-09-10 03:00 PM', created: '2024-02-20 10:00 AM' },
+            { id: 9, name: 'TikTok Paid', type: 'Offsite Static', position: 9, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-09-05 09:45 AM', created: '2024-02-20 10:15 AM' },
+            { id: 10, name: 'Instagram Organic', type: 'Offsite Static', position: 10, numbers: 'Assigned', lastTouch: false, geo: '', exclusions: '', updated: '2025-08-20 02:00 PM', created: '2022-09-12 11:00 AM' },
+        ],
+    }
+}
+</script>
+</body>
+</html>
