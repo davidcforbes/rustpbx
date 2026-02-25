@@ -458,7 +458,110 @@ pub fn VoiceAIPage() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder for AI Tools pages not yet built
+// ChatAI page - chat agent configuration (BETA)
+// ---------------------------------------------------------------------------
+
+#[component]
+pub fn ChatAIPage() -> impl IntoView {
+    view! {
+        <div class="flex flex-col h-full overflow-y-auto">
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+                <div class="breadcrumbs text-sm">
+                    <ul>
+                        <li><span class="text-gray-500">"ChatAI's"</span></li>
+                        <li><span class="text-gray-500">"New"</span></li>
+                        <li><span class="text-iiz-cyan font-medium">"General"</span></li>
+                    </ul>
+                </div>
+                <div class="flex-1"></div>
+                <span class="badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200">"BETA"</span>
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
+                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsInfoCircle /></span>
+                    "Info"
+                </a>
+            </header>
+
+            <div class="flex-1 overflow-y-auto bg-iiz-gray-bg">
+                <div class="max-w-3xl mx-auto p-6 space-y-6">
+                    // General card
+                    <div class="card bg-white border border-gray-200">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-lg font-semibold">"General"</h2>
+
+                            <div class="space-y-4 mt-4">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Name"</label>
+                                    <input type="text" class="input input-bordered w-full" placeholder="Enter agent name" />
+                                    <p class="text-xs text-gray-400 mt-1">"User facing - pick a customer facing name"</p>
+                                </div>
+
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Description"</label>
+                                    <input type="text" class="input input-bordered w-full" placeholder="Brief description of this chat agent" />
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Knowledge Banks card
+                    <div class="card bg-white border border-gray-200">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-lg font-semibold">"Knowledge Banks"</h2>
+
+                            <div class="space-y-4 mt-4">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Choose a Knowledge Bank"</label>
+                                    <select class="select select-bordered w-full">
+                                        <option selected disabled>"Select a knowledge bank..."</option>
+                                        <option>"General FAQ"</option>
+                                        <option>"Product Documentation"</option>
+                                        <option>"Legal Resources"</option>
+                                    </select>
+                                </div>
+
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" class="toggle toggle-sm" checked />
+                                    <span class="text-sm">"Include Source"</span>
+                                </label>
+
+                                <div>
+                                    <button class="btn btn-sm btn-outline">"Manage Knowledge Banks"</button>
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Instructions card
+                    <div class="card bg-white border border-gray-200">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-lg font-semibold">"Instructions"</h2>
+
+                            <div class="mt-4">
+                                <textarea class="textarea textarea-bordered w-full h-40" placeholder="Provide instructions for how the AI chat agent should behave. Include tone, topics to cover, escalation rules, and any specific responses for common questions."></textarea>
+                                <p class="text-xs text-gray-400 mt-1">"These instructions guide the AI agent's responses to customer messages."</p>
+                            </div>
+
+                            <div class="mt-6">
+                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Placeholder for AI Tools pages not yet built (kept for compatibility)
 // ---------------------------------------------------------------------------
 
 #[component]

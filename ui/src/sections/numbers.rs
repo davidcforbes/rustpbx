@@ -680,3 +680,729 @@ pub fn NumbersPlaceholderPage(#[prop(into)] title: String) -> impl IntoView {
         </div>
     }
 }
+
+// ---------------------------------------------------------------------------
+// Additional data types for new pages
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Debug)]
+struct TextNumber {
+    number: &'static str,
+    e164: &'static str,
+}
+
+#[derive(Clone, Debug)]
+struct TargetNumber {
+    number: &'static str,
+    description: &'static str,
+    target_type: &'static str,
+    tracking_numbers: Vec<&'static str>,
+    more_count: u32,
+    updated: &'static str,
+    created: &'static str,
+}
+
+// ---------------------------------------------------------------------------
+// Additional mock data for new pages
+// ---------------------------------------------------------------------------
+
+fn mock_text_available() -> Vec<TextNumber> {
+    vec![
+        TextNumber { number: "(276) 201-0001", e164: "+12762010001" },
+        TextNumber { number: "(276) 201-0002", e164: "+12762010002" },
+        TextNumber { number: "(276) 201-0004", e164: "+12762010004" },
+        TextNumber { number: "(276) 201-0005", e164: "+12762010005" },
+        TextNumber { number: "(276) 201-0006", e164: "+12762010006" },
+        TextNumber { number: "(276) 201-0007", e164: "+12762010007" },
+        TextNumber { number: "(276) 201-0008", e164: "+12762010008" },
+        TextNumber { number: "(910) 991-0047", e164: "+19109910047" },
+        TextNumber { number: "(919) 290-4449", e164: "+19192904449" },
+    ]
+}
+
+fn mock_text_assigned() -> Vec<TextNumber> {
+    vec![
+        TextNumber { number: "(980) 553-2289", e164: "+19805532289" },
+        TextNumber { number: "(855) 614-1888", e164: "+18556141888" },
+        TextNumber { number: "(832) 558-3313", e164: "+18325583313" },
+        TextNumber { number: "(252) 351-2397", e164: "+12523512397" },
+        TextNumber { number: "(888) 361-3349", e164: "+18883613349" },
+        TextNumber { number: "(888) 399-8387", e164: "+18883998387" },
+        TextNumber { number: "(855) 563-5818", e164: "+18555635818" },
+    ]
+}
+
+fn mock_long_text_available() -> Vec<TextNumber> {
+    vec![
+        TextNumber { number: "(276) 201-0001", e164: "+12762010001" },
+        TextNumber { number: "(276) 201-0004", e164: "+12762010004" },
+        TextNumber { number: "(276) 201-0006", e164: "+12762010006" },
+        TextNumber { number: "(276) 201-0008", e164: "+12762010008" },
+        TextNumber { number: "(910) 991-0047", e164: "+19109910047" },
+        TextNumber { number: "(919) 290-4449", e164: "+19192904449" },
+        TextNumber { number: "(252) 235-4100", e164: "+12522354100" },
+    ]
+}
+
+fn mock_target_numbers() -> Vec<TargetNumber> {
+    vec![
+        TargetNumber { number: "(252) 351-2397", description: "Description", target_type: "Phone Match", tracking_numbers: vec!["+12523512397", "+19199180047"], more_count: 0, updated: "2025-12-20", created: "2024-03-15" },
+        TargetNumber { number: "(888) 361-3349", description: "Website", target_type: "Phone Match", tracking_numbers: vec!["+18883613349", "+19802231234"], more_count: 9, updated: "2025-12-18", created: "2023-11-01" },
+        TargetNumber { number: "(888) 359-4517", description: "Google Adwords NC", target_type: "Phone Match", tracking_numbers: vec!["+18883594517"], more_count: 0, updated: "2025-11-30", created: "2023-08-20" },
+        TargetNumber { number: "(855) 563-5818", description: "Google Adwords", target_type: "Phone Match", tracking_numbers: vec!["+18555635818"], more_count: 15, updated: "2025-11-25", created: "2023-01-15" },
+    ]
+}
+
+// ---------------------------------------------------------------------------
+// Text Numbers page - Dual-list picker
+// ---------------------------------------------------------------------------
+
+#[component]
+fn TextNumberDualList(
+    title: &'static str,
+    available: Vec<TextNumber>,
+    assigned: Vec<TextNumber>,
+    available_total: u32,
+    assigned_total: u32,
+) -> impl IntoView {
+    let avail_count = available.len();
+    let assign_count = assigned.len();
+    let avail_label = format!("Available: {} of {}", avail_count, available_total);
+    let assign_label = format!("Assigned: {} of {}", assign_count, assigned_total);
+
+    view! {
+        <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">{title}</h3>
+
+            <div class="flex items-start gap-3">
+                // Available panel
+                <div class="flex-1 border border-gray-200 rounded-lg">
+                    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 rounded-t-lg">
+                        <span class="text-xs font-medium text-gray-600">{avail_label}</span>
+                    </div>
+                    <div class="p-2">
+                        <input type="text" placeholder="Search numbers..." class="input input-xs input-bordered w-full mb-2" />
+                        <div class="h-40 overflow-y-auto space-y-0.5">
+                            {available.into_iter().map(|n| {
+                                view! {
+                                    <label class="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" />
+                                        <span class="text-xs text-gray-700">{n.number}</span>
+                                    </label>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-3 py-1.5 border-t border-gray-200 rounded-b-lg flex gap-2">
+                        <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Select All"</a>
+                        <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Unselect All"</a>
+                    </div>
+                </div>
+
+                // Arrow buttons
+                <div class="flex flex-col items-center gap-1 pt-16">
+                    <button class="btn btn-xs btn-outline border-gray-300 text-gray-500 w-8">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span>
+                    </button>
+                    <button class="btn btn-xs btn-outline border-gray-300 text-gray-500 w-8">
+                        <span class="text-[10px]">">>"</span>
+                    </button>
+                    <button class="btn btn-xs btn-outline border-gray-300 text-gray-500 w-8">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronLeft /></span>
+                    </button>
+                    <button class="btn btn-xs btn-outline border-gray-300 text-gray-500 w-8">
+                        <span class="text-[10px]">"<<"</span>
+                    </button>
+                </div>
+
+                // Assigned panel
+                <div class="flex-1 border border-gray-200 rounded-lg">
+                    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 rounded-t-lg">
+                        <span class="text-xs font-medium text-gray-600">{assign_label}</span>
+                    </div>
+                    <div class="p-2">
+                        <input type="text" placeholder="Search numbers..." class="input input-xs input-bordered w-full mb-2" />
+                        <div class="h-40 overflow-y-auto space-y-0.5">
+                            {assigned.into_iter().map(|n| {
+                                view! {
+                                    <label class="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+                                        <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" />
+                                        <span class="text-xs text-gray-700">{n.number}</span>
+                                    </label>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-3 py-1.5 border-t border-gray-200 rounded-b-lg flex gap-2">
+                        <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Select All"</a>
+                        <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Unselect All"</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 flex justify-end">
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Settings"</button>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn TextNumbersPage() -> impl IntoView {
+    let available = mock_text_available();
+    let assigned = mock_text_assigned();
+    let long_available = mock_long_text_available();
+    // Build long text assigned list (reuse some numbers)
+    let long_assigned: Vec<TextNumber> = vec![
+        TextNumber { number: "(980) 553-2289", e164: "+19805532289" },
+        TextNumber { number: "(855) 614-1888", e164: "+18556141888" },
+        TextNumber { number: "(832) 558-3313", e164: "+18325583313" },
+        TextNumber { number: "(252) 351-2397", e164: "+12523512397" },
+        TextNumber { number: "(888) 361-3349", e164: "+18883613349" },
+        TextNumber { number: "(888) 399-8387", e164: "+18883998387" },
+        TextNumber { number: "(855) 563-5818", e164: "+18555635818" },
+        TextNumber { number: "(276) 201-0002", e164: "+12762010002" },
+    ];
+
+    view! {
+        <div class="flex flex-col h-full">
+            // Header
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+                <div>
+                    <h1 class="text-lg font-semibold text-gray-800">"Text Message Numbers"</h1>
+                    <p class="text-xs text-gray-500">"Choose which numbers can send and receive text messages"</p>
+                </div>
+            </header>
+
+            // Tabs
+            <div class="bg-white border-b border-gray-200 px-4">
+                <div class="flex gap-6 text-sm">
+                    <button class="py-2.5 border-b-2 border-iiz-cyan text-iiz-cyan font-medium">"Incoming Messages"</button>
+                    <button class="py-2.5 text-gray-500 hover:text-gray-700">"Outgoing Messages"</button>
+                </div>
+            </div>
+
+            // Content
+            <div class="flex-1 overflow-y-auto p-4">
+                <TextNumberDualList
+                    title="Allow Text Messages"
+                    available=available
+                    assigned=assigned
+                    available_total=250
+                    assigned_total=250
+                />
+
+                <TextNumberDualList
+                    title="Outgoing Long Text Messages"
+                    available=long_available
+                    assigned=long_assigned
+                    available_total=250
+                    assigned_total=250
+                />
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                    <span class="font-semibold">"SMS Segmentation: "</span>
+                    "Standard SMS messages are limited to 160 characters. Long text messages can contain up to 1,600 characters and will be split into multiple segments for delivery. Each segment is billed separately."
+                </div>
+            </div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Port Numbers page - Multi-step wizard form
+// ---------------------------------------------------------------------------
+
+#[component]
+pub fn PortNumbersPage() -> impl IntoView {
+    view! {
+        <div class="flex flex-col h-full">
+            // Breadcrumb header
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0">
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Port Numbers"</a>
+                <span class="text-xs text-gray-400">">"</span>
+                <span class="text-xs text-gray-500">"New"</span>
+                <span class="text-xs text-gray-400">">"</span>
+                <span class="text-xs font-medium text-gray-700">"General"</span>
+            </header>
+
+            // Form content
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-2xl">
+                    // Name field
+                    <div class="mb-6">
+                        <label class="text-sm font-medium text-gray-700 block mb-1">"Name"</label>
+                        <input type="text" placeholder="Enter port request name" class="input input-bordered w-full" />
+                        <p class="text-xs text-gray-400 mt-1">"Give this port request a descriptive name for easy identification."</p>
+                    </div>
+
+                    // User Details section (expanded)
+                    <div class="bg-white border border-gray-200 rounded-lg mb-4">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 cursor-pointer">
+                            <h3 class="text-sm font-semibold text-gray-700">"User Details"</h3>
+                            <span class="w-4 h-4 inline-flex text-gray-400 rotate-180">
+                                <Icon icon=icondata::BsChevronDown />
+                            </span>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">
+                                        "First Name"
+                                        <span class="text-red-500 ml-0.5">"*"</span>
+                                    </label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">
+                                        "Last Name"
+                                        <span class="text-red-500 ml-0.5">"*"</span>
+                                    </label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">
+                                    "Business Name"
+                                    <span class="text-red-500 ml-0.5">"*"</span>
+                                </label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Service Account Number"</label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Account PIN Number"</label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Billing Details section (collapsed)
+                    <div class="bg-white border border-gray-200 rounded-lg mb-6">
+                        <div class="flex items-center justify-between px-4 py-3 cursor-pointer">
+                            <h3 class="text-sm font-semibold text-gray-700">"Billing Details"</h3>
+                            <span class="w-4 h-4 inline-flex text-gray-400">
+                                <Icon icon=icondata::BsChevronDown />
+                            </span>
+                        </div>
+                        <div class="hidden p-4 space-y-4 border-t border-gray-200">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">
+                                    "Street Address"
+                                    <span class="text-red-500 ml-0.5">"*"</span>
+                                </label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">
+                                        "City"
+                                        <span class="text-red-500 ml-0.5">"*"</span>
+                                    </label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">
+                                        "State"
+                                        <span class="text-red-500 ml-0.5">"*"</span>
+                                    </label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700 block mb-1">
+                                        "ZIP"
+                                        <span class="text-red-500 ml-0.5">"*"</span>
+                                    </label>
+                                    <input type="text" class="input input-bordered w-full" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">
+                                    "Country"
+                                    <span class="text-red-500 ml-0.5">"*"</span>
+                                </label>
+                                <select class="select select-bordered w-full">
+                                    <option selected>"United States"</option>
+                                    <option>"Canada"</option>
+                                    <option>"United Kingdom"</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Continue button
+                    <div class="flex justify-end">
+                        <button class="btn bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Continue"</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Number Pools page - Form-based configuration
+// ---------------------------------------------------------------------------
+
+#[component]
+pub fn NumberPoolsPage() -> impl IntoView {
+    view! {
+        <div class="flex flex-col h-full">
+            // Breadcrumb header
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0">
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Number Pools"</a>
+                <span class="text-xs text-gray-400">">"</span>
+                <span class="text-xs text-gray-500">"New"</span>
+                <span class="text-xs text-gray-400">">"</span>
+                <span class="text-xs font-medium text-gray-700">"General"</span>
+            </header>
+
+            // Form content
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-2xl space-y-4">
+                    // Card 1: General
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="px-4 py-3 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-700">"General"</h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">
+                                    "Name"
+                                    <span class="text-red-500 ml-0.5">"*"</span>
+                                </label>
+                                <input type="text" class="input input-bordered w-full" />
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Description"</label>
+                                <textarea class="textarea textarea-bordered w-full h-20" placeholder="Optional description..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Card 2: Tracking
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="px-4 py-3 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-700">"Tracking"</h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700">"Custom Tracking Source"</label>
+                                <input type="checkbox" class="toggle toggle-sm" />
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Visitor Type"</label>
+                                <select class="select select-bordered w-full">
+                                    <option selected>"All Visitors"</option>
+                                    <option>"New Visitors"</option>
+                                    <option>"Returning Visitors"</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Estimated Visitor Count"</label>
+                                <input type="number" value="1" class="input input-bordered w-32" />
+                            </div>
+                        </div>
+                    </div>
+
+                    // Card 3: Numbers Management
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="px-4 py-3 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-700">"Numbers Management"</h3>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700">"Auto Management"</label>
+                                <input type="checkbox" class="toggle toggle-sm toggle-success" checked />
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Target Accuracy"</label>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-lg font-bold text-iiz-cyan">"99%"</span>
+                                    <input type="range" min="90" max="100" value="99" class="range range-xs range-primary flex-1" />
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                                "Based on your visitor count, we recommend "
+                                <span class="font-bold">"1"</span>
+                                " tracking number(s) to maintain the target accuracy level."
+                            </div>
+
+                            <div class="text-sm text-gray-500">
+                                "Cost: "
+                                <span class="font-medium text-gray-700">"$1.26/mo per number"</span>
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Country"</label>
+                                <select class="select select-bordered w-full">
+                                    <option selected>"US +1"</option>
+                                    <option>"CA +1"</option>
+                                    <option>"GB +44"</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-2">"Number Type"</label>
+                                <div class="flex items-center gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="number_type" class="radio radio-sm radio-primary" checked />
+                                        <span class="text-sm text-gray-700">"Local"</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="number_type" class="radio radio-sm radio-primary" />
+                                        <span class="text-sm text-gray-700">"Toll Free"</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-1">"Area Code"</label>
+                                <select class="select select-bordered w-32">
+                                    <option selected>"205"</option>
+                                    <option>"212"</option>
+                                    <option>"276"</option>
+                                    <option>"310"</option>
+                                    <option>"404"</option>
+                                    <option>"512"</option>
+                                    <option>"702"</option>
+                                    <option>"919"</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700">"Allow Overlay"</label>
+                                <input type="checkbox" class="toggle toggle-sm" />
+                            </div>
+                        </div>
+                    </div>
+
+                    // Save button
+                    <div class="flex justify-end">
+                        <button class="btn bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save"</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Target Numbers page - Data table
+// ---------------------------------------------------------------------------
+
+#[component]
+pub fn TargetNumbersPage() -> impl IntoView {
+    let targets = mock_target_numbers();
+
+    view! {
+        <div class="flex flex-col h-full">
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+                <div class="mr-auto">
+                    <h1 class="text-lg font-semibold text-gray-800">"Target Numbers"</h1>
+                    <p class="text-xs text-gray-500">"Numbers to replace with tracking numbers on your website"</p>
+                </div>
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"New Target Number"</button>
+            </header>
+
+            // Search bar
+            <div class="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3">
+                <div class="join">
+                    <input type="text" placeholder="Search..." class="input input-sm input-bordered join-item w-48" />
+                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                        <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsSearch /></span>
+                    </button>
+                </div>
+                <span class="text-sm text-gray-500">"4 Target Numbers"</span>
+            </div>
+
+            // Table headers
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[32px_1fr_100px_1fr_100px_100px] gap-2 px-4 py-2 items-center">
+                    <div class="col-header"></div>
+                    <div class="col-header">"Name"</div>
+                    <div class="col-header">"Type"</div>
+                    <div class="col-header">"Tracking Numbers"</div>
+                    <div class="col-header">"Updated"</div>
+                    <div class="col-header">"Created"</div>
+                </div>
+            </div>
+
+            // Table rows
+            <div class="flex-1 overflow-y-auto">
+                {targets.into_iter().map(|t| {
+                    let tracking_display = t.tracking_numbers.join(", ");
+                    let more_text = if t.more_count > 0 {
+                        format!("... {} more", t.more_count)
+                    } else {
+                        String::new()
+                    };
+                    view! {
+                        <div class="activity-row grid grid-cols-[32px_1fr_100px_1fr_100px_100px] gap-2 px-4 py-2.5 items-center cursor-pointer">
+                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                            </button>
+                            <div>
+                                <div class="text-sm font-medium text-iiz-blue-link">{t.number}</div>
+                                <div class="text-xs text-gray-500">{t.description}</div>
+                            </div>
+                            <div>
+                                <span class="badge badge-sm bg-gray-100 text-gray-600 border-none">{t.target_type}</span>
+                            </div>
+                            <div>
+                                <span class="text-xs text-gray-600">{tracking_display}</span>
+                                {if !more_text.is_empty() {
+                                    view! { <span class="text-xs text-iiz-cyan ml-1">{more_text}</span> }.into_any()
+                                } else {
+                                    view! { <span></span> }.into_any()
+                                }}
+                            </div>
+                            <div class="text-xs text-gray-500">{t.updated}</div>
+                            <div class="text-xs text-gray-500">{t.created}</div>
+                        </div>
+                    }
+                }).collect::<Vec<_>>()}
+            </div>
+
+            // Pagination bar
+            <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
+                <span>"Showing 1-4 of 4"</span>
+                <div class="flex-1"></div>
+                <span class="text-xs text-gray-400 mr-2">"Per page:"</span>
+                <select class="select select-xs select-bordered">
+                    <option selected>"10"</option>
+                    <option>"25"</option>
+                    <option>"50"</option>
+                    <option>"100"</option>
+                </select>
+            </div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tracking Code page - Installation guide
+// ---------------------------------------------------------------------------
+
+#[component]
+pub fn TrackingCodePage() -> impl IntoView {
+    view! {
+        <div class="flex flex-col h-full">
+            // Breadcrumb header
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0">
+                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Tracking Code"</a>
+                <span class="text-xs text-gray-400">">"</span>
+                <span class="text-xs font-medium text-gray-700">"Tracking Code Installation"</span>
+                <div class="flex-1"></div>
+                <button class="btn btn-sm btn-outline border-iiz-cyan text-iiz-cyan">"Refresh Tracking Code"</button>
+            </header>
+
+            // Content
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-3xl space-y-6">
+                    // Info panel
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+                        "Dynamic Number Insertion (DNI) works by placing a small JavaScript snippet on your website. "
+                        "When a visitor arrives, the script automatically replaces your target phone numbers with unique tracking numbers, "
+                        "allowing you to attribute each call to the correct marketing source."
+                    </div>
+
+                    // Important Setup Notes
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">"Important Setup Notes"</h3>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li class="flex items-start gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
+                                "Avoid conflicts with other call tracking scripts. Only one DNI provider should be active on a page at a time."
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
+                                "Hardcoded phone numbers in images, JavaScript variables, or CSS content properties will not be swapped. Use plain HTML text."
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
+                                "Numbers inside iframes from different domains cannot be replaced due to cross-origin restrictions."
+                            </li>
+                        </ul>
+                    </div>
+
+                    // Code snippet
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-700">"Tracking Code Snippet"</h3>
+                            <button class="btn btn-xs btn-outline border-iiz-cyan text-iiz-cyan">
+                                <span class="w-3 h-3 inline-flex mr-1"><Icon icon=icondata::BsClipboard /></span>
+                                "Copy to Clipboard"
+                            </button>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-b-lg">
+                            <code class="text-green-400 font-mono text-sm">
+                                "<script async src=\"//155169.tctm.co/t.js\"></script>"
+                            </code>
+                        </div>
+                    </div>
+
+                    // Email Developer section
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">"Email Developer"</h3>
+                        <div class="flex items-center gap-3">
+                            <input type="email" placeholder="developer@example.com" class="input input-bordered flex-1" />
+                            <button class="btn bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Send Instructions"</button>
+                        </div>
+                    </div>
+
+                    // Platform tabs
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="border-b border-gray-200 px-4">
+                            <div class="flex gap-4 text-sm">
+                                <button class="py-2.5 border-b-2 border-iiz-cyan text-iiz-cyan font-medium">"STANDARD"</button>
+                                <button class="py-2.5 text-gray-500 hover:text-gray-700">"DEVELOPER RESOURCES"</button>
+                                <button class="py-2.5 text-gray-500 hover:text-gray-700">"TESTING"</button>
+                            </div>
+                        </div>
+
+                        <div class="p-4">
+                            // Platform logos as buttons
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">"Install on a Specific Platform"</h4>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">"AMP"</button>
+                                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">"Google Tag Manager"</button>
+                                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">"Magento"</button>
+                                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">"Wix"</button>
+                                <button class="btn btn-sm btn-outline border-gray-300 text-gray-600">"WordPress"</button>
+                            </div>
+
+                            // Manual install note
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <h4 class="text-sm font-medium text-gray-700">"Not Using One of These Platforms?"</h4>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    "Paste the tracking code snippet above into your website's HTML, just before the closing "
+                                    <code class="bg-gray-200 px-1 rounded text-xs">"</body>"</code>
+                                    " tag on every page you want to track."
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Advanced Options (expandable)
+                    <div class="bg-white border border-gray-200 rounded-lg">
+                        <div class="flex items-center justify-between px-4 py-3 cursor-pointer">
+                            <h3 class="text-sm font-semibold text-gray-700">"Advanced Options"</h3>
+                            <span class="w-4 h-4 inline-flex text-gray-400">
+                                <Icon icon=icondata::BsChevronDown />
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
