@@ -2,8 +2,6 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
-use crate::components::FilterBar;
-
 // ---------------------------------------------------------------------------
 // Numbers side navigation
 // ---------------------------------------------------------------------------
@@ -662,28 +660,6 @@ pub fn TrackingSourcesPage() -> impl IntoView {
                     <option>"25"</option>
                     <option>"50"</option>
                 </select>
-            </div>
-        </div>
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Placeholder for pages not yet fully built
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn NumbersPlaceholderPage(#[prop(into)] title: String) -> impl IntoView {
-    view! {
-        <div class="flex flex-col h-full">
-            <FilterBar />
-            <div class="flex-1 flex items-center justify-center">
-                <div class="text-center">
-                    <span class="w-16 h-16 inline-flex text-gray-300 mx-auto mb-4">
-                        <Icon icon=icondata::BsGrid3x3GapFill />
-                    </span>
-                    <h2 class="text-xl font-semibold text-gray-500">{title}</h2>
-                    <p class="text-gray-400 mt-2">"This section is under development."</p>
-                </div>
             </div>
         </div>
     }

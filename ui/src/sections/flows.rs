@@ -2,8 +2,6 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
-use crate::components::FilterBar;
-
 // ---------------------------------------------------------------------------
 // Flows side navigation
 // ---------------------------------------------------------------------------
@@ -898,31 +896,6 @@ pub fn FormReactorPage() -> impl IntoView {
                         <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
                     </div>
                     <span>"30 FormReactors"</span>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Placeholder for pages not yet fully built
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn FlowsPlaceholderPage(
-    #[prop(into)] title: String,
-    #[prop(into)] description: String,
-) -> impl IntoView {
-    view! {
-        <div class="flex flex-col h-full">
-            <FilterBar />
-            <div class="flex-1 flex items-center justify-center">
-                <div class="text-center max-w-md">
-                    <span class="w-16 h-16 inline-flex text-gray-300 mx-auto mb-4">
-                        <Icon icon=icondata::BsArrowLeftRight />
-                    </span>
-                    <h2 class="text-xl font-semibold text-gray-500">{title}</h2>
-                    <p class="text-gray-400 mt-2">{description}</p>
                 </div>
             </div>
         </div>

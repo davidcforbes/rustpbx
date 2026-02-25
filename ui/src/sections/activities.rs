@@ -557,28 +557,6 @@ fn CallRow(
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder page for routes not yet built
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn PlaceholderPage() -> impl IntoView {
-    view! {
-        <div class="flex flex-col h-full">
-            <FilterBar />
-            <div class="flex-1 flex items-center justify-center">
-                <div class="text-center">
-                    <span class="w-16 h-16 inline-flex text-gray-300 mx-auto mb-4">
-                        <Icon icon=icondata::BsInboxFill />
-                    </span>
-                    <h2 class="text-xl font-semibold text-gray-500">"Coming Soon"</h2>
-                    <p class="text-gray-400 mt-2">"This section is under development."</p>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Texts page -- SMS/text message activity log
 // ---------------------------------------------------------------------------
 

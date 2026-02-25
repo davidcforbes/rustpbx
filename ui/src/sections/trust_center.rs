@@ -882,26 +882,3 @@ pub fn AddressesPage() -> impl IntoView {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Placeholder for Trust Center pages (kept for compatibility)
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn TrustCenterPlaceholderPage(
-    #[prop(into)] title: String,
-    #[prop(into)] description: String,
-) -> impl IntoView {
-    view! {
-        <div class="flex flex-col h-full">
-            <div class="flex-1 flex items-center justify-center bg-iiz-gray-bg">
-                <div class="max-w-md text-center">
-                    <div class="w-16 h-16 rounded-full bg-iiz-cyan-light flex items-center justify-center mx-auto mb-4">
-                        <span class="w-8 h-8 inline-flex text-iiz-cyan"><Icon icon=icondata::BsShieldCheck /></span>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-700">{title}</h2>
-                    <p class="text-sm text-gray-500 mt-2">{description}</p>
-                </div>
-            </div>
-        </div>
-    }
-}

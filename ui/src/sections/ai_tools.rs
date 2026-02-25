@@ -568,26 +568,3 @@ pub fn ChatAIPage() -> impl IntoView {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Placeholder for AI Tools pages not yet built (kept for compatibility)
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn AIToolsPlaceholderPage(
-    #[prop(into)] title: String,
-    #[prop(into)] description: String,
-) -> impl IntoView {
-    view! {
-        <div class="flex flex-col h-full">
-            <div class="flex-1 flex items-center justify-center bg-iiz-gray-bg">
-                <div class="text-center max-w-md">
-                    <div class="w-16 h-16 rounded-full bg-iiz-cyan-light flex items-center justify-center mx-auto mb-4">
-                        <span class="w-8 h-8 inline-flex text-iiz-cyan"><Icon icon=icondata::BsStars /></span>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-700">{title}</h2>
-                    <p class="text-sm text-gray-500 mt-2">{description}</p>
-                </div>
-            </div>
-        </div>
-    }
-}

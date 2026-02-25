@@ -1234,27 +1234,3 @@ pub fn TagsPage() -> impl IntoView {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Placeholder for report pages (kept for compatibility)
-// ---------------------------------------------------------------------------
-
-#[component]
-pub fn ReportsPlaceholderPage(
-    #[prop(into)] title: String,
-    #[prop(into, optional)] description: Option<String>,
-) -> impl IntoView {
-    let desc = description.unwrap_or_else(|| format!("The {} report will display here with charts and data tables.", title));
-    view! {
-        <div class="flex flex-col h-full">
-            <div class="flex-1 flex items-center justify-center bg-iiz-gray-bg">
-                <div class="text-center max-w-md">
-                    <div class="w-16 h-16 rounded-full bg-iiz-cyan-light flex items-center justify-center mx-auto mb-4">
-                        <span class="w-8 h-8 inline-flex text-iiz-cyan"><Icon icon=icondata::BsBarChartFill /></span>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-700">{title}</h2>
-                    <p class="text-sm text-gray-500 mt-2">{desc}</p>
-                </div>
-            </div>
-        </div>
-    }
-}
