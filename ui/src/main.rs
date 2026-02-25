@@ -85,6 +85,21 @@ fn App() -> impl IntoView {
                             <Icon icon=icondata::BsShieldCheck />
                             <span class="text-[10px]">"Trust Center"</span>
                         </AppShellIconNavItem>
+
+                        // Spacer to push bottom icons down
+                        <div class="flex-1"></div>
+
+                        // Help icon
+                        <div class="flex flex-col items-center py-3 text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <Icon icon=icondata::BsQuestionCircle />
+                            <span class="text-[10px]">"Help"</span>
+                        </div>
+
+                        // Settings icon
+                        <div class="flex flex-col items-center py-3 text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <Icon icon=icondata::BsGearFill />
+                            <span class="text-[10px]">"Settings"</span>
+                        </div>
                     </AppShellIconNav>
 
                     <AppShellSidePanel class="w-48 bg-white border-r border-iiz-gray-border">
