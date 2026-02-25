@@ -11,14 +11,22 @@ use leptos_router::{
     path,
 };
 use sections::activities::{ActivitiesSideNav, CallsPage, PlaceholderPage};
+use sections::ai_tools::{
+    AIToolsPlaceholderPage, AIToolsSideNav, AskAIPage, KnowledgeBanksPage, SummariesPage,
+    VoiceAIPage,
+};
+use sections::contacts::{BlockedNumbersPage, ContactListsPage, DoNotCallPage, DoNotTextPage};
 use sections::flows::{
-    BulkMessagesPage, FlowsPlaceholderPage, FlowsSideNav, FormReactorPage,
-    QueuesPage, SchedulesPage, SmartRoutersPage, TriggersPage, VoiceMenusPage,
-    WebhooksPage,
+    BulkMessagesPage, FlowsPlaceholderPage, FlowsSideNav, FormReactorPage, QueuesPage,
+    SchedulesPage, SmartRoutersPage, TriggersPage, VoiceMenusPage, WebhooksPage,
 };
 use sections::numbers::{
     BuyNumbersPage, CallSettingsPage, NumbersPlaceholderPage, NumbersSideNav,
     ReceivingNumbersPage, TrackingNumbersPage, TrackingSourcesPage,
+};
+use sections::reports::{ActivityReportPage, ReportsPlaceholderPage, ReportsSideNav};
+use sections::trust_center::{
+    BusinessInfoPage, TrustCenterPlaceholderPage, TrustCenterSideNav,
 };
 
 fn main() {
@@ -121,11 +129,21 @@ fn App() -> impl IntoView {
                         <Show when=move || section.get() == Some("flows".to_string())>
                             <FlowsSideNav />
                         </Show>
+                        <Show when=move || section.get() == Some("ai-tools".to_string())>
+                            <AIToolsSideNav />
+                        </Show>
+                        <Show when=move || section.get() == Some("reports".to_string())>
+                            <ReportsSideNav />
+                        </Show>
+                        <Show when=move || section.get() == Some("trust-center".to_string())>
+                            <TrustCenterSideNav />
+                        </Show>
                     </AppShellSidePanel>
 
                     <AppShellContent class="bg-iiz-gray-bg">
                         <Routes fallback=|| "Page not found">
                             <Route path=path!("/") view=HomePage />
+                            // Activities
                             <Route path=path!("/activities/calls") view=CallsPage />
                             <Route path=path!("/activities/texts") view=PlaceholderPage />
                             <Route path=path!("/activities/forms") view=PlaceholderPage />
@@ -133,10 +151,12 @@ fn App() -> impl IntoView {
                             <Route path=path!("/activities/faxes") view=PlaceholderPage />
                             <Route path=path!("/activities/videos") view=PlaceholderPage />
                             <Route path=path!("/activities/export") view=PlaceholderPage />
-                            <Route path=path!("/contacts/lists") view=PlaceholderPage />
-                            <Route path=path!("/contacts/blocked") view=PlaceholderPage />
-                            <Route path=path!("/contacts/do-not-call") view=PlaceholderPage />
-                            <Route path=path!("/contacts/do-not-text") view=PlaceholderPage />
+                            // Contacts
+                            <Route path=path!("/contacts/lists") view=ContactListsPage />
+                            <Route path=path!("/contacts/blocked") view=BlockedNumbersPage />
+                            <Route path=path!("/contacts/do-not-call") view=DoNotCallPage />
+                            <Route path=path!("/contacts/do-not-text") view=DoNotTextPage />
+                            // Numbers
                             <Route path=path!("/numbers/tracking") view=TrackingNumbersPage />
                             <Route path=path!("/numbers/buy") view=BuyNumbersPage />
                             <Route path=path!("/numbers/receiving") view=ReceivingNumbersPage />
@@ -173,6 +193,52 @@ fn App() -> impl IntoView {
                             <Route path=path!("/flows/chat-ai") view=|| view! { <FlowsPlaceholderPage title="ChatAI" description="Configure AI-powered chat responses using natural language processing." /> } />
                             <Route path=path!("/flows/dialogflow") view=|| view! { <FlowsPlaceholderPage title="Dialogflow" description="Integrate Google Dialogflow for conversational AI and intent-based routing." /> } />
                             <Route path=path!("/flows/reminders") view=|| view! { <FlowsPlaceholderPage title="Reminders" description="Schedule automated reminder calls, texts, or emails to contacts." /> } />
+                            // AI Tools
+                            <Route path=path!("/ai-tools/askai") view=AskAIPage />
+                            <Route path=path!("/ai-tools/summaries") view=SummariesPage />
+                            <Route path=path!("/ai-tools/knowledge-banks") view=KnowledgeBanksPage />
+                            <Route path=path!("/ai-tools/voiceai") view=VoiceAIPage />
+                            <Route path=path!("/ai-tools/chatai") view=|| view! { <AIToolsPlaceholderPage title="ChatAI" description="Configure AI-powered chat agents for web and SMS interactions. This feature is currently in beta." /> } />
+                            // Reports
+                            <Route path=path!("/reports/activity") view=ActivityReportPage />
+                            <Route path=path!("/reports/roi") view=|| view! { <ReportsPlaceholderPage title="ROI Reports" /> } />
+                            <Route path=path!("/reports/accuracy") view=|| view! { <ReportsPlaceholderPage title="Accuracy Reports" /> } />
+                            <Route path=path!("/reports/map") view=|| view! { <ReportsPlaceholderPage title="Activity Map" /> } />
+                            <Route path=path!("/reports/overview") view=|| view! { <ReportsPlaceholderPage title="Overview" /> } />
+                            <Route path=path!("/reports/todays-missed") view=|| view! { <ReportsPlaceholderPage title="Today's Missed Calls" /> } />
+                            <Route path=path!("/reports/positive-daily") view=|| view! { <ReportsPlaceholderPage title="Positive Daily Reports" /> } />
+                            <Route path=path!("/reports/google-ca") view=|| view! { <ReportsPlaceholderPage title="Google CA Report" /> } />
+                            <Route path=path!("/reports/saturday-calls") view=|| view! { <ReportsPlaceholderPage title="saturday calls" /> } />
+                            <Route path=path!("/reports/daily-calls") view=|| view! { <ReportsPlaceholderPage title="Daily Calls" /> } />
+                            <Route path=path!("/reports/weekly-missed") view=|| view! { <ReportsPlaceholderPage title="Weekly Missed Calls" /> } />
+                            <Route path=path!("/reports/priming") view=|| view! { <ReportsPlaceholderPage title="Priming Calls" /> } />
+                            <Route path=path!("/reports/missed") view=|| view! { <ReportsPlaceholderPage title="Missed Calls" /> } />
+                            <Route path=path!("/reports/missed-daily-1st") view=|| view! { <ReportsPlaceholderPage title="Missed Calls Daily - First Contact" /> } />
+                            <Route path=path!("/reports/cs-daily-missed") view=|| view! { <ReportsPlaceholderPage title="Customer Service Daily Missed Calls" /> } />
+                            <Route path=path!("/reports/cs-daily-missed-2") view=|| view! { <ReportsPlaceholderPage title="Customer Service Daily Missed Calls 2.0" /> } />
+                            <Route path=path!("/reports/priming-missed") view=|| view! { <ReportsPlaceholderPage title="Priming Missed Calls" /> } />
+                            <Route path=path!("/reports/daily-collection") view=|| view! { <ReportsPlaceholderPage title="Daily Collection Calls" /> } />
+                            <Route path=path!("/reports/power-bi") view=|| view! { <ReportsPlaceholderPage title="Power BI - Total Inbound" /> } />
+                            <Route path=path!("/reports/realtime") view=|| view! { <ReportsPlaceholderPage title="real time" /> } />
+                            <Route path=path!("/reports/appointments") view=|| view! { <ReportsPlaceholderPage title="Appointments" /> } />
+                            <Route path=path!("/reports/realtime-agents") view=|| view! { <ReportsPlaceholderPage title="Real-time Agents" /> } />
+                            <Route path=path!("/reports/coaching") view=|| view! { <ReportsPlaceholderPage title="Coaching" /> } />
+                            <Route path=path!("/reports/queue-report") view=|| view! { <ReportsPlaceholderPage title="Queue Report" /> } />
+                            <Route path=path!("/reports/agent-activity") view=|| view! { <ReportsPlaceholderPage title="Agent Activity" /> } />
+                            <Route path=path!("/reports/agency-usage") view=|| view! { <ReportsPlaceholderPage title="Agency Usage" /> } />
+                            <Route path=path!("/reports/custom-reports") view=|| view! { <ReportsPlaceholderPage title="Custom Reports" /> } />
+                            <Route path=path!("/reports/notifications") view=|| view! { <ReportsPlaceholderPage title="Notifications" /> } />
+                            <Route path=path!("/reports/scoring") view=|| view! { <ReportsPlaceholderPage title="Scoring" /> } />
+                            <Route path=path!("/reports/tags") view=|| view! { <ReportsPlaceholderPage title="Tags" /> } />
+                            // Trust Center
+                            <Route path=path!("/trust-center/business") view=BusinessInfoPage />
+                            <Route path=path!("/trust-center/local-text") view=|| view! { <TrustCenterPlaceholderPage title="Local Text Messaging" description="Configure and manage A2P 10DLC campaigns for sending local text messages." /> } />
+                            <Route path=path!("/trust-center/toll-free-text") view=|| view! { <TrustCenterPlaceholderPage title="Toll Free Text Messaging" description="Register toll-free numbers for sending text messages to U.S. and Canadian recipients." /> } />
+                            <Route path=path!("/trust-center/voice-reg") view=|| view! { <TrustCenterPlaceholderPage title="Voice Registration" description="Register your business for STIR/SHAKEN outbound calling verification." /> } />
+                            <Route path=path!("/trust-center/caller-id") view=|| view! { <TrustCenterPlaceholderPage title="Caller ID" description="Configure custom business name display (CNAM) for outbound calls." /> } />
+                            <Route path=path!("/trust-center/requirements") view=|| view! { <TrustCenterPlaceholderPage title="Requirements" description="View regulatory requirements for international communications." /> } />
+                            <Route path=path!("/trust-center/applications") view=|| view! { <TrustCenterPlaceholderPage title="Applications" description="Submit and track regulatory applications for international number provisioning." /> } />
+                            <Route path=path!("/trust-center/addresses") view=|| view! { <TrustCenterPlaceholderPage title="Addresses" description="Manage business addresses required for international regulatory compliance." /> } />
                         </Routes>
                     </AppShellContent>
                 </AppShell>
