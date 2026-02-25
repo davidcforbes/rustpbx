@@ -302,8 +302,34 @@ pub fn SummariesPage() -> impl IntoView {
 // Knowledge Banks page - empty data table
 // ---------------------------------------------------------------------------
 
+struct KnowledgeBankRow {
+    name: &'static str,
+    description: &'static str,
+    documents: u32,
+    category: &'static str,
+    category_color: &'static str,
+    status: &'static str,
+    status_color: &'static str,
+    size: &'static str,
+    last_import: &'static str,
+    updated: &'static str,
+    created: &'static str,
+    used_by: &'static str,
+}
+
+fn knowledge_bank_rows() -> Vec<KnowledgeBankRow> {
+    vec![
+        KnowledgeBankRow { name: "General Knowledge", description: "Company policies, procedures, and general info", documents: 45, category: "General", category_color: "badge-info", status: "Ready", status_color: "badge-success", size: "12.4 MB", last_import: "2025-02-24", updated: "2025-02-24", created: "2024-06-15", used_by: "ChatAI, VoiceAI" },
+        KnowledgeBankRow { name: "Product FAQ", description: "Frequently asked questions about services", documents: 128, category: "Support", category_color: "badge-warning", status: "Ready", status_color: "badge-success", size: "8.7 MB", last_import: "2025-02-23", updated: "2025-02-23", created: "2024-07-20", used_by: "ChatAI" },
+        KnowledgeBankRow { name: "Legal Templates", description: "Legal document templates and case references", documents: 312, category: "Legal", category_color: "badge-secondary", status: "Ready", status_color: "badge-success", size: "156.2 MB", last_import: "2025-02-22", updated: "2025-02-22", created: "2024-08-01", used_by: "VoiceAI" },
+        KnowledgeBankRow { name: "Support Docs", description: "Technical support documentation and guides", documents: 87, category: "Support", category_color: "badge-warning", status: "Indexing", status_color: "badge-warning", size: "23.1 MB", last_import: "2025-02-24", updated: "2025-02-24", created: "2024-09-10", used_by: "ChatAI" },
+        KnowledgeBankRow { name: "Training Materials", description: "Agent training guides and scripts", documents: 34, category: "Training", category_color: "badge-primary", status: "Ready", status_color: "badge-success", size: "5.8 MB", last_import: "2025-02-20", updated: "2025-02-20", created: "2025-01-05", used_by: "—" },
+    ]
+}
+
 #[component]
 pub fn KnowledgeBanksPage() -> impl IntoView {
+    let banks = knowledge_bank_rows();
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -319,37 +345,198 @@ pub fn KnowledgeBanksPage() -> impl IntoView {
                 <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"New Knowledge Bank"</button>
             </header>
 
-            // Search
+            // Search bar
             <div class="bg-white border-b border-gray-200 px-4 py-2">
-                <div class="join">
-                    <input type="text" placeholder="Search..." class="input input-sm input-bordered join-item w-64" />
-                    <button class="btn btn-sm btn-ghost join-item border border-gray-300">
-                        <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsSearch /></span>
-                    </button>
+                <div class="flex items-center gap-3">
+                    <div class="join">
+                        <input type="text" placeholder="Search knowledge banks..." class="input input-sm input-bordered join-item w-64" />
+                        <button class="btn btn-sm btn-ghost join-item border border-gray-300">
+                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsSearch /></span>
+                        </button>
+                    </div>
+                    <select class="select select-sm select-bordered">
+                        <option selected>"All Categories"</option>
+                        <option>"General"</option>
+                        <option>"Support"</option>
+                        <option>"Legal"</option>
+                        <option>"Training"</option>
+                    </select>
+                    <select class="select select-sm select-bordered">
+                        <option selected>"All Statuses"</option>
+                        <option>"Ready"</option>
+                        <option>"Indexing"</option>
+                        <option>"Error"</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <div class="grid grid-cols-[1fr_100px_120px_120px_120px_120px] gap-2 px-4 py-2 items-center">
-                    <div class="col-header">"Name"</div>
-                    <div class="col-header">"Documents"</div>
-                    <div class="col-header">"Category"</div>
-                    <div class="col-header">"Last Import"</div>
-                    <div class="col-header">"Updated"</div>
-                    <div class="col-header">"Created"</div>
+            <div class="flex-1 overflow-y-auto">
+                // Summary cards
+                <div class="grid grid-cols-4 gap-3 p-4">
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Knowledge Banks"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"5"</div>
+                        <div class="text-xs text-green-600">"4 ready, 1 indexing"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Total Documents"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"606"</div>
+                        <div class="text-xs text-gray-400">"Across all banks"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Storage Used"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"206 MB"</div>
+                        <div class="text-xs text-gray-400">"of 1 GB limit"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"AI Agents Using"</div>
+                        <div class="text-2xl font-bold text-iiz-cyan mt-1">"3"</div>
+                        <div class="text-xs text-gray-400">"ChatAI (2), VoiceAI (1)"</div>
+                    </div>
                 </div>
-            </div>
 
-            // Empty state
-            <div class="flex-1 flex items-center justify-center">
-                <div class="text-center py-12">
-                    <span class="w-12 h-12 inline-flex text-gray-300 mx-auto mb-3"><Icon icon=icondata::BsDatabase /></span>
-                    <p class="text-sm text-gray-400">"No knowledge banks found."</p>
-                    <p class="text-xs text-gray-400 mt-1">"Create a knowledge bank to get started."</p>
+                // Knowledge bank table
+                <div class="px-4 pb-4">
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Name"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Documents"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Category"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Status"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-right">"Size"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Last Import"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Used By"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Actions"</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {banks.iter().map(|b| {
+                                    view! {
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                                            <td>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="w-8 h-8 bg-iiz-cyan/10 rounded flex items-center justify-center flex-shrink-0">
+                                                        <span class="w-4 h-4 inline-flex text-iiz-cyan"><Icon icon=icondata::BsDatabase /></span>
+                                                    </span>
+                                                    <div>
+                                                        <div class="text-sm font-medium text-iiz-dark">{b.name}</div>
+                                                        <div class="text-xs text-gray-400">{b.description}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-sm text-center font-medium">{b.documents.to_string()}</td>
+                                            <td><span class=format!("badge badge-sm {}", b.category_color)>{b.category}</span></td>
+                                            <td>
+                                                <div class="flex items-center gap-1">
+                                                    {if b.status == "Indexing" {
+                                                        view! { <span class="loading loading-spinner loading-xs text-warning"></span> }.into_any()
+                                                    } else {
+                                                        view! { <span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span> }.into_any()
+                                                    }}
+                                                    <span class=format!("badge badge-sm {}", b.status_color)>{b.status}</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-sm text-right text-gray-600">{b.size}</td>
+                                            <td class="text-xs text-gray-500">{b.last_import}</td>
+                                            <td class="text-xs text-gray-500">{b.used_by}</td>
+                                            <td class="text-center">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"View"</button>
+                                                    <button class="btn btn-xs btn-ghost text-gray-500">"Import"</button>
+                                                    <button class="btn btn-xs btn-ghost text-red-400">"Remove"</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                // Upload / Import section
+                <div class="grid grid-cols-2 gap-4 px-4 pb-4">
+                    // Upload area
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-iiz-dark mb-3">"Import Documents"</h3>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-iiz-cyan transition-colors cursor-pointer">
+                            <span class="w-10 h-10 inline-flex text-gray-300 mx-auto"><Icon icon=icondata::BsCloudUpload /></span>
+                            <p class="text-sm text-gray-600 mt-2">"Drag files here or click to upload"</p>
+                            <p class="text-xs text-gray-400 mt-1">"PDF, DOCX, TXT, CSV, HTML — Max 50MB per file"</p>
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none mt-3">"Choose Files"</button>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase">"Other Import Methods"</h4>
+                            <div class="flex gap-2">
+                                <button class="btn btn-sm btn-outline gap-1">
+                                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsGlobe /></span>
+                                    "Import from URL"
+                                </button>
+                                <button class="btn btn-sm btn-outline gap-1">
+                                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsLink45deg /></span>
+                                    "Crawl Website"
+                                </button>
+                                <button class="btn btn-sm btn-outline gap-1">
+                                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCodeSlash /></span>
+                                    "API Sync"
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    // Indexing status + content preview
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-iiz-dark mb-3">"Indexing Status"</h3>
+                        <div class="space-y-3">
+                            // Indexing progress for "Support Docs"
+                            <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-medium text-yellow-800">"Support Docs"</span>
+                                    <span class="text-xs text-yellow-600">"72% complete"</span>
+                                </div>
+                                <div class="w-full bg-yellow-200 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 72%"></div>
+                                </div>
+                                <p class="text-xs text-yellow-600 mt-1">"63 of 87 documents indexed"</p>
+                            </div>
+
+                            // Recently indexed
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase">"Recently Indexed"</h4>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                                    <span class="w-4 h-4 inline-flex text-red-500"><Icon icon=icondata::BsFilePdf /></span>
+                                    <span class="text-sm text-gray-700 flex-1">"estate-planning-guide.pdf"</span>
+                                    <span class="text-xs text-gray-400">"2.3 MB"</span>
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                                    <span class="w-4 h-4 inline-flex text-blue-500"><Icon icon=icondata::BsFileWord /></span>
+                                    <span class="text-sm text-gray-700 flex-1">"client-intake-procedures.docx"</span>
+                                    <span class="text-xs text-gray-400">"1.1 MB"</span>
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                                    <span class="w-4 h-4 inline-flex text-gray-500"><Icon icon=icondata::BsFileText /></span>
+                                    <span class="text-sm text-gray-700 flex-1">"faq-responses-v3.txt"</span>
+                                    <span class="text-xs text-gray-400">"45 KB"</span>
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                                    <span class="w-4 h-4 inline-flex text-green-500"><Icon icon=icondata::BsFileSpreadsheet /></span>
+                                    <span class="text-sm text-gray-700 flex-1">"contact-scripts.csv"</span>
+                                    <span class="text-xs text-gray-400">"890 KB"</span>
+                                    <span class="loading loading-spinner loading-xs text-warning"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
+                <span class="text-xs text-gray-400">"5 knowledge banks"</span>
                 <div class="flex-1"></div>
                 <span class="text-xs text-gray-400">"Per page:"</span>
                 <select class="select select-xs select-bordered ml-1">

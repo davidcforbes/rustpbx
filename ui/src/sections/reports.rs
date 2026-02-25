@@ -619,8 +619,33 @@ pub fn AccuracyReportPage() -> impl IntoView {
     }
 }
 
+struct MapRegion {
+    name: &'static str,
+    calls: &'static str,
+    pct: f32,
+    answered: &'static str,
+    missed: &'static str,
+    avg_duration: &'static str,
+    top_source: &'static str,
+    color: &'static str,
+}
+
+fn map_region_data() -> Vec<MapRegion> {
+    vec![
+        MapRegion { name: "North Carolina", calls: "42,156", pct: 38.3, answered: "35,812", missed: "6,344", avg_duration: "2:45", top_source: "Google", color: "#00bcd4" },
+        MapRegion { name: "Virginia", calls: "18,234", pct: 16.6, answered: "15,499", missed: "2,735", avg_duration: "2:22", top_source: "Direct", color: "#26c6da" },
+        MapRegion { name: "South Carolina", calls: "12,890", pct: 11.7, answered: "10,698", missed: "2,192", avg_duration: "2:18", top_source: "Facebook", color: "#4dd0e1" },
+        MapRegion { name: "Georgia", calls: "9,456", pct: 8.6, answered: "7,944", missed: "1,512", avg_duration: "2:05", top_source: "Google", color: "#80deea" },
+        MapRegion { name: "Florida", calls: "8,123", pct: 7.4, answered: "6,742", missed: "1,381", avg_duration: "1:58", top_source: "Referral", color: "#b2ebf2" },
+        MapRegion { name: "New York", calls: "6,890", pct: 6.3, answered: "5,650", missed: "1,240", avg_duration: "2:12", top_source: "Google", color: "#b2ebf2" },
+        MapRegion { name: "California", calls: "5,234", pct: 4.8, answered: "4,292", missed: "942", avg_duration: "2:30", top_source: "TikTok", color: "#e0f7fa" },
+        MapRegion { name: "Other States", calls: "7,067", pct: 6.4, answered: "5,724", missed: "1,343", avg_duration: "2:08", top_source: "Various", color: "#e0f7fa" },
+    ]
+}
+
 #[component]
 pub fn ActivityMapPage() -> impl IntoView {
+    let regions = map_region_data();
     view! {
         <div class="flex flex-col h-full">
             // Top toolbar
@@ -636,6 +661,12 @@ pub fn ActivityMapPage() -> impl IntoView {
                     </button>
                 </div>
                 <div class="flex-1"></div>
+                <select class="select select-sm select-bordered">
+                    <option selected>"By State"</option>
+                    <option>"By City"</option>
+                    <option>"By ZIP Code"</option>
+                    <option>"By Area Code"</option>
+                </select>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
                     <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsInfoCircle /></span>
                     "Info"
@@ -651,19 +682,134 @@ pub fn ActivityMapPage() -> impl IntoView {
             // Title row
             <div class="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
                 <h2 class="text-lg font-semibold text-iiz-dark">"Activity Map"</h2>
-                <p class="text-xs text-gray-500">"Geographic visualization of call origins"</p>
+                <p class="text-xs text-gray-500">"Geographic visualization of call activity by region"</p>
             </div>
 
-            // Map placeholder
-            <div class="flex-1 flex items-center justify-center bg-iiz-gray-bg">
-                <div class="text-center">
-                    <div class="w-64 h-48 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center mx-auto">
-                        <div class="text-center">
-                            <span class="w-12 h-12 inline-flex text-gray-300 mx-auto"><Icon icon=icondata::BsGeoAltFill /></span>
-                            <p class="text-sm text-gray-400 mt-2">"Map loading..."</p>
-                            <p class="text-xs text-gray-300 mt-1">"Geographic call distribution"</p>
+            <div class="flex-1 overflow-y-auto bg-iiz-gray-bg p-4">
+                // KPI cards
+                <div class="grid grid-cols-4 gap-3 mb-4">
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Total Regions"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"48"</div>
+                        <div class="text-xs text-gray-400 mt-1">"Active states"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Top Region"</div>
+                        <div class="text-2xl font-bold text-iiz-cyan mt-1">"NC"</div>
+                        <div class="text-xs text-green-600 mt-1">"38.3% of calls"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Concentration"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"75.2%"</div>
+                        <div class="text-xs text-gray-400 mt-1">"Top 4 states"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Avg Distance"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"245 mi"</div>
+                        <div class="text-xs text-gray-400 mt-1">"From office"</div>
+                    </div>
+                </div>
+
+                // Map visualization (CSS-based US region heatmap)
+                <div class="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                    <h3 class="text-sm font-semibold text-iiz-dark mb-3">"Call Distribution Heatmap"</h3>
+                    <div class="flex gap-6">
+                        // CSS heatmap grid representing regions
+                        <div class="flex-1">
+                            <div class="grid grid-cols-8 gap-1" style="min-height: 200px;">
+                                {regions.iter().map(|r| {
+                                    let height = format!("{}%", (r.pct * 2.5).min(100.0));
+                                    let bg = r.color;
+                                    view! {
+                                        <div class="flex flex-col items-center justify-end">
+                                            <div
+                                                class="w-full rounded-t-sm transition-all relative group cursor-pointer"
+                                                style=format!("height: {}; background-color: {}; min-height: 20px;", height, bg)
+                                            >
+                                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-semibold text-gray-700">
+                                                    {r.calls}
+                                                </div>
+                                            </div>
+                                            <div class="text-xs text-gray-600 mt-1 font-medium truncate w-full text-center">{r.name}</div>
+                                            <div class="text-xs text-gray-400">{format!("{}%", r.pct)}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                        </div>
+                        // Legend
+                        <div class="w-48 flex-shrink-0">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase mb-2">"Heat Scale"</h4>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded" style="background-color: #00bcd4;"></span>
+                                    <span class="text-xs text-gray-600">"High (>25%)"</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded" style="background-color: #4dd0e1;"></span>
+                                    <span class="text-xs text-gray-600">"Medium (10-25%)"</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded" style="background-color: #80deea;"></span>
+                                    <span class="text-xs text-gray-600">"Low (5-10%)"</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded" style="background-color: #e0f7fa;"></span>
+                                    <span class="text-xs text-gray-600">"Minimal (<5%)"</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-2 bg-gray-50 rounded border border-gray-100">
+                                <div class="text-xs text-gray-500 mb-1">"Total Calls"</div>
+                                <div class="text-lg font-bold text-iiz-dark">"110,050"</div>
+                                <div class="text-xs text-gray-400">"Across 48 states"</div>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                // Region detail table
+                <div class="bg-white rounded-lg border border-gray-200">
+                    <table class="table table-sm w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-xs text-gray-500 font-semibold uppercase">"Region"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase text-right">"Calls"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase text-right">"% of Total"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase text-right">"Answered"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase text-right">"Missed"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase text-right">"Avg Duration"</th>
+                                <th class="text-xs text-gray-500 font-semibold uppercase">"Top Source"</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {regions.iter().map(|r| {
+                                let bar_width = format!("{}%", r.pct * 2.5);
+                                view! {
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                        <td class="text-sm font-medium text-iiz-dark">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-3 h-3 rounded" style=format!("background-color: {};", r.color)></span>
+                                                {r.name}
+                                            </div>
+                                        </td>
+                                        <td class="text-sm text-right">{r.calls}</td>
+                                        <td class="text-sm text-right">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <div class="w-16 bg-gray-100 rounded-full h-1.5">
+                                                    <div class="h-1.5 rounded-full" style=format!("width: {}; background-color: {};", bar_width, r.color)></div>
+                                                </div>
+                                                {format!("{}%", r.pct)}
+                                            </div>
+                                        </td>
+                                        <td class="text-sm text-right text-green-600">{r.answered}</td>
+                                        <td class="text-sm text-right text-red-500">{r.missed}</td>
+                                        <td class="text-sm text-right">{r.avg_duration}</td>
+                                        <td class="text-sm">{r.top_source}</td>
+                                    </tr>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -2,7 +2,7 @@
 
 ## Status Classification
 
-### Well-Defined Pages (84 pages)
+### Well-Defined Pages (87 pages)
 
 Complete UI layouts, data models, mock data, and clear implied functionality. Ready for backend integration.
 
@@ -11,25 +11,14 @@ Complete UI layouts, data models, mock data, and clear implied functionality. Re
 | Activities | 7 | Calls, Texts, Forms, Chats, Faxes, Videos, Export Log |
 | Contacts | 4 | Contact Lists, Blocked Numbers, Do Not Call, Do Not Text |
 | Numbers | 10 | Tracking Numbers, Buy Numbers, Receiving Numbers, Text Numbers, Port Numbers, Call Settings, Number Pools, Target Numbers, Tracking Sources, Tracking Code |
-| Flows | 22 | Voice Menus, Queues, Smart Routers, Schedules, Geo Routers, Agent Scripts, Routing Tables, Voicemails, Workflows, Triggers, Keyword Spotting, Lambdas, API Logs, Global, Webhooks, Bulk Messages, LeadReactor, Smart Dialers, FormReactor, Flows ChatAI, Dialogflow, Reminders |
-| AI Tools | 4 | AskAI, Summaries, VoiceAI, ChatAI |
-| Reports | 29 | Activity Report, ROI, Accuracy, Overview, Today's Missed, Positive Daily, Google CA, Saturday Calls, Daily Calls, Weekly Missed, Priming, Missed Calls, Missed Daily 1st, CS Daily Missed, CS Daily Missed 2.0, Priming Missed, Daily Collection, Power BI, Real Time, Appointments, Real-Time Agents, Coaching, Queue Report, Agent Activity, Agency Usage, Custom Reports, Notifications, Scoring, Tags |
+| Flows | 23 | Voice Menus, Queues, Smart Routers, Schedules, Geo Routers, Agent Scripts, Routing Tables, Voicemails, Workflows, Triggers, Keyword Spotting, Lambdas, API Logs, Global, Webhooks, Bulk Messages, LeadReactor, Smart Dialers, FormReactor, Chat Widget, Flows ChatAI, Dialogflow, Reminders |
+| AI Tools | 5 | AskAI, Summaries, Knowledge Banks, VoiceAI, ChatAI |
+| Reports | 30 | Activity Report, Activity Map, ROI, Accuracy, Overview, Today's Missed, Positive Daily, Google CA, Saturday Calls, Daily Calls, Weekly Missed, Priming, Missed Calls, Missed Daily 1st, CS Daily Missed, CS Daily Missed 2.0, Priming Missed, Daily Collection, Power BI, Real Time, Appointments, Real-Time Agents, Coaching, Queue Report, Agent Activity, Agency Usage, Custom Reports, Notifications, Scoring, Tags |
 | Trust Center | 8 | Business Info, Local Text, Toll-Free Text, Voice Registration, Caller ID, Requirements, Applications, Addresses |
 
-### Pages Needing Definition (1 page)
+### Pages Needing Definition: None
 
-| Section | Count | Pages |
-|---------|-------|-------|
-| Reports | 1 | Activity Map (unique stub with map placeholder — needs map provider integration) |
-
-### Stub-Only Pages (2 pages)
-
-Table headers or layout skeleton only. Requires full design.
-
-| Section | Page | What's Missing |
-|---------|------|---------------|
-| Flows | Chat Widget | Data model, config form, customization, embed code |
-| AI Tools | Knowledge Banks | Upload flow, categories, import mechanism, content preview |
+### Stub-Only Pages: None
 
 ---
 
@@ -97,8 +86,7 @@ The FilterBar shows "Main Account" selector, implying multi-account/agency suppo
 ## Recommended Next Steps
 
 1. ~~**Define the 19 template reports**~~ -- DONE. All 19 now have unique KPI cards, charts, tables, and mock data.
-2. **Design Activity Map** -- needs map provider integration (Google Maps / Mapbox / Leaflet), data overlay, and drill-down.
-3. **Design Chat Widget and Knowledge Banks** -- the 2 stub pages need full design.
-4. **Decide on create/edit pattern** -- modal vs. page for entity creation/editing.
-5. **Specify real-time architecture** -- WebSocket/polling approach for live features.
-6. **Design the Workflows canvas** -- the most complex single feature needing design.
+2. ~~**Design Activity Map, Chat Widget, and Knowledge Banks**~~ -- DONE. All 3 former stubs now fully realized.
+3. **Decide on create/edit pattern** -- modal vs. page for entity creation/editing.
+4. **Specify real-time architecture** -- WebSocket/polling approach for live features.
+5. **Design the Workflows canvas** -- the most complex single feature needing design.

@@ -1836,8 +1836,34 @@ pub fn SmartDialersPage() -> impl IntoView {
 // Chat Widget page
 // ---------------------------------------------------------------------------
 
+struct ChatWidgetRow {
+    name: &'static str,
+    fields: u8,
+    active: bool,
+    status: &'static str,
+    status_color: &'static str,
+    tracking: &'static str,
+    routing: &'static str,
+    queue: &'static str,
+    agents: u8,
+    updated: &'static str,
+    created: &'static str,
+    chats: u32,
+}
+
+fn chat_widget_rows() -> Vec<ChatWidgetRow> {
+    vec![
+        ChatWidgetRow { name: "Main Website Chat", fields: 4, active: true, status: "Live", status_color: "badge-success", tracking: "Web Organic", routing: "Round Robin", queue: "Sales", agents: 5, updated: "2025-02-24", created: "2024-08-15", chats: 1245 },
+        ChatWidgetRow { name: "Support Portal", fields: 3, active: true, status: "Live", status_color: "badge-success", tracking: "Support Page", routing: "Skills-Based", queue: "Support", agents: 8, updated: "2025-02-23", created: "2024-09-01", chats: 3456 },
+        ChatWidgetRow { name: "Landing Page - PPC", fields: 5, active: true, status: "Live", status_color: "badge-success", tracking: "Google Ads", routing: "First Available", queue: "Sales", agents: 3, updated: "2025-02-22", created: "2024-11-10", chats: 892 },
+        ChatWidgetRow { name: "Mobile App Chat", fields: 3, active: false, status: "Draft", status_color: "badge-warning", tracking: "Mobile App", routing: "Round Robin", queue: "General", agents: 4, updated: "2025-02-20", created: "2025-01-05", chats: 0 },
+        ChatWidgetRow { name: "After Hours Bot", fields: 2, active: true, status: "Live", status_color: "badge-success", tracking: "All Sources", routing: "AI Only", queue: "—", agents: 0, updated: "2025-02-18", created: "2025-01-20", chats: 567 },
+    ]
+}
+
 #[component]
 pub fn ChatWidgetPage() -> impl IntoView {
+    let widgets = chat_widget_rows();
     view! {
         <div class="flex flex-col h-full">
             // Title bar
@@ -1851,25 +1877,158 @@ pub fn ChatWidgetPage() -> impl IntoView {
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                    <div class="grid grid-cols-[140px_80px_60px_80px_100px_100px_80px_80px_100px_100px_60px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
-                        <div class="col-header">"Chat Widget"</div>
-                        <div class="col-header">"Fields"</div>
-                        <div class="col-header">"Active"</div>
-                        <div class="col-header">"Status"</div>
-                        <div class="col-header">"Tracking"</div>
-                        <div class="col-header">"Routing"</div>
-                        <div class="col-header">"Queue"</div>
-                        <div class="col-header">"Agents"</div>
-                        <div class="col-header">"Updated"</div>
-                        <div class="col-header">"Created"</div>
-                        <div class="col-header text-center">"Chats"</div>
+            <div class="flex-1 overflow-y-auto">
+                // KPI summary cards
+                <div class="grid grid-cols-4 gap-3 p-4">
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Active Widgets"</div>
+                        <div class="text-2xl font-bold text-green-600 mt-1">"4"</div>
+                        <div class="text-xs text-gray-400">"of 5 total"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Total Chats"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"6,160"</div>
+                        <div class="text-xs text-green-600">"+12% vs last month"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Avg Response Time"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"0:32"</div>
+                        <div class="text-xs text-gray-400">"Seconds"</div>
+                    </div>
+                    <div class="bg-white rounded-lg border border-gray-200 p-3">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">"Satisfaction"</div>
+                        <div class="text-2xl font-bold text-iiz-cyan mt-1">"4.6/5"</div>
+                        <div class="text-xs text-green-600">"+0.2 vs last month"</div>
+                    </div>
+                </div>
+
+                // Widget config table
+                <div class="px-4 pb-4">
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Chat Widget"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Fields"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Active"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Status"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Tracking"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Routing"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Queue"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Agents"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Updated"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Created"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Chats"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Actions"</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {widgets.iter().map(|w| {
+                                    view! {
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                                            <td class="text-sm font-medium text-iiz-dark">{w.name}</td>
+                                            <td class="text-sm text-center">{w.fields}</td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="toggle toggle-sm toggle-success" checked=w.active />
+                                            </td>
+                                            <td><span class=format!("badge badge-sm {}", w.status_color)>{w.status}</span></td>
+                                            <td class="text-sm text-gray-600">{w.tracking}</td>
+                                            <td class="text-sm text-gray-600">{w.routing}</td>
+                                            <td class="text-sm text-gray-600">{w.queue}</td>
+                                            <td class="text-sm text-center">{w.agents}</td>
+                                            <td class="text-xs text-gray-500">{w.updated}</td>
+                                            <td class="text-xs text-gray-500">{w.created}</td>
+                                            <td class="text-sm text-center font-medium">{w.chats.to_string()}</td>
+                                            <td class="text-center">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"Edit"</button>
+                                                    <button class="btn btn-xs btn-ghost text-gray-400">"Code"</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                // Widget preview + embed code section
+                <div class="grid grid-cols-2 gap-4 px-4 pb-4">
+                    // Widget preview
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-iiz-dark mb-3">"Widget Preview"</h3>
+                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            // Mini chat widget mockup
+                            <div class="flex justify-end">
+                                <div class="w-72">
+                                    // Chat header
+                                    <div class="bg-iiz-cyan text-white rounded-t-lg px-4 py-3 flex items-center gap-2">
+                                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsChatDots /></span>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-semibold">"Diener Law"</div>
+                                            <div class="text-xs opacity-80">"We typically reply in minutes"</div>
+                                        </div>
+                                    </div>
+                                    // Chat body
+                                    <div class="bg-white border-x border-gray-200 p-3 space-y-2" style="min-height: 120px;">
+                                        <div class="flex gap-2">
+                                            <div class="w-6 h-6 bg-iiz-cyan/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs text-iiz-cyan">"D"</span>
+                                            </div>
+                                            <div class="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-700 max-w-[200px]">
+                                                "Hi! How can we help you today?"
+                                            </div>
+                                        </div>
+                                    </div>
+                                    // Chat input
+                                    <div class="bg-white border border-gray-200 rounded-b-lg px-3 py-2 flex items-center gap-2">
+                                        <input type="text" placeholder="Type a message..." class="text-sm flex-1 outline-none" />
+                                        <button class="w-6 h-6 bg-iiz-cyan rounded-full flex items-center justify-center">
+                                            <span class="w-3 h-3 inline-flex text-white"><Icon icon=icondata::BsSendFill /></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            // Floating button
+                            <div class="flex justify-end mt-3">
+                                <div class="w-14 h-14 bg-iiz-cyan rounded-full flex items-center justify-center shadow-lg cursor-pointer">
+                                    <span class="w-6 h-6 inline-flex text-white"><Icon icon=icondata::BsChatDotsFill /></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    // Empty state
-                    <div class="py-16 text-center">
-                        <p class="text-sm text-gray-400">"No chat widgets configured"</p>
+                    // Embed code
+                    <div class="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-iiz-dark mb-3">"Embed Code"</h3>
+                        <p class="text-xs text-gray-500 mb-3">"Add this code to your website before the closing &lt;/body&gt; tag."</p>
+                        <div class="bg-gray-900 rounded-lg p-4 font-mono text-xs text-green-400 overflow-x-auto">
+                            <pre class="whitespace-pre-wrap">
+                                {"<script>\n  (function(w,d,s,c){\n    var f=d.getElementsByTagName(s)[0];\n    var j=d.createElement(s);\n    j.async=true;\n    j.src='https://chat.4iiz.com/widget/'+c+'.js';\n    f.parentNode.insertBefore(j,f);\n  })(window,document,'script','wgt_abc123');\n</script>"}
+                            </pre>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">
+                                <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsClipboard /></span>
+                                "Copy Code"
+                            </button>
+                            <button class="btn btn-sm btn-ghost">
+                                <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEnvelope /></span>
+                                "Email to Developer"
+                            </button>
+                        </div>
+                        <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <h4 class="text-xs font-semibold text-blue-800 mb-1">"Installation Options"</h4>
+                            <ul class="text-xs text-blue-700 space-y-1">
+                                <li>"- Direct HTML embed (shown above)"</li>
+                                <li>"- Google Tag Manager container"</li>
+                                <li>"- WordPress plugin"</li>
+                                <li>"- React / Vue component"</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
