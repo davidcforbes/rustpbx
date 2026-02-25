@@ -9,7 +9,7 @@ use futures::{
     FutureExt, StreamExt, future,
     stream::{self, BoxStream},
 };
-use rand::Rng;
+
 use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;

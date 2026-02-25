@@ -42,6 +42,7 @@ impl Default for MonitorMode {
 /// In Whisper and Barge modes, the monitor's incoming audio (supervisor speaking)
 /// is captured and stored in `incoming_audio` so that `forward_track` tasks can
 /// mix it into the call legs.
+#[allow(dead_code)]
 pub struct MonitorLeg {
     /// The sample source feeding the monitor's PeerConnection track.
     pub source: SampleStreamSource,
@@ -94,6 +95,7 @@ pub struct MediaBridge {
     monitor: Arc<Mutex<Option<MonitorLeg>>>,
 }
 
+#[allow(dead_code)]
 impl MediaBridge {
     pub fn new(
         leg_a: Arc<dyn MediaPeer>,

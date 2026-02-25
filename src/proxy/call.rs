@@ -1073,7 +1073,7 @@ impl ProxyModule for CallModule {
                 #[cfg(feature = "voice-agent")]
                 if let Some(handler) = self.inner.server.get_invite_handler() {
                     let local_contact = self.inner.server.default_contact_uri();
-                    let (state_tx, state_rx) = tokio::sync::mpsc::unbounded_channel();
+                    let (state_tx, _state_rx) = tokio::sync::mpsc::unbounded_channel();
                     match self.inner.dialog_layer.get_or_create_server_invite(
                         tx,
                         state_tx,
