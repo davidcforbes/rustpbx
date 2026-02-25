@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 use crate::components::FilterBar;
 
@@ -9,6 +10,13 @@ use crate::components::FilterBar;
 
 #[component]
 pub fn NumbersSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         <div class="px-4 pt-4 pb-2">
             <div class="flex items-center gap-2 text-iiz-cyan">
@@ -24,12 +32,12 @@ pub fn NumbersSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsTelephoneFill /></span>
                     "Management"
                 </h3>
-                <a href="/numbers/buy" class="side-nav-item">"Buy Numbers"</a>
-                <a href="/numbers/tracking" class="side-nav-item active">"Tracking Numbers"</a>
-                <a href="/numbers/receiving" class="side-nav-item">"Receiving Numbers"</a>
-                <a href="/numbers/text" class="side-nav-item">"Text Numbers"</a>
-                <a href="/numbers/port" class="side-nav-item">"Port Numbers"</a>
-                <a href="/numbers/call-settings" class="side-nav-item">"Call Settings"</a>
+                <a href="/numbers/buy" class=active("/numbers/buy")>"Buy Numbers"</a>
+                <a href="/numbers/tracking" class=active("/numbers/tracking")>"Tracking Numbers"</a>
+                <a href="/numbers/receiving" class=active("/numbers/receiving")>"Receiving Numbers"</a>
+                <a href="/numbers/text" class=active("/numbers/text")>"Text Numbers"</a>
+                <a href="/numbers/port" class=active("/numbers/port")>"Port Numbers"</a>
+                <a href="/numbers/call-settings" class=active("/numbers/call-settings")>"Call Settings"</a>
             </div>
 
             // Dynamic Numbers group
@@ -38,10 +46,10 @@ pub fn NumbersSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsArrowRepeat /></span>
                     "Dynamic Numbers"
                 </h3>
-                <a href="/numbers/pools" class="side-nav-item">"Number Pools"</a>
-                <a href="/numbers/targets" class="side-nav-item">"Target Numbers"</a>
-                <a href="/numbers/sources" class="side-nav-item">"Tracking Sources"</a>
-                <a href="/numbers/code" class="side-nav-item">"Tracking Code"</a>
+                <a href="/numbers/pools" class=active("/numbers/pools")>"Number Pools"</a>
+                <a href="/numbers/targets" class=active("/numbers/targets")>"Target Numbers"</a>
+                <a href="/numbers/sources" class=active("/numbers/sources")>"Tracking Sources"</a>
+                <a href="/numbers/code" class=active("/numbers/code")>"Tracking Code"</a>
             </div>
         </nav>
     }

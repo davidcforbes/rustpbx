@@ -1,6 +1,7 @@
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 use crate::components::{CallDetailPanel, FilterBar};
 
@@ -214,6 +215,13 @@ fn mock_calls() -> Vec<CallRecord> {
 
 #[component]
 pub fn ActivitiesSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         // Section header
         <div class="px-4 pt-4 pb-2">
@@ -230,13 +238,13 @@ pub fn ActivitiesSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsGrid3x3GapFill /></span>
                     "Activity Logs"
                 </h3>
-                <a href="/activities/calls" class="side-nav-item active">"Calls"</a>
-                <a href="/activities/texts" class="side-nav-item">"Texts"</a>
-                <a href="/activities/forms" class="side-nav-item">"Forms"</a>
-                <a href="/activities/chats" class="side-nav-item">"Chats"</a>
-                <a href="/activities/faxes" class="side-nav-item">"Faxes"</a>
-                <a href="/activities/videos" class="side-nav-item">"Videos"</a>
-                <a href="/activities/export" class="side-nav-item">"Export Log"</a>
+                <a href="/activities/calls" class=active("/activities/calls")>"Calls"</a>
+                <a href="/activities/texts" class=active("/activities/texts")>"Texts"</a>
+                <a href="/activities/forms" class=active("/activities/forms")>"Forms"</a>
+                <a href="/activities/chats" class=active("/activities/chats")>"Chats"</a>
+                <a href="/activities/faxes" class=active("/activities/faxes")>"Faxes"</a>
+                <a href="/activities/videos" class=active("/activities/videos")>"Videos"</a>
+                <a href="/activities/export" class=active("/activities/export")>"Export Log"</a>
             </div>
 
             // Contacts group
@@ -245,10 +253,10 @@ pub fn ActivitiesSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPeopleFill /></span>
                     "Contacts"
                 </h3>
-                <a href="/contacts/lists" class="side-nav-item">"Lists"</a>
-                <a href="/contacts/blocked" class="side-nav-item">"Blocked Numbers"</a>
-                <a href="/contacts/do-not-call" class="side-nav-item">"Do Not Call List"</a>
-                <a href="/contacts/do-not-text" class="side-nav-item">"Do Not Text List"</a>
+                <a href="/contacts/lists" class=active("/contacts/lists")>"Lists"</a>
+                <a href="/contacts/blocked" class=active("/contacts/blocked")>"Blocked Numbers"</a>
+                <a href="/contacts/do-not-call" class=active("/contacts/do-not-call")>"Do Not Call List"</a>
+                <a href="/contacts/do-not-text" class=active("/contacts/do-not-text")>"Do Not Text List"</a>
             </div>
         </nav>
     }

@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 use crate::components::FilterBar;
 
@@ -9,6 +10,13 @@ use crate::components::FilterBar;
 
 #[component]
 pub fn FlowsSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         <div class="px-4 pt-4 pb-2">
             <div class="flex items-center gap-2 text-iiz-cyan">
@@ -24,14 +32,14 @@ pub fn FlowsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsArrowLeftRight /></span>
                     "Routing"
                 </h3>
-                <a href="/flows/voice-menus" class="side-nav-item active">"Voice Menus"</a>
-                <a href="/flows/queues" class="side-nav-item">"Queues"</a>
-                <a href="/flows/smart-routers" class="side-nav-item">"Smart Routers"</a>
-                <a href="/flows/geo-routers" class="side-nav-item">"Geo Routers"</a>
-                <a href="/flows/schedules" class="side-nav-item">"Schedules"</a>
-                <a href="/flows/agent-scripts" class="side-nav-item">"Agent Scripts"</a>
-                <a href="/flows/routing-tables" class="side-nav-item">"Routing Tables"</a>
-                <a href="/flows/voicemails" class="side-nav-item">"Voicemails"</a>
+                <a href="/flows/voice-menus" class=active("/flows/voice-menus")>"Voice Menus"</a>
+                <a href="/flows/queues" class=active("/flows/queues")>"Queues"</a>
+                <a href="/flows/smart-routers" class=active("/flows/smart-routers")>"Smart Routers"</a>
+                <a href="/flows/geo-routers" class=active("/flows/geo-routers")>"Geo Routers"</a>
+                <a href="/flows/schedules" class=active("/flows/schedules")>"Schedules"</a>
+                <a href="/flows/agent-scripts" class=active("/flows/agent-scripts")>"Agent Scripts"</a>
+                <a href="/flows/routing-tables" class=active("/flows/routing-tables")>"Routing Tables"</a>
+                <a href="/flows/voicemails" class=active("/flows/voicemails")>"Voicemails"</a>
             </div>
 
             // Automation group
@@ -40,13 +48,13 @@ pub fn FlowsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsLightningFill /></span>
                     "Automation"
                 </h3>
-                <a href="/flows/workflows" class="side-nav-item">"Workflows"</a>
-                <a href="/flows/triggers" class="side-nav-item">"Triggers"</a>
-                <a href="/flows/keyword-spotting" class="side-nav-item">"Keyword Spotting"</a>
-                <a href="/flows/lambdas" class="side-nav-item">"Lambdas"</a>
-                <a href="/flows/api-logs" class="side-nav-item">"API Logs"</a>
-                <a href="/flows/global" class="side-nav-item">"Global"</a>
-                <a href="/flows/webhooks" class="side-nav-item">"Webhooks"</a>
+                <a href="/flows/workflows" class=active("/flows/workflows")>"Workflows"</a>
+                <a href="/flows/triggers" class=active("/flows/triggers")>"Triggers"</a>
+                <a href="/flows/keyword-spotting" class=active("/flows/keyword-spotting")>"Keyword Spotting"</a>
+                <a href="/flows/lambdas" class=active("/flows/lambdas")>"Lambdas"</a>
+                <a href="/flows/api-logs" class=active("/flows/api-logs")>"API Logs"</a>
+                <a href="/flows/global" class=active("/flows/global")>"Global"</a>
+                <a href="/flows/webhooks" class=active("/flows/webhooks")>"Webhooks"</a>
             </div>
 
             // Engagement group
@@ -55,20 +63,20 @@ pub fn FlowsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsChatDotsFill /></span>
                     "Engagement"
                 </h3>
-                <a href="/flows/bulk-messages" class="side-nav-item">"Bulk Messages"</a>
-                <a href="/flows/lead-reactor" class="side-nav-item">"LeadReactor"</a>
-                <a href="/flows/smart-dialers" class="side-nav-item">"Smart Dialers"</a>
-                <a href="/flows/form-reactor" class="side-nav-item">"FormReactor"</a>
-                <a href="/flows/chat-widget" class="side-nav-item">"Chat Widget"</a>
-                <a href="/flows/chat-ai" class="side-nav-item">
+                <a href="/flows/bulk-messages" class=active("/flows/bulk-messages")>"Bulk Messages"</a>
+                <a href="/flows/lead-reactor" class=active("/flows/lead-reactor")>"LeadReactor"</a>
+                <a href="/flows/smart-dialers" class=active("/flows/smart-dialers")>"Smart Dialers"</a>
+                <a href="/flows/form-reactor" class=active("/flows/form-reactor")>"FormReactor"</a>
+                <a href="/flows/chat-widget" class=active("/flows/chat-widget")>"Chat Widget"</a>
+                <a href="/flows/chat-ai" class=active("/flows/chat-ai")>
                     "ChatAI"
                     <span class="badge badge-xs bg-iiz-cyan text-white border-none ml-1">"BETA"</span>
                 </a>
-                <a href="/flows/dialogflow" class="side-nav-item">
+                <a href="/flows/dialogflow" class=active("/flows/dialogflow")>
                     "Dialogflow"
                     <span class="badge badge-xs bg-iiz-cyan text-white border-none ml-1">"BETA"</span>
                 </a>
-                <a href="/flows/reminders" class="side-nav-item">"Reminders"</a>
+                <a href="/flows/reminders" class=active("/flows/reminders")>"Reminders"</a>
             </div>
         </nav>
     }

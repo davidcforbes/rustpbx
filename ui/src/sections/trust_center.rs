@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 // ---------------------------------------------------------------------------
 // Trust Center side navigation
@@ -7,6 +8,13 @@ use leptos_icons::Icon;
 
 #[component]
 pub fn TrustCenterSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         <div class="px-4 pt-4 pb-2">
             <div class="flex items-center gap-2 text-iiz-cyan">
@@ -22,11 +30,11 @@ pub fn TrustCenterSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsFlag /></span>
                     "US Outbound Compliance"
                 </h3>
-                <a href="/trust-center/business" class="side-nav-item active">"Business/Contact Info"</a>
-                <a href="/trust-center/local-text" class="side-nav-item">"Local Text Messaging"</a>
-                <a href="/trust-center/toll-free-text" class="side-nav-item">"Toll Free Text Messaging"</a>
-                <a href="/trust-center/voice-reg" class="side-nav-item">"Voice Registration"</a>
-                <a href="/trust-center/caller-id" class="side-nav-item">"Caller ID"</a>
+                <a href="/trust-center/business" class=active("/trust-center/business")>"Business/Contact Info"</a>
+                <a href="/trust-center/local-text" class=active("/trust-center/local-text")>"Local Text Messaging"</a>
+                <a href="/trust-center/toll-free-text" class=active("/trust-center/toll-free-text")>"Toll Free Text Messaging"</a>
+                <a href="/trust-center/voice-reg" class=active("/trust-center/voice-reg")>"Voice Registration"</a>
+                <a href="/trust-center/caller-id" class=active("/trust-center/caller-id")>"Caller ID"</a>
             </div>
 
             // Global Compliance group
@@ -35,9 +43,9 @@ pub fn TrustCenterSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsGlobe /></span>
                     "Global Compliance"
                 </h3>
-                <a href="/trust-center/requirements" class="side-nav-item">"Requirements"</a>
-                <a href="/trust-center/applications" class="side-nav-item">"Applications"</a>
-                <a href="/trust-center/addresses" class="side-nav-item">"Addresses"</a>
+                <a href="/trust-center/requirements" class=active("/trust-center/requirements")>"Requirements"</a>
+                <a href="/trust-center/applications" class=active("/trust-center/applications")>"Applications"</a>
+                <a href="/trust-center/addresses" class=active("/trust-center/addresses")>"Addresses"</a>
             </div>
         </nav>
     }

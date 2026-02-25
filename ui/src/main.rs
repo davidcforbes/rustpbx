@@ -7,7 +7,8 @@ use leptos_daisyui_rs::components::*;
 use leptos_icons::Icon;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Route, Router, Routes},
+    components::{Redirect, Route, Router, Routes},
+    hooks::use_location,
     path,
 };
 use sections::activities::{ActivitiesSideNav, CallsPage, ChatsPage, ExportLogPage, FaxesPage, FormsPage, TextsPage, VideosPage};
@@ -57,12 +58,40 @@ fn main() {
 fn App() -> impl IntoView {
     provide_meta_context();
 
-    let section = RwSignal::new(Some("activities".to_string()));
-
     view! {
         <Router>
-            <div class="h-screen w-screen">
-                <AppShell active_section=section>
+            <AppLayout />
+        </Router>
+    }
+}
+
+#[component]
+fn AppLayout() -> impl IntoView {
+    let location = use_location();
+    let section = RwSignal::new(Some("activities".to_string()));
+
+    // Sync section signal from current URL path
+    Effect::new(move |_| {
+        let path = location.pathname.get();
+        let new_section = if path.starts_with("/numbers") {
+            "numbers"
+        } else if path.starts_with("/flows") {
+            "flows"
+        } else if path.starts_with("/ai-tools") {
+            "ai-tools"
+        } else if path.starts_with("/reports") {
+            "reports"
+        } else if path.starts_with("/trust-center") {
+            "trust-center"
+        } else {
+            "activities"
+        };
+        section.set(Some(new_section.to_string()));
+    });
+
+    view! {
+        <div class="h-screen w-screen">
+            <AppShell active_section=section>
                     <AppShellIconNav class="w-16 bg-white border-r border-iiz-gray-border">
                         // Logo
                         <div class="py-4 mb-2">
@@ -157,7 +186,7 @@ fn App() -> impl IntoView {
 
                     <AppShellContent class="bg-iiz-gray-bg">
                         <Routes fallback=|| "Page not found">
-                            <Route path=path!("/") view=HomePage />
+                            <Route path=path!("/") view=|| view! { <Redirect path="/activities/calls" /> } />
                             // Activities
                             <Route path=path!("/activities/calls") view=CallsPage />
                             <Route path=path!("/activities/texts") view=TextsPage />
@@ -262,16 +291,5 @@ fn App() -> impl IntoView {
                     </AppShellContent>
                 </AppShell>
             </div>
-        </Router>
-    }
-}
-
-#[component]
-fn HomePage() -> impl IntoView {
-    view! {
-        <div class="p-6">
-            <h1 class="text-2xl font-bold text-iiz-dark">"Welcome to 4iiz"</h1>
-            <p class="text-iiz-gray-text mt-2">"Select a section from the navigation to get started."</p>
-        </div>
     }
 }

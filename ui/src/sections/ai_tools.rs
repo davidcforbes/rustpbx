@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 // ---------------------------------------------------------------------------
 // AI Tools side navigation
@@ -7,6 +8,13 @@ use leptos_icons::Icon;
 
 #[component]
 pub fn AIToolsSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         <div class="px-4 pt-4 pb-2">
             <div class="flex items-center gap-2 text-iiz-cyan">
@@ -22,8 +30,8 @@ pub fn AIToolsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsDiamond /></span>
                     "AI Insights"
                 </h3>
-                <a href="/ai-tools/askai" class="side-nav-item active">"AskAI"</a>
-                <a href="/ai-tools/summaries" class="side-nav-item">"Summaries"</a>
+                <a href="/ai-tools/askai" class=active("/ai-tools/askai")>"AskAI"</a>
+                <a href="/ai-tools/summaries" class=active("/ai-tools/summaries")>"Summaries"</a>
             </div>
 
             // AI Agents group
@@ -32,12 +40,12 @@ pub fn AIToolsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsRobot /></span>
                     "AI Agents"
                 </h3>
-                <a href="/ai-tools/chatai" class="side-nav-item">
+                <a href="/ai-tools/chatai" class=active("/ai-tools/chatai")>
                     "ChatAI"
                     <span class="ml-1 text-[10px] text-gray-400 uppercase">"BETA"</span>
                 </a>
-                <a href="/ai-tools/voiceai" class="side-nav-item">"VoiceAI"</a>
-                <a href="/ai-tools/knowledge-banks" class="side-nav-item">
+                <a href="/ai-tools/voiceai" class=active("/ai-tools/voiceai")>"VoiceAI"</a>
+                <a href="/ai-tools/knowledge-banks" class=active("/ai-tools/knowledge-banks")>
                     "Knowledge Banks"
                     <span class="ml-1 text-[10px] text-gray-400 uppercase">"BETA"</span>
                 </a>

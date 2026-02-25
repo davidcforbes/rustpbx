@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_location;
 
 // ---------------------------------------------------------------------------
 // Reports side navigation
@@ -7,6 +8,13 @@ use leptos_icons::Icon;
 
 #[component]
 pub fn ReportsSideNav() -> impl IntoView {
+    let location = use_location();
+    let active = |href: &'static str| {
+        move || {
+            if location.pathname.get() == href { "side-nav-item active" } else { "side-nav-item" }
+        }
+    };
+
     view! {
         <div class="px-4 pt-4 pb-2">
             <div class="flex items-center gap-2 text-iiz-cyan">
@@ -22,27 +30,27 @@ pub fn ReportsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsGraphUp /></span>
                     "Analytics"
                 </h3>
-                <a href="/reports/activity" class="side-nav-item active">"Activity Reports"</a>
-                <a href="/reports/roi" class="side-nav-item">"ROI Reports"</a>
-                <a href="/reports/accuracy" class="side-nav-item">"Accuracy Reports"</a>
-                <a href="/reports/map" class="side-nav-item">"Activity Map"</a>
-                <a href="/reports/overview" class="side-nav-item">"Overview"</a>
-                <a href="/reports/todays-missed" class="side-nav-item">"Today's Missed Calls"</a>
-                <a href="/reports/positive-daily" class="side-nav-item">"Positive Daily Reports"</a>
-                <a href="/reports/google-ca" class="side-nav-item">"Google CA Report"</a>
-                <a href="/reports/saturday-calls" class="side-nav-item">"saturday calls"</a>
-                <a href="/reports/daily-calls" class="side-nav-item">"Daily Calls"</a>
-                <a href="/reports/weekly-missed" class="side-nav-item">"Weekly Missed Calls"</a>
-                <a href="/reports/priming" class="side-nav-item">"Priming Calls"</a>
-                <a href="/reports/missed" class="side-nav-item">"Missed Calls"</a>
-                <a href="/reports/missed-daily-1st" class="side-nav-item">"Missed Calls Daily - 1st"</a>
-                <a href="/reports/cs-daily-missed" class="side-nav-item">"CS Daily Missed Calls"</a>
-                <a href="/reports/cs-daily-missed-2" class="side-nav-item">"CS Daily Missed 2.0"</a>
-                <a href="/reports/priming-missed" class="side-nav-item">"Priming Missed Calls"</a>
-                <a href="/reports/daily-collection" class="side-nav-item">"Daily Collection Calls"</a>
-                <a href="/reports/power-bi" class="side-nav-item">"Power BI - Total Inbound"</a>
-                <a href="/reports/realtime" class="side-nav-item">"real time"</a>
-                <a href="/reports/appointments" class="side-nav-item">"Appointments"</a>
+                <a href="/reports/activity" class=active("/reports/activity")>"Activity Reports"</a>
+                <a href="/reports/roi" class=active("/reports/roi")>"ROI Reports"</a>
+                <a href="/reports/accuracy" class=active("/reports/accuracy")>"Accuracy Reports"</a>
+                <a href="/reports/map" class=active("/reports/map")>"Activity Map"</a>
+                <a href="/reports/overview" class=active("/reports/overview")>"Overview"</a>
+                <a href="/reports/todays-missed" class=active("/reports/todays-missed")>"Today's Missed Calls"</a>
+                <a href="/reports/positive-daily" class=active("/reports/positive-daily")>"Positive Daily Reports"</a>
+                <a href="/reports/google-ca" class=active("/reports/google-ca")>"Google CA Report"</a>
+                <a href="/reports/saturday-calls" class=active("/reports/saturday-calls")>"saturday calls"</a>
+                <a href="/reports/daily-calls" class=active("/reports/daily-calls")>"Daily Calls"</a>
+                <a href="/reports/weekly-missed" class=active("/reports/weekly-missed")>"Weekly Missed Calls"</a>
+                <a href="/reports/priming" class=active("/reports/priming")>"Priming Calls"</a>
+                <a href="/reports/missed" class=active("/reports/missed")>"Missed Calls"</a>
+                <a href="/reports/missed-daily-1st" class=active("/reports/missed-daily-1st")>"Missed Calls Daily - 1st"</a>
+                <a href="/reports/cs-daily-missed" class=active("/reports/cs-daily-missed")>"CS Daily Missed Calls"</a>
+                <a href="/reports/cs-daily-missed-2" class=active("/reports/cs-daily-missed-2")>"CS Daily Missed 2.0"</a>
+                <a href="/reports/priming-missed" class=active("/reports/priming-missed")>"Priming Missed Calls"</a>
+                <a href="/reports/daily-collection" class=active("/reports/daily-collection")>"Daily Collection Calls"</a>
+                <a href="/reports/power-bi" class=active("/reports/power-bi")>"Power BI - Total Inbound"</a>
+                <a href="/reports/realtime" class=active("/reports/realtime")>"real time"</a>
+                <a href="/reports/appointments" class=active("/reports/appointments")>"Appointments"</a>
             </div>
 
             // Connect group
@@ -51,10 +59,10 @@ pub fn ReportsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPeopleFill /></span>
                     "Connect"
                 </h3>
-                <a href="/reports/realtime-agents" class="side-nav-item">"Real-time Agents"</a>
-                <a href="/reports/coaching" class="side-nav-item">"Coaching"</a>
-                <a href="/reports/queue-report" class="side-nav-item">"Queue Report"</a>
-                <a href="/reports/agent-activity" class="side-nav-item">"Agent Activity"</a>
+                <a href="/reports/realtime-agents" class=active("/reports/realtime-agents")>"Real-time Agents"</a>
+                <a href="/reports/coaching" class=active("/reports/coaching")>"Coaching"</a>
+                <a href="/reports/queue-report" class=active("/reports/queue-report")>"Queue Report"</a>
+                <a href="/reports/agent-activity" class=active("/reports/agent-activity")>"Agent Activity"</a>
             </div>
 
             // Usage group
@@ -63,7 +71,7 @@ pub fn ReportsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsSpeedometer /></span>
                     "Usage"
                 </h3>
-                <a href="/reports/agency-usage" class="side-nav-item">"Agency Usage"</a>
+                <a href="/reports/agency-usage" class=active("/reports/agency-usage")>"Agency Usage"</a>
             </div>
 
             // Report Settings group
@@ -72,10 +80,10 @@ pub fn ReportsSideNav() -> impl IntoView {
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsGearFill /></span>
                     "Report Settings"
                 </h3>
-                <a href="/reports/custom-reports" class="side-nav-item">"Custom Reports"</a>
-                <a href="/reports/notifications" class="side-nav-item">"Notifications"</a>
-                <a href="/reports/scoring" class="side-nav-item">"Scoring"</a>
-                <a href="/reports/tags" class="side-nav-item">"Tags"</a>
+                <a href="/reports/custom-reports" class=active("/reports/custom-reports")>"Custom Reports"</a>
+                <a href="/reports/notifications" class=active("/reports/notifications")>"Notifications"</a>
+                <a href="/reports/scoring" class=active("/reports/scoring")>"Scoring"</a>
+                <a href="/reports/tags" class=active("/reports/tags")>"Tags"</a>
             </div>
         </nav>
     }
