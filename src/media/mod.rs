@@ -16,6 +16,36 @@ pub use transcoder::Transcoder;
 
 use crate::media::recorder::RecorderOption;
 
+// Shared types needed by AI voice pipeline (from active-call)
+pub const INTERNAL_SAMPLERATE: u32 = 16000;
+pub type TrackId = String;
+pub type PayloadBuf = Vec<u8>;
+pub type PcmBuf = Vec<i16>;
+pub type Sample = i16;
+
+#[derive(Debug, Clone)]
+pub enum Samples {
+    PCM(Vec<i16>),
+}
+
+#[derive(Debug, Clone)]
+pub struct SourcePacket {
+    pub track_id: TrackId,
+    pub samples: Samples,
+    pub codec: audio_codec::CodecType,
+    pub ssrc: u32,
+    pub timestamp: u32,
+    pub payload: PayloadBuf,
+}
+
+#[derive(Debug, Clone)]
+pub struct AudioFrame {
+    pub track_id: TrackId,
+    pub samples: Vec<i16>,
+    pub sample_rate: u32,
+    pub timestamp: u64,
+}
+
 pub mod audio_source;
 pub mod call_quality;
 #[cfg(test)]
@@ -25,6 +55,23 @@ pub mod transcoder;
 #[cfg(test)]
 mod unified_pc_tests;
 pub mod wav_writer;
+
+// AI Voice Agent media processing (from active-call)
+pub mod agent_recorder;
+pub mod ambiance;
+pub mod asr_processor;
+pub mod cache;
+pub mod denoiser;
+pub mod dtmf;
+pub mod engine;
+pub mod inactivity;
+pub mod loader;
+pub mod processor;
+pub mod realtime_processor;
+pub mod stream;
+pub mod track;
+pub mod vad;
+pub mod volume_control;
 
 pub trait StreamWriter: Send + Sync {
     fn write_header(&mut self) -> Result<()>;
