@@ -28,6 +28,14 @@ pub struct CallRecord {
     pub agent_color: String,
     pub automation: String,
     pub tags: Vec<String>,
+    // CRM / case metadata (visible in the real 4iiz UI)
+    pub case_description: String,
+    pub contact_category: String,
+    pub crm_contact_id: String,
+    pub crm_matter_id: String,
+    pub case_subtype: String,
+    pub matter_status: String,
+    pub answered_by: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -38,72 +46,149 @@ fn mock_calls() -> Vec<CallRecord> {
     vec![
         CallRecord {
             id: "4045529975".into(),
-            name: "Wilne Jean".into(),
-            phone: "(773) 648-1494".into(),
-            location: "Month Olive, NC".into(),
-            source: "Mystery Shopper".into(),
-            source_number: "(919) 436-4235".into(),
-            source_name: "(Mystery Shopper)".into(),
-            has_audio: true,
-            duration: "00:08".into(),
-            date: "Tue Feb 24th".into(),
-            time: "02:39 PM".into(),
-            status: "Answered".into(),
-            agent: "Magaly Almaraz".into(),
-            agent_initials: "MA".into(),
-            agent_color: "#7b1fa2".into(),
-            automation: "Answered Calls Lookup - Missed Calls Automation".into(),
+            name: "Francisco Javier 26-49335".into(),
+            phone: "(714) 737-3835".into(),
+            location: "Cypress, CA US".into(),
+            source: "Google Organic".into(),
+            source_number: "(949) 649-6378".into(),
+            source_name: "Santa Ana Office - Google My Business".into(),
+            has_audio: false,
+            duration: "00:00".into(),
+            date: "Wed Feb 25th".into(),
+            time: "04:46 PM".into(),
+            status: "Hangup".into(),
+            agent: "Javi Guerrero".into(),
+            agent_initials: "JG".into(),
+            agent_color: "#0277bd".into(),
+            automation: String::new(),
             tags: vec!["agent_assigned".into()],
+            case_description: "U-Visa Investigation (Not Detained)".into(),
+            contact_category: String::new(),
+            crm_contact_id: "4307460001363256958".into(),
+            crm_matter_id: "4307460001306053781".into(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: String::new(),
         },
         CallRecord {
             id: "4045529976".into(),
-            name: "Jose Hipolito -Fb".into(),
-            phone: "(408) 449-1936".into(),
-            location: "San Jose/North Da, CA US".into(),
+            name: "Martha A Morales - Fb".into(),
+            phone: "(979) 567-8615".into(),
+            location: "Bryan, TX US".into(),
             source: "Google Organic".into(),
-            source_number: "(949) 649-6378".into(),
-            source_name: "(Santa Ana Office - Google My Business)".into(),
+            source_number: "(603) 218-2269".into(),
+            source_name: "Dallas Office - Google My Business".into(),
             has_audio: true,
-            duration: "00:28".into(),
-            date: "Tue Feb 24th".into(),
-            time: "02:39 PM".into(),
+            duration: "01:03".into(),
+            date: "Wed Feb 25th".into(),
+            time: "04:45 PM".into(),
             status: "Answered".into(),
-            agent: "Cecilia Arrezola".into(),
-            agent_initials: "CA".into(),
-            agent_color: "#00897b".into(),
-            automation: "Cecilia Arrezola".into(),
+            agent: "Fernanda Padilla".into(),
+            agent_initials: "FP".into(),
+            agent_color: "#7b1fa2".into(),
+            automation: String::new(),
             tags: vec![],
+            case_description: String::new(),
+            contact_category: String::new(),
+            crm_contact_id: String::new(),
+            crm_matter_id: String::new(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: "Appointments Set?: No".into(),
         },
         CallRecord {
             id: "4045529977".into(),
-            name: "Wilne Jean".into(),
-            phone: "(773) 648-1494".into(),
-            location: "Month Olive, NC".into(),
-            source: "Mystery Shopper".into(),
-            source_number: "(919) 436-4235".into(),
-            source_name: "(Mystery Shopper)".into(),
+            name: "Mirian Elizabeth Ocampo Diaz 25-42709".into(),
+            phone: "(910) 305-3917".into(),
+            location: "Fayetteville, NC US".into(),
+            source: "Google Organic".into(),
+            source_number: "(919) 725-8000".into(),
+            source_name: "Durham Office - Google My Business".into(),
             has_audio: true,
-            duration: "00:12".into(),
-            date: "Tue Feb 24th".into(),
-            time: "02:39 PM".into(),
+            duration: "00:35".into(),
+            date: "Wed Feb 25th".into(),
+            time: "04:44 PM".into(),
             status: "Answered".into(),
-            agent: "Magaly Almaraz".into(),
-            agent_initials: "MA".into(),
-            agent_color: "#7b1fa2".into(),
+            agent: "Daniela Nubia".into(),
+            agent_initials: "DN".into(),
+            agent_color: "#00897b".into(),
             automation: "Answered Calls Lookup - Missed Calls Automation".into(),
             tags: vec![],
+            case_description: "Adjustment Of Status Relative Petition".into(),
+            contact_category: "Customer Service".into(),
+            crm_contact_id: "4307460001924153177".into(),
+            crm_matter_id: "4307460010060854368".into(),
+            case_subtype: "Document Collection (AOS-IR)".into(),
+            matter_status: String::new(),
+            answered_by: "agent_assigned".into(),
         },
         CallRecord {
             id: "4045529978".into(),
+            name: "Raquel Escobar".into(),
+            phone: "(714) 981-6483".into(),
+            location: "Placentia, CA US".into(),
+            source: "Google Organic".into(),
+            source_number: "(949) 649-6378".into(),
+            source_name: "Santa Ana Office - Google My Business".into(),
+            has_audio: false,
+            duration: "54:07".into(),
+            date: "Wed Feb 25th".into(),
+            time: "04:45 PM".into(),
+            status: "in progress".into(),
+            agent: "Brandon Nunez".into(),
+            agent_initials: "BN".into(),
+            agent_color: "#c62828".into(),
+            automation: String::new(),
+            tags: vec![
+                "repeated caller".into(),
+                "spanish ivr".into(),
+                "sales call".into(),
+            ],
+            case_description: String::new(),
+            contact_category: String::new(),
+            crm_contact_id: String::new(),
+            crm_matter_id: String::new(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: "Answered?: \u{2714}".into(),
+        },
+        CallRecord {
+            id: "4045529979".into(),
+            name: "Karla Velazquez Girlfriend Olvan Josue Fajardo Dominguez 25-36648".into(),
+            phone: "(240) 733-5285".into(),
+            location: "Durham, NC".into(),
+            source: "Google Organic".into(),
+            source_number: "(919) 725-8000".into(),
+            source_name: "Durham Office - Google My Business".into(),
+            has_audio: true,
+            duration: "03:42".into(),
+            date: "Wed Feb 25th".into(),
+            time: "04:45 PM".into(),
+            status: "Answered".into(),
+            agent: "Judith Andrade".into(),
+            agent_initials: "JA".into(),
+            agent_color: "#4527a0".into(),
+            automation: String::new(),
+            tags: vec![],
+            case_description: "U-Visa Investigation".into(),
+            contact_category: "Customer Service".into(),
+            crm_contact_id: "4307460008623341469".into(),
+            crm_matter_id: "4307460009004326759".into(),
+            case_subtype: "0023 - Follow up Call to Agency (UVil)".into(),
+            matter_status: String::new(),
+            answered_by: String::new(),
+        },
+        CallRecord {
+            id: "4045529980".into(),
             name: "Jose Ramon Garcia Sanchez 25-45997".into(),
             phone: "(602) 930-7605".into(),
             location: "Phoenix, AZ US".into(),
             source: "Google Organic".into(),
             source_number: "(602) 838-6665".into(),
-            source_name: "(Phoenix Office - Google My Business)".into(),
+            source_name: "Phoenix Office - Google My Business".into(),
             has_audio: false,
             duration: "01:08".into(),
-            date: "Tue Feb 24th".into(),
+            date: "Wed Feb 25th".into(),
             time: "02:39 PM".into(),
             status: "in progress".into(),
             agent: "Oswaldo Aguilera".into(),
@@ -115,49 +200,13 @@ fn mock_calls() -> Vec<CallRecord> {
                 "spanish ivr".into(),
                 "inbound to make payment".into(),
             ],
-        },
-        CallRecord {
-            id: "4045529979".into(),
-            name: "Jose Tores".into(),
-            phone: "(786) 862-3629".into(),
-            location: "FL US".into(),
-            source: "Tiktok Organic".into(),
-            source_number: "(657) 279-5506".into(),
-            source_name: "(TikTok Organic)".into(),
-            has_audio: false,
-            duration: "01:13".into(),
-            date: "Tue Feb 24th".into(),
-            time: "02:39 PM".into(),
-            status: "in progress".into(),
-            agent: "Mario Rivas".into(),
-            agent_initials: "MR".into(),
-            agent_color: "#c62828".into(),
-            automation: "Initial Language Selection".into(),
-            tags: vec![
-                "repeated caller".into(),
-                "spanish ivr".into(),
-                "in ice custody".into(),
-                "sales call".into(),
-            ],
-        },
-        CallRecord {
-            id: "4045529980".into(),
-            name: "Ismael Diosdado".into(),
-            phone: "(919) 360-0772".into(),
-            location: "Chapel Hill, NC US".into(),
-            source: "Google Organic".into(),
-            source_number: "(919) 725-8000".into(),
-            source_name: "(Durham Office - Google My Business)".into(),
-            has_audio: false,
-            duration: "02:30".into(),
-            date: "Tue Feb 24th".into(),
-            time: "02:37 PM".into(),
-            status: "in progress".into(),
-            agent: "Celia Torres".into(),
-            agent_initials: "CT".into(),
-            agent_color: "#4527a0".into(),
-            automation: String::new(),
-            tags: vec![],
+            case_description: String::new(),
+            contact_category: String::new(),
+            crm_contact_id: String::new(),
+            crm_matter_id: String::new(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: String::new(),
         },
         CallRecord {
             id: "4045529981".into(),
@@ -166,10 +215,10 @@ fn mock_calls() -> Vec<CallRecord> {
             location: "Santa Ana, CA US".into(),
             source: "Tiktok Organic".into(),
             source_number: "(657) 279-5506".into(),
-            source_name: "(TikTok Organic)".into(),
+            source_name: "TikTok Organic".into(),
             has_audio: false,
             duration: "02:49".into(),
-            date: "Tue Feb 24th".into(),
+            date: "Wed Feb 25th".into(),
             time: "02:37 PM".into(),
             status: "in progress".into(),
             agent: "Israel Navarro".into(),
@@ -181,6 +230,13 @@ fn mock_calls() -> Vec<CallRecord> {
                 "spanish ivr".into(),
                 "sales call".into(),
             ],
+            case_description: String::new(),
+            contact_category: String::new(),
+            crm_contact_id: String::new(),
+            crm_matter_id: String::new(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: String::new(),
         },
         CallRecord {
             id: "4045529982".into(),
@@ -189,10 +245,10 @@ fn mock_calls() -> Vec<CallRecord> {
             location: "Montebello, CA US".into(),
             source: "Google Organic".into(),
             source_number: "(949) 649-6378".into(),
-            source_name: "(Santa Ana Office - Google My Business)".into(),
+            source_name: "Santa Ana Office - Google My Business".into(),
             has_audio: false,
             duration: "03:05".into(),
-            date: "Tue Feb 24th".into(),
+            date: "Wed Feb 25th".into(),
             time: "02:37 PM".into(),
             status: "in progress".into(),
             agent: String::new(),
@@ -205,6 +261,13 @@ fn mock_calls() -> Vec<CallRecord> {
                 "cs routed per priming".into(),
                 "cs smart router".into(),
             ],
+            case_description: String::new(),
+            contact_category: String::new(),
+            crm_contact_id: String::new(),
+            crm_matter_id: String::new(),
+            case_subtype: String::new(),
+            matter_status: String::new(),
+            answered_by: String::new(),
         },
     ]
 }
@@ -278,21 +341,33 @@ pub fn CallsPage() -> impl IntoView {
 
             // Column headers
             <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <div class="grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-2 items-center">
+                <div class="grid grid-cols-[24px_2.5fr_1.5fr_0.6fr_0.5fr_0.6fr_0.6fr_1.2fr_36px] gap-2 px-4 py-2 items-center">
                     <div></div>
                     <div class="col-header flex items-center gap-1">
-                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPerson /></span>
+                        <span class="w-3 h-3 inline-flex text-iiz-cyan"><Icon icon=icondata::BsPerson /></span>
                         "Contact"
                     </div>
                     <div class="col-header flex items-center gap-1">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsBuilding /></span>
                         "Source"
                     </div>
-                    <div class="col-header">"Session Data"</div>
-                    <div class="col-header">"Score"</div>
-                    <div class="col-header">"Audio"</div>
-                    <div class="col-header">"Metrics"</div>
-                    <div class="col-header">"Routing"</div>
+                    <div class="col-header flex items-center gap-1">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsLayoutTextSidebar /></span>
+                        "Session Data"
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsStarFill /></span>
+                        "Score"
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsVolumeUpFill /></span>
+                        "Audio"
+                    </div>
+                    <div class="col-header flex items-center gap-1">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsGraphUp /></span>
+                        "Metrics"
+                    </div>
+                    <div></div>
                     <div></div>
                 </div>
             </div>
@@ -326,7 +401,7 @@ pub fn CallsPage() -> impl IntoView {
 
             // Status bar
             <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-8 of 3,694,942 results"</span>
+                <span>"Showing 1-8 of 3,700,569 results"</span>
                 <div class="flex-1"></div>
                 <div class="flex items-center gap-1">
                     <button class="btn btn-xs btn-ghost text-gray-400">
@@ -366,16 +441,21 @@ fn CallRow(
     #[prop(into)] selected: Signal<bool>,
     on_click: impl Fn(ev::MouseEvent) + 'static,
 ) -> impl IntoView {
-    let status_class = if call.status == "Answered" {
-        "text-xs mt-0.5 text-iiz-cyan"
-    } else {
-        "text-xs mt-0.5 text-iiz-orange"
+    let status_color = match call.status.as_str() {
+        "Answered" => "text-iiz-cyan",
+        "Hangup" => "text-red-500",
+        _ => "text-iiz-orange",
+    };
+    let status_dot_color = match call.status.as_str() {
+        "Answered" => "bg-iiz-cyan",
+        "Hangup" => "bg-red-400",
+        _ => "bg-orange-400",
     };
 
     let audio_icon_class = if call.has_audio {
-        "w-4 h-4 inline-flex text-iiz-cyan"
+        "w-3.5 h-3.5 inline-flex text-iiz-cyan"
     } else {
-        "w-4 h-4 inline-flex text-gray-300"
+        "w-3.5 h-3.5 inline-flex text-gray-300"
     };
 
     let audio_label: &'static str = if call.has_audio { "audio" } else { "no audio" };
@@ -383,6 +463,11 @@ fn CallRow(
     let has_tags = !call.tags.is_empty();
     let has_agent = !call.agent.is_empty();
     let has_automation = !call.automation.is_empty();
+    let has_case = !call.case_description.is_empty();
+    let has_crm = !call.crm_contact_id.is_empty();
+    let has_category = !call.contact_category.is_empty();
+    let has_subtype = !call.case_subtype.is_empty();
+    let has_answered_by = !call.answered_by.is_empty();
 
     // Pre-compute all strings for the view
     let name = call.name.clone();
@@ -391,20 +476,26 @@ fn CallRow(
     let source = call.source.clone();
     let source_number = call.source_number.clone();
     let source_name = call.source_name.clone();
-    let duration_text = format!("\u{25C0} {}", &call.duration);
+    let duration_text = format!("\u{25B6} {}", &call.duration);
     let date = call.date.clone();
     let time = call.time.clone();
-    let status_text = format!("\u{25CF} {}", &call.status);
+    let status_text = call.status.clone();
     let agent_name = call.agent.clone();
     let agent_initials = call.agent_initials.clone();
     let agent_color_style = format!("background-color:{}", &call.agent_color);
     let automation = call.automation.clone();
     let tags = call.tags.clone();
+    let case_description = call.case_description.clone();
+    let crm_contact_id = format!("crm_contact_id: {}", &call.crm_contact_id);
+    let crm_matter_id = format!("crm_matter_id: {}", &call.crm_matter_id);
+    let contact_category = format!("Contact Category: {}", &call.contact_category);
+    let case_subtype = format!("Case Subtype: {}", &call.case_subtype);
+    let answered_by = call.answered_by.clone();
 
     view! {
         <div
             class=move || {
-                let base = "activity-row grid grid-cols-[24px_2fr_1.5fr_0.8fr_0.6fr_0.8fr_1.2fr_1fr_48px] gap-2 px-4 py-3 items-start cursor-pointer";
+                let base = "activity-row grid grid-cols-[24px_2.5fr_1.5fr_0.6fr_0.5fr_0.6fr_0.6fr_1.2fr_36px] gap-2 px-4 py-2.5 items-start cursor-pointer";
                 if selected.get() {
                     format!("{} bg-iiz-cyan-light", base)
                 } else {
@@ -414,27 +505,56 @@ fn CallRow(
             on:click=on_click
         >
             // Call icon
-            <div class="pt-1">
+            <div class="pt-0.5">
                 <span class="w-4 h-4 inline-flex text-green-500"><Icon icon=icondata::BsTelephoneFill /></span>
             </div>
 
-            // Contact column
-            <div>
-                <div class="flex items-center gap-2">
-                    <span class="font-medium text-sm">{name}</span>
-                    <button class="text-gray-400 hover:text-gray-600">
+            // Contact column -- dense multi-line card with CRM metadata
+            <div class="min-w-0">
+                <div class="flex items-start gap-1">
+                    <span class="font-semibold text-[13px] leading-tight text-gray-900">{name}</span>
+                    <button class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsThreeDotsVertical /></span>
                     </button>
                 </div>
-                <div class="text-xs text-gray-500">{phone}</div>
-                <div class="flex items-center gap-1 mt-0.5">
-                    <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Call"</a>
-                    <span class="text-gray-300">"|"</span>
-                    <a class="text-xs text-blue-500 hover:underline cursor-pointer">{location}</a>
-                </div>
-                <div class="flex items-center gap-1 mt-0.5">
-                    <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Edit"</a>
-                </div>
+                <div class="text-[11px] text-gray-500 leading-tight">{phone}</div>
+                <div class="text-[11px] text-gray-400 leading-tight">{location}</div>
+                {if has_case {
+                    Some(view! {
+                        <div class="text-[11px] text-gray-600 leading-tight mt-0.5 font-medium">{case_description}</div>
+                    })
+                } else {
+                    None
+                }}
+                {if has_category {
+                    Some(view! {
+                        <div class="text-[10px] text-gray-400 leading-tight">{contact_category}</div>
+                    })
+                } else {
+                    None
+                }}
+                {if has_crm {
+                    Some(view! {
+                        <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_contact_id}</div>
+                        <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_matter_id}</div>
+                    })
+                } else {
+                    None
+                }}
+                {if has_subtype {
+                    Some(view! {
+                        <div class="text-[10px] text-gray-400 leading-tight">{case_subtype}</div>
+                    })
+                } else {
+                    None
+                }}
+                {if has_answered_by {
+                    Some(view! {
+                        <div class="text-[10px] text-gray-400 leading-tight">{answered_by}</div>
+                    })
+                } else {
+                    None
+                }}
                 {if has_tags {
                     Some(
                         view! {
@@ -455,25 +575,24 @@ fn CallRow(
             </div>
 
             // Source column
-            <div>
+            <div class="min-w-0">
                 <div class="flex items-center gap-1">
-                    <span class="w-3.5 h-3.5 inline-flex text-gray-400"><Icon icon=icondata::BsBuilding /></span>
-                    <span class="text-sm font-medium">{source}</span>
+                    <span class="w-3 h-3 inline-flex text-red-400 flex-shrink-0"><Icon icon=icondata::BsGeoAltFill /></span>
+                    <span class="text-[12px] font-semibold text-gray-800 truncate">{source}</span>
                 </div>
-                <div class="text-xs text-iiz-blue-link">{source_number}</div>
-                <div class="text-xs text-gray-400">{source_name}</div>
+                <div class="text-[11px] text-iiz-blue-link leading-tight">{source_number}</div>
+                <div class="text-[10px] text-gray-400 leading-tight truncate">{source_name}</div>
             </div>
 
             // Session Data column
-            <div class="flex items-center gap-1">
-                <span class="w-4 h-4 inline-flex text-gray-400"><Icon icon=icondata::BsBarChartFill /></span>
+            <div class="flex justify-center pt-0.5">
+                <span class="w-4 h-4 inline-flex text-gray-300"><Icon icon=icondata::BsBarChartFill /></span>
             </div>
 
             // Score column
-            <div>
-                <button class="text-iiz-cyan hover:text-iiz-cyan/80 flex flex-col items-center">
-                    <span class="w-5 h-5 inline-flex"><Icon icon=icondata::BsBarChartFill /></span>
-                    <span class="text-[10px]">"Score"</span>
+            <div class="flex justify-center pt-0.5">
+                <button class="text-gray-300 hover:text-iiz-cyan">
+                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsBarChartFill /></span>
                 </button>
             </div>
 
@@ -481,62 +600,53 @@ fn CallRow(
             <div>
                 <div class="flex items-center gap-1">
                     <span class={audio_icon_class}><Icon icon=icondata::BsVolumeUpFill /></span>
-                    <span class="text-xs">{audio_label}</span>
+                    <span class="text-[10px] text-gray-500">{audio_label}</span>
                 </div>
-                <div class="text-xs text-gray-500">{duration_text}</div>
-            </div>
-
-            // Metrics column
-            <div>
-                <div class="text-xs text-gray-500 flex items-center gap-1">
-                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsCalendar /></span>
-                    <span>{date}</span>
-                </div>
-                <div class="text-xs text-gray-500 flex items-center gap-1">
-                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsClock /></span>
-                    <span>{time}</span>
-                </div>
-                <div class={status_class}>
-                    {status_text}
+                <div class="text-[10px] text-gray-500 flex items-center gap-0.5 mt-0.5">
+                    <span class="w-2.5 h-2.5 inline-flex"><Icon icon=icondata::BsPlayFill /></span>
+                    {duration_text}
                 </div>
             </div>
 
-            // Routing / Agent column
-            <div>
-                {if has_agent {
-                    view! {
-                        <div class="flex items-center gap-2">
-                            <div class="avatar placeholder">
-                                <div
-                                    class="w-7 h-7 rounded-full text-white text-[10px] flex items-center justify-center"
-                                    style=agent_color_style.clone()
-                                >
-                                    <span>{agent_initials.clone()}</span>
-                                </div>
+            // Metrics + Agent combined column (stacked right side like real app)
+            <div class="text-right">
+                // Agent row at top
+                <div class="flex items-center justify-end gap-1.5 mb-1">
+                    {if has_agent {
+                        view! {
+                            <span class="text-[11px] text-gray-600 truncate">{agent_name.clone()}</span>
+                            <div
+                                class="w-6 h-6 rounded-full text-white text-[9px] flex items-center justify-center flex-shrink-0"
+                                style=agent_color_style.clone()
+                            >
+                                <span>{agent_initials.clone()}</span>
                             </div>
-                            <span class="text-sm">{agent_name.clone()}</span>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    view! {
-                        <div class="flex items-center gap-2">
-                            <div class="avatar placeholder">
-                                <div
-                                    class="w-7 h-7 rounded-full text-white text-[10px] flex items-center justify-center"
-                                    style=agent_color_style.clone()
-                                >
-                                    <span>{agent_initials.clone()}</span>
-                                </div>
+                        }
+                        .into_any()
+                    } else {
+                        view! {
+                            <a class="text-[11px] text-iiz-cyan hover:underline cursor-pointer">"+ set agent"</a>
+                            <div
+                                class="w-6 h-6 rounded-full text-white text-[9px] flex items-center justify-center flex-shrink-0"
+                                style=agent_color_style.clone()
+                            >
+                                <span>{agent_initials.clone()}</span>
                             </div>
-                            <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"+ set agent"</a>
-                        </div>
-                    }
-                    .into_any()
-                }}
+                        }
+                        .into_any()
+                    }}
+                </div>
+                // Date & time
+                <div class="text-[11px] text-gray-500 leading-tight">{date}</div>
+                <div class="text-[11px] text-gray-500 leading-tight">{time}</div>
+                // Status with colored dot
+                <div class="flex items-center justify-end gap-1 mt-0.5">
+                    <span class={format!("w-1.5 h-1.5 rounded-full inline-block {}", status_dot_color)}></span>
+                    <span class={format!("text-[11px] font-medium {}", status_color)}>{status_text}</span>
+                </div>
                 {if has_automation {
                     Some(view! {
-                        <div class="text-xs text-iiz-blue-link mt-0.5">{automation.clone()}</div>
+                        <div class="text-[10px] text-iiz-blue-link leading-tight mt-0.5 truncate">{automation.clone()}</div>
                     })
                 } else {
                     None
@@ -544,12 +654,12 @@ fn CallRow(
             </div>
 
             // Actions column
-            <div class="flex items-center gap-1">
-                <button class="btn btn-xs btn-ghost text-gray-400">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEnvelope /></span>
+            <div class="flex flex-col items-center gap-1 pt-0.5">
+                <button class="text-gray-300 hover:text-gray-500">
+                    <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsEnvelope /></span>
                 </button>
-                <button class="btn btn-xs btn-ghost text-red-400">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsFlag /></span>
+                <button class="text-gray-300 hover:text-red-400">
+                    <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsFlag /></span>
                 </button>
             </div>
         </div>

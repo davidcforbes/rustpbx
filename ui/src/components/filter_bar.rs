@@ -34,7 +34,7 @@ pub fn FilterBar() -> impl IntoView {
                 // Count
                 <span class="text-sm text-gray-500 flex items-center gap-1">
                     <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsBarChartFill /></span>
-                    "3,694,942 calls"
+                    "3,700,569 calls"
                 </span>
                 // Auto Load
                 <label class="flex items-center gap-1 text-sm text-gray-500 cursor-pointer">
