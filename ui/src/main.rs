@@ -10,7 +10,7 @@ use leptos_router::{
     components::{Route, Router, Routes},
     path,
 };
-use sections::activities::CallsPage;
+use sections::activities::{ActivitiesSideNav, CallsPage, PlaceholderPage};
 
 fn main() {
     console_error_panic_hook::set_once();
@@ -88,15 +88,25 @@ fn App() -> impl IntoView {
                     </AppShellIconNav>
 
                     <AppShellSidePanel class="w-48 bg-white border-r border-iiz-gray-border">
-                        <div class="p-3">
-                            // Side panel content will be added in Task 2
-                        </div>
+                        <Show when=move || section.get() == Some("activities".to_string())>
+                            <ActivitiesSideNav />
+                        </Show>
                     </AppShellSidePanel>
 
                     <AppShellContent class="bg-iiz-gray-bg">
                         <Routes fallback=|| "Page not found">
                             <Route path=path!("/") view=HomePage />
                             <Route path=path!("/activities/calls") view=CallsPage />
+                            <Route path=path!("/activities/texts") view=PlaceholderPage />
+                            <Route path=path!("/activities/forms") view=PlaceholderPage />
+                            <Route path=path!("/activities/chats") view=PlaceholderPage />
+                            <Route path=path!("/activities/faxes") view=PlaceholderPage />
+                            <Route path=path!("/activities/videos") view=PlaceholderPage />
+                            <Route path=path!("/activities/export") view=PlaceholderPage />
+                            <Route path=path!("/contacts/lists") view=PlaceholderPage />
+                            <Route path=path!("/contacts/blocked") view=PlaceholderPage />
+                            <Route path=path!("/contacts/do-not-call") view=PlaceholderPage />
+                            <Route path=path!("/contacts/do-not-text") view=PlaceholderPage />
                         </Routes>
                     </AppShellContent>
                 </AppShell>
