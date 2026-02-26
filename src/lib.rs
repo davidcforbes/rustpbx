@@ -35,6 +35,8 @@ pub mod playbook;
 pub mod offline;
 pub mod useragent;
 
+pub mod iiz;
+
 // --- AI Voice Agent shared types (from active-call lib.rs) ---
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
