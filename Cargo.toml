@@ -137,7 +137,8 @@ ldap3 = "0.12.1"
 lettre = { version = "0.11", optional = true, features = ["smtp-transport", "tokio1-native-tls", "builder"] }
 
 # 4iiz ORM (Diesel + diesel-async for PostgreSQL)
-diesel = { version = "2.2", features = ["postgres", "uuid", "chrono", "serde_json"] }
+diesel = { version = "2.2", features = ["postgres", "uuid", "chrono", "serde_json", "numeric"] }
+bigdecimal = { version = "0.4", features = ["serde"] }
 diesel-async = { version = "0.5", features = ["postgres", "bb8"] }
 diesel-derive-enum = { version = "2.1", features = ["postgres"] }
 pgvector = { version = "0.4", features = ["diesel", "serde"] }

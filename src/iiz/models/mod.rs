@@ -4,8 +4,10 @@
 //! the Diesel ORM and API serialization.
 
 pub mod accounts;
+pub mod activities;
 pub mod ai_tools;
 pub mod automations;
+pub mod communication;
 pub mod contacts;
 pub mod engagement;
 pub mod enums;
@@ -74,6 +76,19 @@ pub use ai_tools::{
     UpdateAskAiConfig, UpdateChatAiAgent, UpdateChatAiConfig, UpdateDialogflowConfig,
     UpdateKnowledgeBank, UpdateKnowledgeBankDocument, UpdateKnowledgeBankEmbedding,
     UpdateSummaryConfig, UpdateVoiceAiAgent, VoiceAiAgent,
+};
+pub use activities::{
+    ActiveCall, AgentStateLogEntry, ApiLogEntry, CallAiSummary, CallAnnotation, CallDailySummary,
+    CallFlowEvent, CallKeywordHit, CallRecord, CallTag, CallTranscriptionSegment,
+    CallVisitorSession, MonitoringEvent, NewActiveCall, NewAgentStateLogEntry, NewApiLogEntry,
+    NewCallAiSummary, NewCallAnnotation, NewCallDailySummary, NewCallFlowEvent, NewCallKeywordHit,
+    NewCallRecord, NewCallTag, NewCallTranscriptionSegment, NewCallVisitorSession,
+    NewMonitoringEvent, UpdateActiveCall, UpdateCallAnnotation, UpdateCallDailySummary,
+};
+pub use communication::{
+    ChatRecord, ExportRecord, FaxRecord, FormRecord, NewChatRecord, NewExportRecord, NewFaxRecord,
+    NewFormRecord, NewTextMessage, NewTextRecord, NewVideoRecord, TextMessage, TextRecord,
+    UpdateChatRecord, UpdateExportRecord, VideoRecord,
 };
 
 // Common type aliases used across models
