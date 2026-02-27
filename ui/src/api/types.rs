@@ -624,6 +624,129 @@ pub struct TagItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Flows section — additional
+// -------------------------------------------------------------------------
+
+/// A geo router returned by GET /flows/geo-routers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeoRouterItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// An agent script returned by GET /flows/agent-scripts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentScriptItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A routing table returned by GET /flows/routing-tables
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutingTableItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A voicemail box returned by GET /flows/voicemails
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoicemailBoxItem {
+    pub id: String,
+    pub name: String,
+    pub greeting_type: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A keyword spotting config returned by GET /flows/keyword-spotting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeywordSpottingItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A lambda returned by GET /flows/lambdas
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LambdaItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub runtime: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A workflow returned by GET /flows/workflows
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A lead reactor config returned by GET /flows/lead-reactor
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LeadReactorItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A smart dialer config returned by GET /flows/smart-dialers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartDialerItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A dialogflow config returned by GET /flows/dialogflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DialogflowItem {
+    pub id: String,
+    pub name: String,
+    pub project_id: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A reminder returned by GET /flows/reminders
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReminderItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
