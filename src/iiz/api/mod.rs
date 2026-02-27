@@ -27,6 +27,7 @@ pub mod flows;
 pub mod middleware;
 pub mod numbers;
 pub mod pagination;
+pub mod reports;
 pub mod tags;
 pub mod trust_center;
 
@@ -78,8 +79,8 @@ pub fn router(state: IizState) -> Router {
         )
         // -- Trust Center section (Phase F7.2) --
         .nest("/trust-center", trust_center::router())
-        // Section routers will be nested here in later phases:
-        // .nest("/reports", reports::router())
+        // -- Reports section (Phase F8.2) --
+        .nest("/reports", reports::router())
         .with_state(state);
 
     Router::new().nest("/api/v1", api)
