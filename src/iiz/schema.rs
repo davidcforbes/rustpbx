@@ -78,9 +78,7 @@ pub mod iiz {
         #[diesel(postgres_type(name = "user_role", schema = "iiz"))]
         pub struct UserRole;
 
-        #[derive(diesel::sql_types::SqlType)]
-        #[diesel(postgres_type(name = "vector"))]
-        pub struct Vector;
+        pub use pgvector::sql_types::Vector;
 
         #[derive(diesel::sql_types::SqlType)]
         #[diesel(postgres_type(name = "workflow_node_type", schema = "iiz"))]

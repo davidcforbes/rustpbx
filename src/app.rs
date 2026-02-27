@@ -78,6 +78,8 @@ pub struct AppStateInner {
     pub active_calls: Arc<std::sync::Mutex<std::collections::HashMap<String, Arc<dyn std::any::Any + Send + Sync>>>>,
     #[cfg(feature = "voice-agent")]
     pub invitation: crate::call::active_sip::Invitation,
+    // 4iiz API state (Diesel-backed REST API)
+    pub iiz: Option<Arc<crate::iiz::api::IizState>>,
 }
 
 pub type AppState = Arc<AppStateInner>;
@@ -391,6 +393,7 @@ impl AppStateBuilder {
             active_calls: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
             #[cfg(feature = "voice-agent")]
             invitation,
+            iiz: None, // Initialized via config in Phase 1
         });
 
         if let Some(mut manager) = callrecord_manager {
@@ -657,6 +660,11 @@ pub fn create_router(state: AppState) -> Router {
         let voice_agent_routes =
             crate::handler::voice_agent::voice_agent_router().with_state(state.clone());
         router = router.nest("/voice-agent/v1", voice_agent_routes);
+    }
+
+    // 4iiz API (Diesel-backed REST API)
+    if let Some(ref iiz_state) = state.iiz {
+        router = router.merge(crate::iiz::api::router((**iiz_state).clone()));
     }
 
     let access_log_skip_paths = Arc::new(state.config().http_access_skip_paths.clone());

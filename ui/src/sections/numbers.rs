@@ -2,6 +2,12 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
+use crate::api::api_get;
+use crate::api::types::{
+    CallSettingItem, ListResponse, PaginationMeta, ReceivingNumberItem, TargetNumberItem,
+    TextNumberItem, TrackingNumberItem, TrackingSourceItem,
+};
+
 // ---------------------------------------------------------------------------
 // Numbers side navigation
 // ---------------------------------------------------------------------------
@@ -54,60 +60,126 @@ pub fn NumbersSideNav() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Data types
+// Shared helpers (duplicated from contacts.rs to keep modules independent)
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Debug)]
-struct TrackingNumber {
-    number: &'static str,
-    source: &'static str,
-    routing: &'static str,
-    routing_type: &'static str,
-    text_enabled: bool,
-    target: &'static str,
-    config: &'static str,
-    billing_date: &'static str,
-    active: bool,
-    number_type: &'static str,
+/// Format an ISO-8601 datetime string for display (just the first 19 chars).
+fn fmt_date(iso: &str) -> String {
+    iso.replace('T', " ")
+        .trim_end_matches('Z')
+        .chars()
+        .take(19)
+        .collect()
 }
 
-#[derive(Clone, Debug)]
-struct ReceivingNumber {
-    number: &'static str,
-    description: &'static str,
-    tracking_count: u32,
-    total_calls: &'static str,
-    updated: &'static str,
-    created: &'static str,
+/// Format an integer with comma separators (e.g. 73549 -> "73,549").
+fn fmt_number(n: i32) -> String {
+    if n < 0 {
+        return format!("-{}", fmt_number(-n));
+    }
+    let s = n.to_string();
+    let mut result = String::new();
+    for (i, c) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(c);
+    }
+    result.chars().rev().collect()
 }
 
-#[derive(Clone, Debug)]
-struct CallSetting {
-    name: &'static str,
-    is_default: bool,
-    greeting: bool,
-    whisper: bool,
-    inbound_rec: bool,
-    outbound_rec: bool,
-    transcribe: bool,
-    caller_id: bool,
-    enhanced_id: bool,
-    override_id: bool,
-    spam: bool,
-    updated: &'static str,
-    created: &'static str,
+/// Render a pagination footer from real metadata.
+fn pagination_footer(meta: &PaginationMeta) -> impl IntoView {
+    let page = meta.page;
+    let per_page = meta.per_page;
+    let total_items = meta.total_items;
+    let total_pages = meta.total_pages;
+    let has_prev = meta.has_prev;
+    let has_next = meta.has_next;
+
+    let start = (page - 1) * per_page + 1;
+    let end = std::cmp::min(page * per_page, total_items);
+    let showing = format!("Showing {}-{} of {}", start, end, total_items);
+
+    let mut pages: Vec<i64> = Vec::new();
+    pages.push(1);
+    if page > 3 {
+        pages.push(-1);
+    }
+    for p in (page - 1)..=(page + 1) {
+        if p > 1 && p < total_pages {
+            pages.push(p);
+        }
+    }
+    if page < total_pages - 2 {
+        pages.push(-1);
+    }
+    if total_pages > 1 {
+        pages.push(total_pages);
+    }
+    pages.dedup();
+
+    view! {
+        <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
+            <span>{showing}</span>
+            <div class="flex-1"></div>
+            <div class="flex items-center gap-1">
+                <button
+                    class="btn btn-xs btn-ghost text-gray-400"
+                    disabled=move || !has_prev
+                >
+                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronLeft /></span>
+                </button>
+                {pages.into_iter().map(|p| {
+                    if p == -1 {
+                        view! { <span class="text-xs text-gray-400">"..."</span> }.into_any()
+                    } else if p == page {
+                        let s = p.to_string();
+                        view! { <button class="btn btn-xs bg-iiz-cyan text-white border-none">{s}</button> }.into_any()
+                    } else {
+                        let s = p.to_string();
+                        view! { <button class="btn btn-xs btn-ghost">{s}</button> }.into_any()
+                    }
+                }).collect::<Vec<_>>()}
+                <button
+                    class="btn btn-xs btn-ghost text-gray-400"
+                    disabled=move || !has_next
+                >
+                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span>
+                </button>
+            </div>
+            <span class="text-xs text-gray-400 ml-2">"Per page:"</span>
+            <select class="select select-xs select-bordered ml-1">
+                <option selected>"25"</option>
+                <option>"50"</option>
+                <option>"100"</option>
+            </select>
+        </div>
+    }
 }
 
-#[derive(Clone, Debug)]
-struct TrackingSource {
-    name: &'static str,
-    source_type: &'static str,
-    position: u32,
-    numbers: &'static str,
-    last_touch: bool,
-    updated: &'static str,
-    created: &'static str,
+/// Loading spinner placeholder.
+fn loading_view() -> impl IntoView {
+    view! {
+        <div class="flex-1 flex items-center justify-center p-8">
+            <span class="loading loading-spinner loading-md text-iiz-cyan"></span>
+            <span class="ml-2 text-gray-500">"Loading..."</span>
+        </div>
+    }
 }
+
+/// Error message display.
+fn error_view(msg: String) -> impl IntoView {
+    view! {
+        <div class="flex-1 flex items-center justify-center p-8">
+            <div class="text-red-500 text-sm">{msg}</div>
+        </div>
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mock data types (only for pages that stay on mock data)
+// ---------------------------------------------------------------------------
 
 #[derive(Clone, Debug)]
 struct BuyNumber {
@@ -116,56 +188,6 @@ struct BuyNumber {
     rate_center: &'static str,
     features: Vec<&'static str>,
     monthly: &'static str,
-}
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-fn mock_tracking_numbers() -> Vec<TrackingNumber> {
-    vec![
-        TrackingNumber { number: "(910) 991-0047", source: "Test source", routing: "SYSTANGO TESTING", routing_type: "Queue", text_enabled: true, target: "Account Level", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-23", active: true, number_type: "Offsite Static" },
-        TrackingNumber { number: "(980) 553-2289", source: "Facebook Paid", routing: "Check if New Lead or Current Client", routing_type: "Smart Router", text_enabled: true, target: "(855) 563-5818", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-13", active: true, number_type: "Onsite Dynamic" },
-        TrackingNumber { number: "(855) 614-1888", source: "Customer Service Line", routing: "Rescue Team", routing_type: "Queue", text_enabled: true, target: "Account Level", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-01", active: true, number_type: "Offsite Static" },
-        TrackingNumber { number: "(919) 290-4449", source: "WhatsApp", routing: "Customer Service Queue (Official)", routing_type: "Queue", text_enabled: true, target: "Account Level", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-01", active: true, number_type: "Offsite Static" },
-        TrackingNumber { number: "(832) 558-3313", source: "Facebook West Houston Office", routing: "Check if New Lead or...", routing_type: "Smart Router", text_enabled: true, target: "(855) 563-5818", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-01", active: true, number_type: "Onsite Dynamic" },
-        TrackingNumber { number: "(276) 201-0001", source: "Google Organic", routing: "Main IVR", routing_type: "Queue", text_enabled: false, target: "Account Level", config: "Inbound Rec, Caller ID", billing_date: "2026-03-15", active: true, number_type: "Offsite Static" },
-        TrackingNumber { number: "(276) 201-0002", source: "YouTube Ads", routing: "Sales Queue", routing_type: "Queue", text_enabled: true, target: "(888) 361-3349", config: "Inbound Rec, Outbound Rec, Caller ID", billing_date: "2026-03-15", active: false, number_type: "Offsite Static" },
-        TrackingNumber { number: "(276) 201-0003", source: "TikTok Organic", routing: "CS Smart Router", routing_type: "Smart Router", text_enabled: true, target: "(855) 563-5818", config: "Inbound Rec, Outbound Rec, Transcribe", billing_date: "2026-03-15", active: true, number_type: "Onsite Dynamic" },
-    ]
-}
-
-fn mock_receiving_numbers() -> Vec<ReceivingNumber> {
-    vec![
-        ReceivingNumber { number: "(252) 235-4100", description: "CASE MANAGERS QUEUE", tracking_count: 2, total_calls: "182", updated: "2025-12-15", created: "2024-06-10" },
-        ReceivingNumber { number: "(844) 707-4320", description: "RMS-FKM-PAYMENTS", tracking_count: 1, total_calls: "0", updated: "2025-11-20", created: "2024-08-05" },
-        ReceivingNumber { number: "(252) 351-2397", description: "CS QUEUE", tracking_count: 5, total_calls: "4,119", updated: "2025-12-20", created: "2024-03-15" },
-        ReceivingNumber { number: "(888) 361-3349", description: "SALES QUEUE", tracking_count: 8, total_calls: "13,228", updated: "2025-12-22", created: "2023-11-01" },
-        ReceivingNumber { number: "(888) 399-8387", description: "ANSWERHERO", tracking_count: 12, total_calls: "73,549", updated: "2025-12-22", created: "2023-05-20" },
-        ReceivingNumber { number: "(855) 563-5818", description: "MAIN CS LINE", tracking_count: 15, total_calls: "50,417", updated: "2025-12-22", created: "2023-01-15" },
-    ]
-}
-
-fn mock_call_settings() -> Vec<CallSetting> {
-    vec![
-        CallSetting { name: "Account Level", is_default: true, greeting: true, whisper: false, inbound_rec: true, outbound_rec: true, transcribe: false, caller_id: true, enhanced_id: false, override_id: false, spam: false, updated: "2025-12-01", created: "2023-01-15" },
-        CallSetting { name: "No Call Recording", is_default: false, greeting: false, whisper: false, inbound_rec: true, outbound_rec: false, transcribe: false, caller_id: true, enhanced_id: false, override_id: false, spam: false, updated: "2025-10-15", created: "2024-06-01" },
-    ]
-}
-
-fn mock_tracking_sources() -> Vec<TrackingSource> {
-    vec![
-        TrackingSource { name: "Direct", source_type: "Onsite Dynamic", position: 1, numbers: "13 Assigned", last_touch: false, updated: "2025-12-20", created: "2023-01-15" },
-        TrackingSource { name: "Woosender", source_type: "Offsite Static", position: 2, numbers: "3 Assigned", last_touch: true, updated: "2025-12-18", created: "2023-03-10" },
-        TrackingSource { name: "Email Marketing", source_type: "Offsite Static", position: 3, numbers: "2 Assigned", last_touch: false, updated: "2025-12-15", created: "2023-05-20" },
-        TrackingSource { name: "Facebook Paid", source_type: "Offsite Static", position: 4, numbers: "5 Assigned", last_touch: false, updated: "2025-12-10", created: "2023-06-01" },
-        TrackingSource { name: "Google Organic", source_type: "Offsite Static", position: 5, numbers: "8 Assigned", last_touch: false, updated: "2025-12-10", created: "2023-06-15" },
-        TrackingSource { name: "YouTube Ads", source_type: "Offsite Static", position: 6, numbers: "2 Assigned", last_touch: false, updated: "2025-11-30", created: "2024-01-10" },
-        TrackingSource { name: "TikTok Organic", source_type: "Offsite Static", position: 7, numbers: "4 Assigned", last_touch: true, updated: "2025-11-25", created: "2024-03-01" },
-        TrackingSource { name: "Google Paid", source_type: "Offsite Static", position: 8, numbers: "6 Assigned", last_touch: false, updated: "2025-11-20", created: "2024-04-15" },
-        TrackingSource { name: "Bing Organic", source_type: "Offsite Static", position: 9, numbers: "1 Assigned", last_touch: false, updated: "2025-11-15", created: "2024-06-01" },
-        TrackingSource { name: "Referral", source_type: "Offsite Static", position: 10, numbers: "3 Assigned", last_touch: true, updated: "2025-11-10", created: "2024-07-20" },
-    ]
 }
 
 fn mock_buy_numbers() -> Vec<BuyNumber> {
@@ -187,7 +209,9 @@ fn mock_buy_numbers() -> Vec<BuyNumber> {
 
 #[component]
 pub fn TrackingNumbersPage() -> impl IntoView {
-    let numbers = mock_tracking_numbers();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TrackingNumberItem>>("/numbers/tracking?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -197,7 +221,14 @@ pub fn TrackingNumbersPage() -> impl IntoView {
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Released Numbers"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Number Log"</a>
                 <div class="flex-1"></div>
-                <span class="text-sm text-gray-500">"254 Tracking Numbers"</span>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Tracking Numbers", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <div class="join">
                     <input type="text" placeholder="Search numbers..." class="input input-sm input-bordered join-item w-48" />
                     <button class="btn btn-sm btn-ghost join-item border border-gray-300">
@@ -211,14 +242,13 @@ pub fn TrackingNumbersPage() -> impl IntoView {
 
             // Table headers
             <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <div class="grid grid-cols-[32px_120px_140px_180px_80px_110px_160px_100px_80px_80px_100px] gap-1 px-4 py-2 items-center">
+                <div class="grid grid-cols-[32px_120px_140px_180px_80px_110px_100px_80px_80px_100px] gap-1 px-4 py-2 items-center">
                     <div class="col-header"></div>
                     <div class="col-header">"Number"</div>
                     <div class="col-header">"Source"</div>
-                    <div class="col-header">"Call Routing"</div>
+                    <div class="col-header">"Routing"</div>
                     <div class="col-header">"Text"</div>
                     <div class="col-header">"Target"</div>
-                    <div class="col-header">"Config"</div>
                     <div class="col-header">"Billing"</div>
                     <div class="col-header">"Active"</div>
                     <div class="col-header">"Actions"</div>
@@ -226,62 +256,62 @@ pub fn TrackingNumbersPage() -> impl IntoView {
                 </div>
             </div>
 
-            // Table rows
-            <div class="flex-1 overflow-y-auto">
-                {numbers.into_iter().map(|n| view! { <TrackingNumberRow number=n /> }).collect::<Vec<_>>()}
-            </div>
-
-            // Pagination bar
-            <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-8 of 254"</span>
-                <div class="flex-1"></div>
-                <div class="flex items-center gap-1">
-                    <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronLeft /></span></button>
-                    <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                    <button class="btn btn-xs btn-ghost">"2"</button>
-                    <button class="btn btn-xs btn-ghost">"3"</button>
-                    <span class="text-xs text-gray-400">"..."</span>
-                    <button class="btn btn-xs btn-ghost">"26"</button>
-                    <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                </div>
-                <select class="select select-xs select-bordered ml-2">
-                    <option selected>"10"</option>
-                    <option>"25"</option>
-                    <option>"50"</option>
-                    <option>"100"</option>
-                </select>
-            </div>
+            // Table rows with loading/error handling
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|n| {
+                                    view! { <TrackingNumberRow number=n /> }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
 
 #[component]
-fn TrackingNumberRow(number: TrackingNumber) -> impl IntoView {
-    let type_class = if number.number_type == "Onsite Dynamic" {
+fn TrackingNumberRow(number: TrackingNumberItem) -> impl IntoView {
+    let type_class = if number.number_class == "dynamic" {
         "badge badge-sm bg-purple-100 text-purple-700 border-none"
     } else {
         "badge badge-sm bg-gray-100 text-gray-600 border-none"
     };
-    let routing_badge = if number.routing_type == "Smart Router" {
+    let routing_type_str = number.routing_type.clone().unwrap_or_default();
+    let routing_badge = if routing_type_str.contains("smart") || routing_type_str.contains("Smart") {
         "badge badge-xs bg-blue-100 text-blue-700 border-none"
     } else {
         "badge badge-xs bg-green-100 text-green-700 border-none"
     };
-    let active_class = if number.active { "text-green-600 text-xs" } else { "text-gray-400 text-xs" };
-    let active_text = if number.active { "Yes" } else { "No" };
+    let active_class = if number.is_active { "text-green-600 text-xs" } else { "text-gray-400 text-xs" };
+    let active_text = if number.is_active { "Yes" } else { "No" };
+    let routing_desc = number.routing_description.clone().unwrap_or_else(|| "\u{2014}".to_string());
+    let source_display = number.source_id.clone().unwrap_or_else(|| "\u{2014}".to_string());
+    let target_display = number.routing_target_id.clone().unwrap_or_else(|| "\u{2014}".to_string());
+    let billing_display = number.billing_date.map(|d| d.to_string()).unwrap_or_else(|| "\u{2014}".to_string());
+    let number_type_display = format!("{} {}", number.number_class, number.number_type);
 
     view! {
-        <div class="activity-row grid grid-cols-[32px_120px_140px_180px_80px_110px_160px_100px_80px_80px_100px] gap-1 px-4 py-2.5 items-center cursor-pointer">
+        <div class="activity-row grid grid-cols-[32px_120px_140px_180px_80px_110px_100px_80px_80px_100px] gap-1 px-4 py-2.5 items-center cursor-pointer">
             <button class="btn btn-xs btn-ghost text-gray-400">
                 <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
             </button>
             <div>
-                <div class="text-sm font-medium text-iiz-blue-link">{number.number}</div>
+                <div class="text-sm font-medium text-iiz-blue-link">{number.number.clone()}</div>
             </div>
-            <div class="text-xs text-gray-600 truncate">{number.source}</div>
+            <div class="text-xs text-gray-600 truncate">{source_display}</div>
             <div>
-                <div class="text-xs truncate">{number.routing}</div>
-                <span class=routing_badge>{number.routing_type}</span>
+                <div class="text-xs truncate">{routing_desc}</div>
+                <span class=routing_badge>{routing_type_str}</span>
             </div>
             <div>
                 {if number.text_enabled {
@@ -290,9 +320,8 @@ fn TrackingNumberRow(number: TrackingNumber) -> impl IntoView {
                     view! { <span class="text-xs text-gray-400">"-"</span> }.into_any()
                 }}
             </div>
-            <div class="text-xs text-gray-600 truncate">{number.target}</div>
-            <div class="text-xs text-gray-500 truncate">{number.config}</div>
-            <div class="text-xs text-gray-500">{number.billing_date}</div>
+            <div class="text-xs text-gray-600 truncate">{target_display}</div>
+            <div class="text-xs text-gray-500">{billing_display}</div>
             <div class=active_class>{active_text}</div>
             <div class="flex items-center gap-0.5">
                 <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsCalendar /></span></button>
@@ -300,13 +329,13 @@ fn TrackingNumberRow(number: TrackingNumber) -> impl IntoView {
                 <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsTelephone /></span></button>
                 <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsClipboard /></span></button>
             </div>
-            <div><span class=type_class>{number.number_type}</span></div>
+            <div><span class=type_class>{number_type_display}</span></div>
         </div>
     }
 }
 
 // ---------------------------------------------------------------------------
-// Buy Numbers page
+// Buy Numbers page (UNCHANGED - mock data, no backend table)
 // ---------------------------------------------------------------------------
 
 #[component]
@@ -430,7 +459,9 @@ pub fn BuyNumbersPage() -> impl IntoView {
 
 #[component]
 pub fn ReceivingNumbersPage() -> impl IntoView {
-    let numbers = mock_receiving_numbers();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ReceivingNumberItem>>("/numbers/receiving?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -438,7 +469,14 @@ pub fn ReceivingNumbersPage() -> impl IntoView {
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <div class="flex-1"></div>
-                <span class="text-sm text-gray-500">"6 Receiving Numbers"</span>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Receiving Numbers", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <div class="join">
                     <input type="text" placeholder="Search..." class="input input-sm input-bordered join-item w-40" />
                     <button class="btn btn-sm btn-ghost join-item border border-gray-300">
@@ -461,44 +499,51 @@ pub fn ReceivingNumbersPage() -> impl IntoView {
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto">
-                {numbers.into_iter().map(|n| {
-                    let tracking_text = format!("{} Numbers", n.tracking_count);
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
                     view! {
-                        <div class="activity-row grid grid-cols-[32px_160px_120px_40px_80px_100px_100px_100px] gap-2 px-4 py-2.5 items-center cursor-pointer">
-                            <button class="btn btn-xs btn-ghost text-gray-400">
-                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                            </button>
-                            <div>
-                                <div class="text-sm font-medium text-iiz-blue-link">{n.number}</div>
-                                <div class="text-xs text-gray-500">{n.description}</div>
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|n| {
+                                    let desc = n.description.clone().unwrap_or_default();
+                                    let tracking_text = format!("{} Numbers", n.tracking_count);
+                                    let total_calls_display = fmt_number(n.total_calls);
+                                    let updated = fmt_date(&n.updated_at);
+                                    let created = fmt_date(&n.created_at);
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_160px_120px_40px_80px_100px_100px_100px] gap-2 px-4 py-2.5 items-center cursor-pointer">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div>
+                                                <div class="text-sm font-medium text-iiz-blue-link">{n.number.clone()}</div>
+                                                <div class="text-xs text-gray-500">{desc}</div>
+                                            </div>
+                                            <div>
+                                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">{tracking_text}</a>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-xs btn-ghost text-gray-400">
+                                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsVolumeUpFill /></span>
+                                                </button>
+                                            </div>
+                                            <div class="text-xs text-gray-500">"-"</div>
+                                            <div class="text-sm">{total_calls_display}</div>
+                                            <div class="text-xs text-gray-500">{updated}</div>
+                                            <div class="text-xs text-gray-500">{created}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
                             </div>
-                            <div>
-                                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">{tracking_text}</a>
-                            </div>
-                            <div>
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsVolumeUpFill /></span>
-                                </button>
-                            </div>
-                            <div class="text-xs text-gray-500">"-"</div>
-                            <div class="text-sm">{n.total_calls}</div>
-                            <div class="text-xs text-gray-500">{n.updated}</div>
-                            <div class="text-xs text-gray-500">{n.created}</div>
-                        </div>
-                    }
-                }).collect::<Vec<_>>()}
-            </div>
-
-            <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-6 of 6"</span>
-                <div class="flex-1"></div>
-                <select class="select select-xs select-bordered">
-                    <option selected>"10"</option>
-                    <option>"25"</option>
-                    <option>"50"</option>
-                </select>
-            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -509,7 +554,9 @@ pub fn ReceivingNumbersPage() -> impl IntoView {
 
 #[component]
 pub fn CallSettingsPage() -> impl IntoView {
-    let settings = mock_call_settings();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<CallSettingItem>>("/numbers/call-settings?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -517,7 +564,14 @@ pub fn CallSettingsPage() -> impl IntoView {
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <div class="flex-1"></div>
-                <span class="text-sm text-gray-500">"2 Call Settings"</span>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Call Settings", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"New Call Settings"</button>
             </header>
 
@@ -540,37 +594,52 @@ pub fn CallSettingsPage() -> impl IntoView {
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto overflow-x-auto">
-                {settings.into_iter().map(|s| {
-                    let check = |enabled: bool| {
-                        if enabled {
-                            view! { <span class="text-green-500 text-sm">"✓"</span> }.into_any()
-                        } else {
-                            view! { <span class="text-gray-300 text-sm">"-"</span> }.into_any()
-                        }
-                    };
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
                     view! {
-                        <div class="activity-row grid grid-cols-[32px_140px_60px_60px_60px_60px_60px_60px_60px_60px_60px_60px_90px_90px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
-                            <button class="btn btn-xs btn-ghost text-gray-400">
-                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                            </button>
-                            <div class="text-sm font-medium">{s.name}</div>
-                            <div class="text-center">{check(s.is_default)}</div>
-                            <div class="text-center">{check(s.greeting)}</div>
-                            <div class="text-center">{check(s.whisper)}</div>
-                            <div class="text-center">{check(s.inbound_rec)}</div>
-                            <div class="text-center">{check(s.outbound_rec)}</div>
-                            <div class="text-center">{check(s.transcribe)}</div>
-                            <div class="text-center">{check(s.caller_id)}</div>
-                            <div class="text-center">{check(s.enhanced_id)}</div>
-                            <div class="text-center">{check(s.override_id)}</div>
-                            <div class="text-center">{check(s.spam)}</div>
-                            <div class="text-xs text-gray-500">{s.updated}</div>
-                            <div class="text-xs text-gray-500">{s.created}</div>
-                        </div>
-                    }
-                }).collect::<Vec<_>>()}
-            </div>
+                        <>
+                            <div class="flex-1 overflow-y-auto overflow-x-auto">
+                                {items.into_iter().map(|s| {
+                                    let check = |enabled: bool| {
+                                        if enabled {
+                                            view! { <span class="text-green-500 text-sm">{"\u{2713}"}</span> }.into_any()
+                                        } else {
+                                            view! { <span class="text-gray-300 text-sm">"-"</span> }.into_any()
+                                        }
+                                    };
+                                    let updated = fmt_date(&s.updated_at);
+                                    let created = fmt_date(&s.created_at);
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_140px_60px_60px_60px_60px_60px_60px_60px_60px_60px_60px_90px_90px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div class="text-sm font-medium">{s.name.clone()}</div>
+                                            <div class="text-center">{check(s.is_default)}</div>
+                                            <div class="text-center">{check(s.greeting_enabled)}</div>
+                                            <div class="text-center">{check(s.whisper_enabled)}</div>
+                                            <div class="text-center">{check(s.inbound_recording)}</div>
+                                            <div class="text-center">{check(s.outbound_recording)}</div>
+                                            <div class="text-center">{check(s.transcription_enabled)}</div>
+                                            <div class="text-center">{check(s.caller_id_enabled)}</div>
+                                            <div class="text-center">{check(s.enhanced_caller_id)}</div>
+                                            <div class="text-center">{check(s.caller_id_override)}</div>
+                                            <div class="text-center">{check(s.spam_filter_enabled)}</div>
+                                            <div class="text-xs text-gray-500">{updated}</div>
+                                            <div class="text-xs text-gray-500">{created}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -581,7 +650,9 @@ pub fn CallSettingsPage() -> impl IntoView {
 
 #[component]
 pub fn TrackingSourcesPage() -> impl IntoView {
-    let sources = mock_tracking_sources();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TrackingSourceItem>>("/numbers/sources?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -590,7 +661,14 @@ pub fn TrackingSourcesPage() -> impl IntoView {
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Export"</a>
                 <div class="flex-1"></div>
-                <span class="text-sm text-gray-500">"46 Tracking Sources"</span>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Tracking Sources", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <div class="join">
                     <input type="text" placeholder="Search..." class="input input-sm input-bordered join-item w-40" />
                     <button class="btn btn-sm btn-ghost join-item border border-gray-300">
@@ -613,141 +691,67 @@ pub fn TrackingSourcesPage() -> impl IntoView {
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto">
-                {sources.into_iter().map(|s| {
-                    let type_class = if s.source_type == "Onsite Dynamic" {
-                        "badge badge-sm bg-purple-100 text-purple-700 border-none"
-                    } else {
-                        "badge badge-sm bg-gray-100 text-gray-600 border-none"
-                    };
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
                     view! {
-                        <div class="activity-row grid grid-cols-[32px_1fr_120px_60px_100px_70px_90px_90px] gap-2 px-4 py-2.5 items-center cursor-pointer">
-                            <button class="btn btn-xs btn-ghost text-gray-400">
-                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                            </button>
-                            <div class="text-sm font-medium">{s.name}</div>
-                            <div><span class=type_class>{s.source_type}</span></div>
-                            <div class="text-sm text-center">{s.position}</div>
-                            <div><a class="text-xs text-iiz-cyan hover:underline cursor-pointer">{s.numbers}</a></div>
-                            <div class="text-center">
-                                {if s.last_touch {
-                                    view! { <span class="text-green-500 text-sm">"✓"</span> }.into_any()
-                                } else {
-                                    view! { <span class="text-gray-300 text-sm">"-"</span> }.into_any()
-                                }}
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|s| {
+                                    let source_type_display = s.source_type.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                    let type_class = if source_type_display.contains("Dynamic") || source_type_display.contains("dynamic") {
+                                        "badge badge-sm bg-purple-100 text-purple-700 border-none"
+                                    } else {
+                                        "badge badge-sm bg-gray-100 text-gray-600 border-none"
+                                    };
+                                    let numbers_text = format!("{} Assigned", s.number_count);
+                                    let updated = fmt_date(&s.updated_at);
+                                    let created = fmt_date(&s.created_at);
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_1fr_120px_60px_100px_70px_90px_90px] gap-2 px-4 py-2.5 items-center cursor-pointer">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div class="text-sm font-medium">{s.name.clone()}</div>
+                                            <div><span class=type_class>{source_type_display}</span></div>
+                                            <div class="text-sm text-center">{s.position}</div>
+                                            <div><a class="text-xs text-iiz-cyan hover:underline cursor-pointer">{numbers_text}</a></div>
+                                            <div class="text-center">
+                                                {if s.last_touch {
+                                                    view! { <span class="text-green-500 text-sm">{"\u{2713}"}</span> }.into_any()
+                                                } else {
+                                                    view! { <span class="text-gray-300 text-sm">"-"</span> }.into_any()
+                                                }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">{updated}</div>
+                                            <div class="text-xs text-gray-500">{created}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
                             </div>
-                            <div class="text-xs text-gray-500">{s.updated}</div>
-                            <div class="text-xs text-gray-500">{s.created}</div>
-                        </div>
-                    }
-                }).collect::<Vec<_>>()}
-            </div>
-
-            <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-10 of 46"</span>
-                <div class="flex-1"></div>
-                <div class="flex items-center gap-1">
-                    <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronLeft /></span></button>
-                    <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                    <button class="btn btn-xs btn-ghost">"2"</button>
-                    <button class="btn btn-xs btn-ghost">"3"</button>
-                    <button class="btn btn-xs btn-ghost">"4"</button>
-                    <button class="btn btn-xs btn-ghost">"5"</button>
-                    <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                </div>
-                <select class="select select-xs select-bordered ml-2">
-                    <option selected>"10"</option>
-                    <option>"25"</option>
-                    <option>"50"</option>
-                </select>
-            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
 
 // ---------------------------------------------------------------------------
-// Additional data types for new pages
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Debug)]
-struct TextNumber {
-    number: &'static str,
-    e164: &'static str,
-}
-
-#[derive(Clone, Debug)]
-struct TargetNumber {
-    number: &'static str,
-    description: &'static str,
-    target_type: &'static str,
-    tracking_numbers: Vec<&'static str>,
-    more_count: u32,
-    updated: &'static str,
-    created: &'static str,
-}
-
-// ---------------------------------------------------------------------------
-// Additional mock data for new pages
-// ---------------------------------------------------------------------------
-
-fn mock_text_available() -> Vec<TextNumber> {
-    vec![
-        TextNumber { number: "(276) 201-0001", e164: "+12762010001" },
-        TextNumber { number: "(276) 201-0002", e164: "+12762010002" },
-        TextNumber { number: "(276) 201-0004", e164: "+12762010004" },
-        TextNumber { number: "(276) 201-0005", e164: "+12762010005" },
-        TextNumber { number: "(276) 201-0006", e164: "+12762010006" },
-        TextNumber { number: "(276) 201-0007", e164: "+12762010007" },
-        TextNumber { number: "(276) 201-0008", e164: "+12762010008" },
-        TextNumber { number: "(910) 991-0047", e164: "+19109910047" },
-        TextNumber { number: "(919) 290-4449", e164: "+19192904449" },
-    ]
-}
-
-fn mock_text_assigned() -> Vec<TextNumber> {
-    vec![
-        TextNumber { number: "(980) 553-2289", e164: "+19805532289" },
-        TextNumber { number: "(855) 614-1888", e164: "+18556141888" },
-        TextNumber { number: "(832) 558-3313", e164: "+18325583313" },
-        TextNumber { number: "(252) 351-2397", e164: "+12523512397" },
-        TextNumber { number: "(888) 361-3349", e164: "+18883613349" },
-        TextNumber { number: "(888) 399-8387", e164: "+18883998387" },
-        TextNumber { number: "(855) 563-5818", e164: "+18555635818" },
-    ]
-}
-
-fn mock_long_text_available() -> Vec<TextNumber> {
-    vec![
-        TextNumber { number: "(276) 201-0001", e164: "+12762010001" },
-        TextNumber { number: "(276) 201-0004", e164: "+12762010004" },
-        TextNumber { number: "(276) 201-0006", e164: "+12762010006" },
-        TextNumber { number: "(276) 201-0008", e164: "+12762010008" },
-        TextNumber { number: "(910) 991-0047", e164: "+19109910047" },
-        TextNumber { number: "(919) 290-4449", e164: "+19192904449" },
-        TextNumber { number: "(252) 235-4100", e164: "+12522354100" },
-    ]
-}
-
-fn mock_target_numbers() -> Vec<TargetNumber> {
-    vec![
-        TargetNumber { number: "(252) 351-2397", description: "Description", target_type: "Phone Match", tracking_numbers: vec!["+12523512397", "+19199180047"], more_count: 0, updated: "2025-12-20", created: "2024-03-15" },
-        TargetNumber { number: "(888) 361-3349", description: "Website", target_type: "Phone Match", tracking_numbers: vec!["+18883613349", "+19802231234"], more_count: 9, updated: "2025-12-18", created: "2023-11-01" },
-        TargetNumber { number: "(888) 359-4517", description: "Google Adwords NC", target_type: "Phone Match", tracking_numbers: vec!["+18883594517"], more_count: 0, updated: "2025-11-30", created: "2023-08-20" },
-        TargetNumber { number: "(855) 563-5818", description: "Google Adwords", target_type: "Phone Match", tracking_numbers: vec!["+18555635818"], more_count: 15, updated: "2025-11-25", created: "2023-01-15" },
-    ]
-}
-
-// ---------------------------------------------------------------------------
-// Text Numbers page - Dual-list picker
+// Text Numbers page - Dual-list picker (wired to API)
 // ---------------------------------------------------------------------------
 
 #[component]
 fn TextNumberDualList(
     title: &'static str,
-    available: Vec<TextNumber>,
-    assigned: Vec<TextNumber>,
-    available_total: u32,
-    assigned_total: u32,
+    available: Vec<TextNumberItem>,
+    assigned: Vec<TextNumberItem>,
+    available_total: usize,
+    assigned_total: usize,
 ) -> impl IntoView {
     let avail_count = available.len();
     let assign_count = assigned.len();
@@ -771,7 +775,7 @@ fn TextNumberDualList(
                                 view! {
                                     <label class="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
                                         <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" />
-                                        <span class="text-xs text-gray-700">{n.number}</span>
+                                        <span class="text-xs text-gray-700">{n.number.clone()}</span>
                                     </label>
                                 }
                             }).collect::<Vec<_>>()}
@@ -811,7 +815,7 @@ fn TextNumberDualList(
                                 view! {
                                     <label class="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
                                         <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" />
-                                        <span class="text-xs text-gray-700">{n.number}</span>
+                                        <span class="text-xs text-gray-700">{n.number.clone()}</span>
                                     </label>
                                 }
                             }).collect::<Vec<_>>()}
@@ -833,20 +837,9 @@ fn TextNumberDualList(
 
 #[component]
 pub fn TextNumbersPage() -> impl IntoView {
-    let available = mock_text_available();
-    let assigned = mock_text_assigned();
-    let long_available = mock_long_text_available();
-    // Build long text assigned list (reuse some numbers)
-    let long_assigned: Vec<TextNumber> = vec![
-        TextNumber { number: "(980) 553-2289", e164: "+19805532289" },
-        TextNumber { number: "(855) 614-1888", e164: "+18556141888" },
-        TextNumber { number: "(832) 558-3313", e164: "+18325583313" },
-        TextNumber { number: "(252) 351-2397", e164: "+12523512397" },
-        TextNumber { number: "(888) 361-3349", e164: "+18883613349" },
-        TextNumber { number: "(888) 399-8387", e164: "+18883998387" },
-        TextNumber { number: "(855) 563-5818", e164: "+18555635818" },
-        TextNumber { number: "(276) 201-0002", e164: "+12762010002" },
-    ];
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TextNumberItem>>("/numbers/text?page=1&per_page=1000").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -867,34 +860,52 @@ pub fn TextNumbersPage() -> impl IntoView {
             </div>
 
             // Content
-            <div class="flex-1 overflow-y-auto p-4">
-                <TextNumberDualList
-                    title="Allow Text Messages"
-                    available=available
-                    assigned=assigned
-                    available_total=250
-                    assigned_total=250
-                />
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let all_items = resp.items.clone();
+                    let available: Vec<TextNumberItem> = all_items.iter().filter(|n| !n.is_assigned).cloned().collect();
+                    let assigned: Vec<TextNumberItem> = all_items.iter().filter(|n| n.is_assigned).cloned().collect();
+                    let available_total = available.len();
+                    let assigned_total = assigned.len();
+                    // Clone for the second dual list
+                    let available2 = available.clone();
+                    let assigned2 = assigned.clone();
+                    let available_total2 = available_total;
+                    let assigned_total2 = assigned_total;
+                    view! {
+                        <div class="flex-1 overflow-y-auto p-4">
+                            <TextNumberDualList
+                                title="Allow Text Messages"
+                                available=available
+                                assigned=assigned
+                                available_total=available_total
+                                assigned_total=assigned_total
+                            />
 
-                <TextNumberDualList
-                    title="Outgoing Long Text Messages"
-                    available=long_available
-                    assigned=long_assigned
-                    available_total=250
-                    assigned_total=250
-                />
+                            <TextNumberDualList
+                                title="Outgoing Long Text Messages"
+                                available=available2
+                                assigned=assigned2
+                                available_total=available_total2
+                                assigned_total=assigned_total2
+                            />
 
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-                    <span class="font-semibold">"SMS Segmentation: "</span>
-                    "Standard SMS messages are limited to 160 characters. Long text messages can contain up to 1,600 characters and will be split into multiple segments for delivery. Each segment is billed separately."
-                </div>
-            </div>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                                <span class="font-semibold">"SMS Segmentation: "</span>
+                                "Standard SMS messages are limited to 160 characters. Long text messages can contain up to 1,600 characters and will be split into multiple segments for delivery. Each segment is billed separately."
+                            </div>
+                        </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
 
 // ---------------------------------------------------------------------------
-// Port Numbers page - Multi-step wizard form
+// Port Numbers page - Multi-step wizard form (UNCHANGED)
 // ---------------------------------------------------------------------------
 
 #[component]
@@ -1029,7 +1040,7 @@ pub fn PortNumbersPage() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Number Pools page - Form-based configuration
+// Number Pools page - Form-based configuration (UNCHANGED)
 // ---------------------------------------------------------------------------
 
 #[component]
@@ -1183,7 +1194,9 @@ pub fn NumberPoolsPage() -> impl IntoView {
 
 #[component]
 pub fn TargetNumbersPage() -> impl IntoView {
-    let targets = mock_target_numbers();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TargetNumberItem>>("/numbers/targets?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -1205,7 +1218,14 @@ pub fn TargetNumbersPage() -> impl IntoView {
                         <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsSearch /></span>
                     </button>
                 </div>
-                <span class="text-sm text-gray-500">"4 Target Numbers"</span>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Target Numbers", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
             </div>
 
             // Table headers
@@ -1214,66 +1234,56 @@ pub fn TargetNumbersPage() -> impl IntoView {
                     <div class="col-header"></div>
                     <div class="col-header">"Name"</div>
                     <div class="col-header">"Type"</div>
-                    <div class="col-header">"Tracking Numbers"</div>
+                    <div class="col-header">"Description"</div>
                     <div class="col-header">"Updated"</div>
                     <div class="col-header">"Created"</div>
                 </div>
             </div>
 
             // Table rows
-            <div class="flex-1 overflow-y-auto">
-                {targets.into_iter().map(|t| {
-                    let tracking_display = t.tracking_numbers.join(", ");
-                    let more_text = if t.more_count > 0 {
-                        format!("... {} more", t.more_count)
-                    } else {
-                        String::new()
-                    };
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
                     view! {
-                        <div class="activity-row grid grid-cols-[32px_1fr_100px_1fr_100px_100px] gap-2 px-4 py-2.5 items-center cursor-pointer">
-                            <button class="btn btn-xs btn-ghost text-gray-400">
-                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                            </button>
-                            <div>
-                                <div class="text-sm font-medium text-iiz-blue-link">{t.number}</div>
-                                <div class="text-xs text-gray-500">{t.description}</div>
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|t| {
+                                    let desc = t.description.clone().unwrap_or_default();
+                                    let updated = fmt_date(&t.updated_at);
+                                    let created = fmt_date(&t.created_at);
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_1fr_100px_1fr_100px_100px] gap-2 px-4 py-2.5 items-center cursor-pointer">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div>
+                                                <div class="text-sm font-medium text-iiz-blue-link">{t.number.clone()}</div>
+                                                <div class="text-xs text-gray-500">{t.name.clone()}</div>
+                                            </div>
+                                            <div>
+                                                <span class="badge badge-sm bg-gray-100 text-gray-600 border-none">{t.target_type.clone()}</span>
+                                            </div>
+                                            <div class="text-xs text-gray-600">{desc}</div>
+                                            <div class="text-xs text-gray-500">{updated}</div>
+                                            <div class="text-xs text-gray-500">{created}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
                             </div>
-                            <div>
-                                <span class="badge badge-sm bg-gray-100 text-gray-600 border-none">{t.target_type}</span>
-                            </div>
-                            <div>
-                                <span class="text-xs text-gray-600">{tracking_display}</span>
-                                {if !more_text.is_empty() {
-                                    view! { <span class="text-xs text-iiz-cyan ml-1">{more_text}</span> }.into_any()
-                                } else {
-                                    view! { <span></span> }.into_any()
-                                }}
-                            </div>
-                            <div class="text-xs text-gray-500">{t.updated}</div>
-                            <div class="text-xs text-gray-500">{t.created}</div>
-                        </div>
-                    }
-                }).collect::<Vec<_>>()}
-            </div>
-
-            // Pagination bar
-            <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-4 of 4"</span>
-                <div class="flex-1"></div>
-                <span class="text-xs text-gray-400 mr-2">"Per page:"</span>
-                <select class="select select-xs select-bordered">
-                    <option selected>"10"</option>
-                    <option>"25"</option>
-                    <option>"50"</option>
-                    <option>"100"</option>
-                </select>
-            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
 
 // ---------------------------------------------------------------------------
-// Tracking Code page - Installation guide
+// Tracking Code page - Installation guide (UNCHANGED)
 // ---------------------------------------------------------------------------
 
 #[component]
