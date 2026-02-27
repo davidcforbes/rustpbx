@@ -4,7 +4,8 @@ use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
 use crate::api::types::{
-    ListResponse, PaginationMeta, QueueItem, ScheduleItem, SmartRouterItem, VoiceMenuItem,
+    BulkMessageItem, ChatWidgetItem, FormReactorItem, ListResponse, PaginationMeta, QueueItem,
+    ScheduleItem, SmartRouterItem, TriggerItem, VoiceMenuItem, WebhookItem,
 };
 
 // ---------------------------------------------------------------------------
@@ -208,99 +209,7 @@ fn error_view(msg: String) -> impl IntoView {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Data types (mock — kept for pages not yet wired to API)
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Debug)]
-struct Trigger {
-    name: &'static str,
-    trigger_event: &'static str,
-    run_on: &'static str,
-    if_rules: &'static str,
-    then_action: &'static str,
-    runs_7d: &'static str,
-    updated: &'static str,
-    created: &'static str,
-}
-
-#[derive(Clone, Debug)]
-struct Webhook {
-    name: &'static str,
-    trigger_event: &'static str,
-    callback_url: &'static str,
-    method: &'static str,
-    body_type: &'static str,
-    updated: &'static str,
-    created: &'static str,
-}
-
-#[derive(Clone, Debug)]
-struct BulkMessage {
-    label: &'static str,
-    phone: &'static str,
-    body: &'static str,
-    recipients: u32,
-    send_time: &'static str,
-    delivered: &'static str,
-    status: &'static str,
-    updated: &'static str,
-    created: &'static str,
-}
-
-#[derive(Clone, Debug)]
-struct FormReactorEntry {
-    name: &'static str,
-    fields: &'static str,
-    tracking_number: &'static str,
-    updated: &'static str,
-    created: &'static str,
-    calls: u32,
-}
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-fn mock_triggers() -> Vec<Trigger> {
-    vec![
-        Trigger { name: "FKM Tagging - Outbound", trigger_event: "End event with all data ready", run_on: "All Tracking Numbers", if_rules: "Agent is any [Maria G., Carlos R., Ana T.]", then_action: "Tag Call 'fkm-outbound'", runs_7d: "1,689", updated: "2026-02-23", created: "2024-03-15" },
-        Trigger { name: "#NA & Missed Calls Tickets", trigger_event: "End event with all data ready", run_on: "All Tracking Numbers", if_rules: "Call status is 'missed' OR 'no-answer'", then_action: "Create Ticket, Send Email", runs_7d: "1,074", updated: "2026-02-22", created: "2024-04-01" },
-        Trigger { name: "AnswerHero Tickets", trigger_event: "End event with all data ready", run_on: "AnswerHero Numbers", if_rules: "Agent contains 'AnswerHero'", then_action: "Create Ticket, Webhook → Zapier", runs_7d: "474", updated: "2026-02-21", created: "2024-05-20" },
-        Trigger { name: "Repeated Callers", trigger_event: "End event with all data ready", run_on: "All Tracking Numbers", if_rules: "Caller has called > 3 times in 24h", then_action: "Tag Call 'repeat-caller', Notify Manager", runs_7d: "1,429", updated: "2026-02-23", created: "2024-06-10" },
-        Trigger { name: "Assigned Agent", trigger_event: "End event with all data ready", run_on: "All Tracking Numbers", if_rules: "Call answered by agent", then_action: "Update Contact → Assigned Agent", runs_7d: "23,274", updated: "2026-02-23", created: "2024-01-15" },
-    ]
-}
-
-fn mock_webhooks() -> Vec<Webhook> {
-    vec![
-        Webhook { name: "4iiz AI Outbound SMS", trigger_event: "After text sent [outbound_text]", callback_url: "https://gfphuh6fxq...lambda-url.us-east-1.on.aws/", method: "POST", body_type: "Log Data", updated: "2026-02-23", created: "2025-08-15" },
-        Webhook { name: "Offline-Comms-test1", trigger_event: "At end of call/form/chat [end]", callback_url: "https://abc123.ngrok.io/webhook", method: "POST", body_type: "Log Data", updated: "2026-02-20", created: "2025-09-01" },
-        Webhook { name: "#Na Calls to Tickets", trigger_event: "Through a trigger [route]", callback_url: "https://hooks.zapier.com/hooks/catch/123...", method: "POST", body_type: "Log Data", updated: "2026-02-18", created: "2025-06-10" },
-        Webhook { name: "AnswerHero", trigger_event: "Through a trigger [route]", callback_url: "https://hooks.zapier.com/hooks/catch/456...", method: "POST", body_type: "Log Data", updated: "2026-02-15", created: "2025-07-20" },
-        Webhook { name: "4iiz AI SMS hook", trigger_event: "After text sent [outbound_text]", callback_url: "https://xyz789.lambda-url.us-east-1.on.aws/", method: "POST", body_type: "Log Data", updated: "2026-02-22", created: "2025-10-01" },
-    ]
-}
-
-fn mock_bulk_messages() -> Vec<BulkMessage> {
-    vec![
-        BulkMessage { label: "Atencion: tienes una cita importante con Diener Law", phone: "(919) 725-8000", body: "Atencion: tienes una cita importante con Diener Law Group...", recipients: 61, send_time: "2026-02-24 10:15", delivered: "2026-02-24 10:16 AM", status: "Completed", updated: "2026-02-24", created: "2026-02-24" },
-        BulkMessage { label: "Diener Law", phone: "(919) 725-8000", body: "Your appointment with Diener Law Group is confirmed...", recipients: 9, send_time: "2026-02-24 09:00", delivered: "2026-02-24 09:01 AM", status: "Completed", updated: "2026-02-24", created: "2026-02-24" },
-        BulkMessage { label: "Atencion: tienes una cita importante con Diener Law", phone: "(919) 725-8000", body: "Atencion: tienes una cita importante con Diener Law Group...", recipients: 407, send_time: "2026-02-23 14:30", delivered: "2026-02-23 02:32 PM", status: "Completed", updated: "2026-02-23", created: "2026-02-23" },
-        BulkMessage { label: "Weekly follow-up reminder", phone: "(855) 563-5818", body: "Hi! This is a friendly reminder about your upcoming...", recipients: 234, send_time: "2026-02-22 08:00", delivered: "2026-02-22 08:02 AM", status: "Completed", updated: "2026-02-22", created: "2026-02-22" },
-        BulkMessage { label: "Payment reminder - February", phone: "(888) 361-3349", body: "Your payment is due. Please contact us at...", recipients: 156, send_time: "2026-02-20 10:00", delivered: "", status: "Failed", updated: "2026-02-20", created: "2026-02-20" },
-    ]
-}
-
-fn mock_form_reactors() -> Vec<FormReactorEntry> {
-    vec![
-        FormReactorEntry { name: "Permanent Residence Form", fields: "Name * Phone * Email * Submit", tracking_number: "+15622836869", updated: "2025-12-15", created: "2024-06-10", calls: 7 },
-        FormReactorEntry { name: "Book - Spanish", fields: "Nombre * Teléfono * Correo * Enviar", tracking_number: "+19197258000", updated: "2025-11-20", created: "2024-03-01", calls: 5 },
-        FormReactorEntry { name: "Questions", fields: "Name * Phone * Email * Message Submit", tracking_number: "+18553635818", updated: "2025-12-22", created: "2023-08-15", calls: 335 },
-        FormReactorEntry { name: "Immigration Questionnaire", fields: "Name * Phone * Email * Country * Case Type * Submit (Gravity Forms)", tracking_number: "+18883613349", updated: "2025-12-20", created: "2024-01-20", calls: 120 },
-        FormReactorEntry { name: "Footer Contact", fields: "Name * Phone * Email * Submit", tracking_number: "+18883998387", updated: "2025-12-22", created: "2023-05-01", calls: 747 },
-    ]
-}
+// (Mock structs for Triggers, Webhooks, BulkMessages, FormReactors removed — now using API types.)
 
 // ---------------------------------------------------------------------------
 // Voice Menus page
@@ -708,7 +617,9 @@ pub fn SchedulesPage() -> impl IntoView {
 
 #[component]
 pub fn TriggersPage() -> impl IntoView {
-    let triggers = mock_triggers();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TriggerItem>>("/flows/triggers?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -718,6 +629,14 @@ pub fn TriggersPage() -> impl IntoView {
                     <p class="text-sm text-gray-500">"Trigger actions on your activities"</p>
                 </div>
                 <div class="flex-1"></div>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Triggers", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Visual Workflows"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"API Logs"</a>
@@ -727,56 +646,58 @@ pub fn TriggersPage() -> impl IntoView {
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                    <div class="grid grid-cols-[32px_180px_180px_140px_1fr_80px_90px_90px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
-                        <div class="col-header"></div>
-                        <div class="col-header">"Name"</div>
-                        <div class="col-header">"Trigger"</div>
-                        <div class="col-header">"Run"</div>
-                        <div class="col-header">"Rules"</div>
-                        <div class="col-header text-right">"Runs (7d)"</div>
-                        <div class="col-header">"Updated"</div>
-                        <div class="col-header">"Created"</div>
-                    </div>
-
-                    {triggers.into_iter().map(|t| {
-                        view! {
-                            <div class="activity-row grid grid-cols-[32px_180px_180px_140px_1fr_80px_90px_90px] gap-1 px-4 py-3 items-center cursor-pointer min-w-max">
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                                </button>
-                                <div class="text-sm font-medium text-iiz-blue-link">{t.name}</div>
-                                <div class="text-xs text-gray-500">{t.trigger_event}</div>
-                                <div class="text-xs text-gray-500">{t.run_on}</div>
-                                <div class="bg-gray-50 rounded px-3 py-2 text-xs">
-                                    <div>
-                                        <span class="font-semibold">"If all rules match: "</span>
-                                        <span class="text-gray-600">{t.if_rules}</span>
-                                    </div>
-                                    <div class="mt-1">
-                                        <span class="font-semibold text-iiz-cyan">"Then: "</span>
-                                        <span class="text-gray-600">{t.then_action}</span>
-                                    </div>
-                                </div>
-                                <div class="text-sm font-bold text-gray-700 text-right">{t.runs_7d}</div>
-                                <div class="text-xs text-gray-500">{t.updated}</div>
-                                <div class="text-xs text-gray-500">{t.created}</div>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
-
-                <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                        <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                        <button class="btn btn-xs btn-ghost">"2"</button>
-                        <button class="btn btn-xs btn-ghost">"3"</button>
-                        <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                    </div>
-                    <span>"26 Triggers"</span>
+            // Table header
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[32px_180px_180px_140px_80px_80px_120px_120px] gap-1 px-4 py-2 items-center min-w-max">
+                    <div class="col-header"></div>
+                    <div class="col-header">"Name"</div>
+                    <div class="col-header">"Trigger Event"</div>
+                    <div class="col-header">"Run On"</div>
+                    <div class="col-header text-right">"Runs (7d)"</div>
+                    <div class="col-header">"Status"</div>
+                    <div class="col-header">"Updated"</div>
+                    <div class="col-header">"Created"</div>
                 </div>
             </div>
+
+            // Table rows with loading/error handling
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|t| {
+                                    let run_on = t.run_on.clone().unwrap_or_default();
+                                    let status_class = match t.status.as_str() {
+                                        "active" => "badge badge-sm bg-green-500 text-white border-none",
+                                        "paused" => "badge badge-sm bg-orange-400 text-white border-none",
+                                        _ => "badge badge-sm bg-gray-400 text-white border-none",
+                                    };
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_180px_180px_140px_80px_80px_120px_120px] gap-1 px-4 py-3 items-center cursor-pointer min-w-max">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div class="text-sm font-medium text-iiz-blue-link">{t.name.clone()}</div>
+                                            <div class="text-xs text-gray-500">{t.trigger_event.clone()}</div>
+                                            <div class="text-xs text-gray-500">{run_on}</div>
+                                            <div class="text-sm font-bold text-gray-700 text-right">{t.runs_7d.to_string()}</div>
+                                            <div><span class=status_class>{t.status.clone()}</span></div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&t.updated_at)}</div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&t.created_at)}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -787,7 +708,9 @@ pub fn TriggersPage() -> impl IntoView {
 
 #[component]
 pub fn WebhooksPage() -> impl IntoView {
-    let hooks = mock_webhooks();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<WebhookItem>>("/flows/webhooks?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -797,6 +720,14 @@ pub fn WebhooksPage() -> impl IntoView {
                     <p class="text-sm text-gray-500">"Send data to your servers"</p>
                 </div>
                 <div class="flex-1"></div>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Webhooks", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Global Webhooks"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"API Logs"</a>
@@ -809,52 +740,65 @@ pub fn WebhooksPage() -> impl IntoView {
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                    <div class="grid grid-cols-[32px_160px_180px_200px_60px_80px_90px_90px_100px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
-                        <div class="col-header"></div>
-                        <div class="col-header">"Name"</div>
-                        <div class="col-header">"Trigger"</div>
-                        <div class="col-header">"Callback URL"</div>
-                        <div class="col-header">"Method"</div>
-                        <div class="col-header">"Body Type"</div>
-                        <div class="col-header">"Updated"</div>
-                        <div class="col-header">"Created"</div>
-                        <div class="col-header">"Actions"</div>
-                    </div>
-
-                    {hooks.into_iter().map(|h| {
-                        view! {
-                            <div class="activity-row grid grid-cols-[32px_160px_180px_200px_60px_80px_90px_90px_100px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                                </button>
-                                <div class="text-sm font-medium text-iiz-blue-link">{h.name}</div>
-                                <div class="text-xs text-gray-500">{h.trigger_event}</div>
-                                <div class="text-xs text-gray-400 truncate max-w-[200px]">{h.callback_url}</div>
-                                <div class="text-xs text-gray-500">{h.method}</div>
-                                <div class="text-xs text-gray-500">{h.body_type}</div>
-                                <div class="text-xs text-gray-500">{h.updated}</div>
-                                <div class="text-xs text-gray-500">{h.created}</div>
-                                <div class="flex items-center gap-1">
-                                    <button class="btn btn-xs bg-iiz-cyan text-white border-none">"Test"</button>
-                                    <button class="btn btn-xs btn-ghost text-gray-400">"Deact."</button>
-                                </div>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
-
-                <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                        <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                        <button class="btn btn-xs btn-ghost">"2"</button>
-                        <button class="btn btn-xs btn-ghost">"3"</button>
-                        <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                    </div>
-                    <span>"24 Webhooks"</span>
+            // Table header
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[32px_160px_180px_200px_60px_80px_80px_120px_120px_100px] gap-1 px-4 py-2 items-center min-w-max">
+                    <div class="col-header"></div>
+                    <div class="col-header">"Name"</div>
+                    <div class="col-header">"Trigger Event"</div>
+                    <div class="col-header">"Callback URL"</div>
+                    <div class="col-header">"Method"</div>
+                    <div class="col-header">"Body Type"</div>
+                    <div class="col-header">"Status"</div>
+                    <div class="col-header">"Updated"</div>
+                    <div class="col-header">"Created"</div>
+                    <div class="col-header">"Actions"</div>
                 </div>
             </div>
+
+            // Table rows with loading/error handling
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|h| {
+                                    let trigger_event = h.trigger_event.clone().unwrap_or_default();
+                                    let status_class = match h.status.as_str() {
+                                        "active" => "badge badge-sm bg-green-500 text-white border-none",
+                                        "paused" => "badge badge-sm bg-orange-400 text-white border-none",
+                                        _ => "badge badge-sm bg-gray-400 text-white border-none",
+                                    };
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_160px_180px_200px_60px_80px_80px_120px_120px_100px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div class="text-sm font-medium text-iiz-blue-link">{h.name.clone()}</div>
+                                            <div class="text-xs text-gray-500">{trigger_event}</div>
+                                            <div class="text-xs text-gray-400 truncate max-w-[200px]">{h.callback_url.clone()}</div>
+                                            <div class="text-xs text-gray-500">{h.method.clone()}</div>
+                                            <div class="text-xs text-gray-500">{h.body_type.clone()}</div>
+                                            <div><span class=status_class>{h.status.clone()}</span></div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&h.updated_at)}</div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&h.created_at)}</div>
+                                            <div class="flex items-center gap-1">
+                                                <button class="btn btn-xs bg-iiz-cyan text-white border-none">"Test"</button>
+                                                <button class="btn btn-xs btn-ghost text-gray-400">"Deact."</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -865,7 +809,9 @@ pub fn WebhooksPage() -> impl IntoView {
 
 #[component]
 pub fn BulkMessagesPage() -> impl IntoView {
-    let messages = mock_bulk_messages();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<BulkMessageItem>>("/flows/bulk-messages?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -884,6 +830,14 @@ pub fn BulkMessagesPage() -> impl IntoView {
                     <p class="text-sm text-gray-500">"Send text messages to a group of recipients"</p>
                 </div>
                 <div class="flex-1"></div>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Bulk Messages", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">
                     "+ New Bulk Message"
@@ -901,61 +855,68 @@ pub fn BulkMessagesPage() -> impl IntoView {
                 <button class="btn btn-xs btn-ghost">"Export..."</button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                    <div class="grid grid-cols-[32px_200px_120px_200px_70px_120px_140px_80px_90px_90px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
-                        <div class="col-header"></div>
-                        <div class="col-header">"Label"</div>
-                        <div class="col-header">"Phone Numbers"</div>
-                        <div class="col-header">"Body"</div>
-                        <div class="col-header text-center">"Recipients"</div>
-                        <div class="col-header">"Send Time"</div>
-                        <div class="col-header">"Delivered On"</div>
-                        <div class="col-header">"Status"</div>
-                        <div class="col-header">"Updated"</div>
-                        <div class="col-header">"Created"</div>
-                    </div>
-
-                    {messages.into_iter().map(|m| {
-                        let status_class = match m.status {
-                            "Completed" => "badge badge-sm bg-green-500 text-white border-none",
-                            "Failed" => "badge badge-sm bg-red-500 text-white border-none",
-                            "Sending" => "badge badge-sm bg-blue-500 text-white border-none",
-                            "Pending" => "badge badge-sm bg-orange-400 text-white border-none",
-                            _ => "badge badge-sm bg-gray-400 text-white border-none",
-                        };
-                        view! {
-                            <div class="activity-row grid grid-cols-[32px_200px_120px_200px_70px_120px_140px_80px_90px_90px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsArrowRepeat /></span>
-                                </button>
-                                <div class="text-sm font-medium text-iiz-blue-link truncate max-w-[200px]">{m.label}</div>
-                                <div class="text-xs text-gray-500 whitespace-nowrap">{m.phone}</div>
-                                <div class="text-xs text-gray-400 truncate max-w-[200px]">{m.body}</div>
-                                <div class="text-sm font-bold text-gray-600 text-center">{m.recipients}</div>
-                                <div class="text-xs text-gray-500">{m.send_time}</div>
-                                <div class="text-xs text-gray-500">{m.delivered}</div>
-                                <div><span class=status_class>{m.status}</span></div>
-                                <div class="text-xs text-gray-500">{m.updated}</div>
-                                <div class="text-xs text-gray-500">{m.created}</div>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
-
-                <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                        <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                        <button class="btn btn-xs btn-ghost">"2"</button>
-                        <button class="btn btn-xs btn-ghost">"3"</button>
-                        <span class="text-xs text-gray-400">"..."</span>
-                        <button class="btn btn-xs btn-ghost">"169"</button>
-                        <button class="btn btn-xs btn-ghost">"170"</button>
-                        <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                    </div>
-                    <span>"1,695 Bulk Messages"</span>
+            // Table header
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[32px_200px_120px_200px_70px_70px_70px_70px_80px_120px_120px] gap-1 px-4 py-2 items-center min-w-max">
+                    <div class="col-header"></div>
+                    <div class="col-header">"Label"</div>
+                    <div class="col-header">"Phone"</div>
+                    <div class="col-header">"Body"</div>
+                    <div class="col-header text-center">"Recipients"</div>
+                    <div class="col-header text-center">"Sent"</div>
+                    <div class="col-header text-center">"Delivered"</div>
+                    <div class="col-header text-center">"Failed"</div>
+                    <div class="col-header">"Status"</div>
+                    <div class="col-header">"Scheduled"</div>
+                    <div class="col-header">"Created"</div>
                 </div>
             </div>
+
+            // Table rows with loading/error handling
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|m| {
+                                    let label = m.label.clone().unwrap_or_default();
+                                    let phone = m.sender_phone.clone().unwrap_or_default();
+                                    let scheduled = m.scheduled_at.as_deref().map(fmt_date).unwrap_or_default();
+                                    let status_class = match m.status.as_str() {
+                                        "completed" | "Completed" => "badge badge-sm bg-green-500 text-white border-none",
+                                        "failed" | "Failed" => "badge badge-sm bg-red-500 text-white border-none",
+                                        "sending" | "Sending" => "badge badge-sm bg-blue-500 text-white border-none",
+                                        "pending" | "Pending" => "badge badge-sm bg-orange-400 text-white border-none",
+                                        _ => "badge badge-sm bg-gray-400 text-white border-none",
+                                    };
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_200px_120px_200px_70px_70px_70px_70px_80px_120px_120px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsArrowRepeat /></span>
+                                            </button>
+                                            <div class="text-sm font-medium text-iiz-blue-link truncate max-w-[200px]">{label}</div>
+                                            <div class="text-xs text-gray-500 whitespace-nowrap">{phone}</div>
+                                            <div class="text-xs text-gray-400 truncate max-w-[200px]">{m.message_body.clone()}</div>
+                                            <div class="text-sm font-bold text-gray-600 text-center">{m.recipient_count.to_string()}</div>
+                                            <div class="text-sm text-gray-600 text-center">{m.sent_count.to_string()}</div>
+                                            <div class="text-sm text-green-600 text-center">{m.delivered_count.to_string()}</div>
+                                            <div class="text-sm text-red-600 text-center">{m.failed_count.to_string()}</div>
+                                            <div><span class=status_class>{m.status.clone()}</span></div>
+                                            <div class="text-xs text-gray-500">{scheduled}</div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&m.created_at)}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -966,7 +927,9 @@ pub fn BulkMessagesPage() -> impl IntoView {
 
 #[component]
 pub fn FormReactorPage() -> impl IntoView {
-    let forms = mock_form_reactors();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<FormReactorItem>>("/flows/form-reactor?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -976,6 +939,14 @@ pub fn FormReactorPage() -> impl IntoView {
                     <p class="text-sm text-gray-500">"Embeddable forms that can trigger phone calls, text messages, and emails"</p>
                 </div>
                 <div class="flex-1"></div>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} FormReactors", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Restore"</a>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">
@@ -983,45 +954,56 @@ pub fn FormReactorPage() -> impl IntoView {
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200">
-                    <div class="grid grid-cols-[32px_200px_1fr_140px_90px_90px_60px] gap-2 px-4 py-2 border-b border-gray-200">
-                        <div class="col-header"></div>
-                        <div class="col-header">"Form Name"</div>
-                        <div class="col-header">"Fields"</div>
-                        <div class="col-header">"Tracking Number"</div>
-                        <div class="col-header">"Updated"</div>
-                        <div class="col-header">"Created"</div>
-                        <div class="col-header text-center">"Calls"</div>
-                    </div>
-
-                    {forms.into_iter().map(|f| {
-                        view! {
-                            <div class="activity-row grid grid-cols-[32px_200px_1fr_140px_90px_90px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer">
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                                </button>
-                                <div class="text-sm font-medium text-iiz-blue-link whitespace-nowrap">{f.name}</div>
-                                <div class="bg-gray-50 rounded px-3 py-1.5 text-xs text-gray-600">{f.fields}</div>
-                                <div class="text-xs text-gray-500 whitespace-nowrap">{f.tracking_number}</div>
-                                <div class="text-xs text-gray-500">{f.updated}</div>
-                                <div class="text-xs text-gray-500">{f.created}</div>
-                                <div class="text-sm font-bold text-gray-600 text-center">{f.calls}</div>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
-
-                <div class="flex items-center justify-between mt-3 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                        <button class="btn btn-xs bg-iiz-cyan text-white border-none">"1"</button>
-                        <button class="btn btn-xs btn-ghost">"2"</button>
-                        <button class="btn btn-xs btn-ghost">"3"</button>
-                        <button class="btn btn-xs btn-ghost text-gray-400"><span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span></button>
-                    </div>
-                    <span>"30 FormReactors"</span>
+            // Table header
+            <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div class="grid grid-cols-[32px_200px_1fr_80px_120px_120px_60px] gap-2 px-4 py-2 items-center">
+                    <div class="col-header"></div>
+                    <div class="col-header">"Form Name"</div>
+                    <div class="col-header">"Fields"</div>
+                    <div class="col-header">"Status"</div>
+                    <div class="col-header">"Updated"</div>
+                    <div class="col-header">"Created"</div>
+                    <div class="col-header text-center">"Calls"</div>
                 </div>
             </div>
+
+            // Table rows with loading/error handling
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let items = resp.items.clone();
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <>
+                            <div class="flex-1 overflow-y-auto">
+                                {items.into_iter().map(|f| {
+                                    let fields = f.form_fields.clone().unwrap_or_default();
+                                    let status_class = match f.status.as_str() {
+                                        "active" => "badge badge-sm bg-green-500 text-white border-none",
+                                        "draft" => "badge badge-sm bg-orange-400 text-white border-none",
+                                        _ => "badge badge-sm bg-gray-400 text-white border-none",
+                                    };
+                                    view! {
+                                        <div class="activity-row grid grid-cols-[32px_200px_1fr_80px_120px_120px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer">
+                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                            </button>
+                                            <div class="text-sm font-medium text-iiz-blue-link whitespace-nowrap">{f.name.clone()}</div>
+                                            <div class="bg-gray-50 rounded px-3 py-1.5 text-xs text-gray-600">{fields}</div>
+                                            <div><span class=status_class>{f.status.clone()}</span></div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&f.updated_at)}</div>
+                                            <div class="text-xs text-gray-500">{fmt_date(&f.created_at)}</div>
+                                            <div class="text-sm font-bold text-gray-600 text-center">{f.call_count.to_string()}</div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                            {pagination_footer(&meta)}
+                        </>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -1960,40 +1942,28 @@ pub fn SmartDialersPage() -> impl IntoView {
 // Chat Widget page
 // ---------------------------------------------------------------------------
 
-struct ChatWidgetRow {
-    name: &'static str,
-    fields: u8,
-    active: bool,
-    status: &'static str,
-    status_color: &'static str,
-    tracking: &'static str,
-    routing: &'static str,
-    queue: &'static str,
-    agents: u8,
-    updated: &'static str,
-    created: &'static str,
-    chats: u32,
-}
-
-fn chat_widget_rows() -> Vec<ChatWidgetRow> {
-    vec![
-        ChatWidgetRow { name: "Main Website Chat", fields: 4, active: true, status: "Live", status_color: "badge-success", tracking: "Web Organic", routing: "Round Robin", queue: "Sales", agents: 5, updated: "2025-02-24", created: "2024-08-15", chats: 1245 },
-        ChatWidgetRow { name: "Support Portal", fields: 3, active: true, status: "Live", status_color: "badge-success", tracking: "Support Page", routing: "Skills-Based", queue: "Support", agents: 8, updated: "2025-02-23", created: "2024-09-01", chats: 3456 },
-        ChatWidgetRow { name: "Landing Page - PPC", fields: 5, active: true, status: "Live", status_color: "badge-success", tracking: "Google Ads", routing: "First Available", queue: "Sales", agents: 3, updated: "2025-02-22", created: "2024-11-10", chats: 892 },
-        ChatWidgetRow { name: "Mobile App Chat", fields: 3, active: false, status: "Draft", status_color: "badge-warning", tracking: "Mobile App", routing: "Round Robin", queue: "General", agents: 4, updated: "2025-02-20", created: "2025-01-05", chats: 0 },
-        ChatWidgetRow { name: "After Hours Bot", fields: 2, active: true, status: "Live", status_color: "badge-success", tracking: "All Sources", routing: "AI Only", queue: "—", agents: 0, updated: "2025-02-18", created: "2025-01-20", chats: 567 },
-    ]
-}
+// (ChatWidgetRow mock struct removed — now using ChatWidgetItem from API types.)
 
 #[component]
 pub fn ChatWidgetPage() -> impl IntoView {
-    let widgets = chat_widget_rows();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ChatWidgetItem>>("/flows/chat-widgets?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             // Title bar
             <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3 flex-shrink-0">
                 <h1 class="text-xl font-semibold text-iiz-dark">"Chat Widget"</h1>
                 <div class="flex-1"></div>
+                <span class="text-sm text-gray-500">
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("{} Chat Widgets", r.pagination.total_items))
+                            .unwrap_or_default()
+                    }}
+                </span>
                 <button class="btn btn-xs btn-ghost text-gray-500">"User licenses"</button>
                 <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Info"</a>
                 <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">
@@ -2002,27 +1972,27 @@ pub fn ChatWidgetPage() -> impl IntoView {
             </div>
 
             <div class="flex-1 overflow-y-auto">
-                // KPI summary cards
+                // KPI summary cards (static — needs aggregation queries later)
                 <div class="grid grid-cols-4 gap-3 p-4">
                     <div class="bg-white rounded-lg border border-gray-200 p-3">
                         <div class="text-xs text-gray-500 uppercase tracking-wide">"Active Widgets"</div>
-                        <div class="text-2xl font-bold text-green-600 mt-1">"4"</div>
-                        <div class="text-xs text-gray-400">"of 5 total"</div>
+                        <div class="text-2xl font-bold text-green-600 mt-1">"--"</div>
+                        <div class="text-xs text-gray-400">"of -- total"</div>
                     </div>
                     <div class="bg-white rounded-lg border border-gray-200 p-3">
                         <div class="text-xs text-gray-500 uppercase tracking-wide">"Total Chats"</div>
-                        <div class="text-2xl font-bold text-iiz-dark mt-1">"6,160"</div>
-                        <div class="text-xs text-green-600">"+12% vs last month"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"--"</div>
+                        <div class="text-xs text-gray-400">"Aggregation pending"</div>
                     </div>
                     <div class="bg-white rounded-lg border border-gray-200 p-3">
                         <div class="text-xs text-gray-500 uppercase tracking-wide">"Avg Response Time"</div>
-                        <div class="text-2xl font-bold text-iiz-dark mt-1">"0:32"</div>
+                        <div class="text-2xl font-bold text-iiz-dark mt-1">"--"</div>
                         <div class="text-xs text-gray-400">"Seconds"</div>
                     </div>
                     <div class="bg-white rounded-lg border border-gray-200 p-3">
                         <div class="text-xs text-gray-500 uppercase tracking-wide">"Satisfaction"</div>
-                        <div class="text-2xl font-bold text-iiz-cyan mt-1">"4.6/5"</div>
-                        <div class="text-xs text-green-600">"+0.2 vs last month"</div>
+                        <div class="text-2xl font-bold text-iiz-cyan mt-1">"--"</div>
+                        <div class="text-xs text-gray-400">"Aggregation pending"</div>
                     </div>
                 </div>
 
@@ -2034,44 +2004,64 @@ pub fn ChatWidgetPage() -> impl IntoView {
                                 <tr class="border-b border-gray-200">
                                     <th class="text-xs text-gray-500 font-semibold uppercase">"Chat Widget"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Fields"</th>
-                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Active"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase">"Status"</th>
-                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Tracking"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase">"Routing"</th>
-                                    <th class="text-xs text-gray-500 font-semibold uppercase">"Queue"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Agents"</th>
+                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Chats"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase">"Updated"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase">"Created"</th>
-                                    <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Chats"</th>
                                     <th class="text-xs text-gray-500 font-semibold uppercase text-center">"Actions"</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {widgets.iter().map(|w| {
-                                    view! {
-                                        <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
-                                            <td class="text-sm font-medium text-iiz-dark">{w.name}</td>
-                                            <td class="text-sm text-center">{w.fields}</td>
-                                            <td class="text-center">
-                                                <input type="checkbox" class="toggle toggle-sm toggle-success" checked=w.active />
-                                            </td>
-                                            <td><span class=format!("badge badge-sm {}", w.status_color)>{w.status}</span></td>
-                                            <td class="text-sm text-gray-600">{w.tracking}</td>
-                                            <td class="text-sm text-gray-600">{w.routing}</td>
-                                            <td class="text-sm text-gray-600">{w.queue}</td>
-                                            <td class="text-sm text-center">{w.agents}</td>
-                                            <td class="text-xs text-gray-500">{w.updated}</td>
-                                            <td class="text-xs text-gray-500">{w.created}</td>
-                                            <td class="text-sm text-center font-medium">{w.chats.to_string()}</td>
-                                            <td class="text-center">
-                                                <div class="flex items-center justify-center gap-1">
-                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"Edit"</button>
-                                                    <button class="btn btn-xs btn-ghost text-gray-400">"Code"</button>
-                                                </div>
+                                {move || match data.get() {
+                                    None => view! {
+                                        <tr>
+                                            <td colspan="9" class="text-center py-4">
+                                                <span class="loading loading-spinner loading-md text-iiz-cyan"></span>
+                                                <span class="ml-2 text-gray-500">"Loading..."</span>
                                             </td>
                                         </tr>
+                                    }.into_any(),
+                                    Some(Err(e)) => view! {
+                                        <tr>
+                                            <td colspan="9" class="text-center py-4 text-red-500 text-sm">{e}</td>
+                                        </tr>
+                                    }.into_any(),
+                                    Some(Ok(resp)) => {
+                                        let items = resp.items.clone();
+                                        view! {
+                                            <>
+                                                {items.into_iter().map(|w| {
+                                                    let routing = w.routing_type.clone().unwrap_or_default();
+                                                    let status_class = match w.status.as_str() {
+                                                        "active" | "live" => "badge badge-sm badge-success",
+                                                        "draft" => "badge badge-sm badge-warning",
+                                                        _ => "badge badge-sm bg-gray-400 text-white border-none",
+                                                    };
+                                                    view! {
+                                                        <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                                                            <td class="text-sm font-medium text-iiz-dark">{w.name.clone()}</td>
+                                                            <td class="text-sm text-center">{w.custom_fields_count.to_string()}</td>
+                                                            <td><span class=status_class>{w.status.clone()}</span></td>
+                                                            <td class="text-sm text-gray-600">{routing}</td>
+                                                            <td class="text-sm text-center">{w.agent_count.to_string()}</td>
+                                                            <td class="text-sm text-center font-medium">{w.chat_count.to_string()}</td>
+                                                            <td class="text-xs text-gray-500">{fmt_date(&w.updated_at)}</td>
+                                                            <td class="text-xs text-gray-500">{fmt_date(&w.created_at)}</td>
+                                                            <td class="text-center">
+                                                                <div class="flex items-center justify-center gap-1">
+                                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"Edit"</button>
+                                                                    <button class="btn btn-xs btn-ghost text-gray-400">"Code"</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }).collect::<Vec<_>>()}
+                                            </>
+                                        }.into_any()
                                     }
-                                }).collect::<Vec<_>>()}
+                                }}
                             </tbody>
                         </table>
                     </div>

@@ -257,6 +257,82 @@ pub struct ScheduleItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Flows section — Automation & Engagement
+// -------------------------------------------------------------------------
+
+/// A trigger returned by GET /flows/triggers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TriggerItem {
+    pub id: String,
+    pub name: String,
+    pub trigger_event: String,
+    pub run_on: Option<String>,
+    pub runs_7d: i32,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A webhook returned by GET /flows/webhooks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebhookItem {
+    pub id: String,
+    pub name: String,
+    pub trigger_event: Option<String>,
+    pub callback_url: String,
+    pub method: String,
+    pub body_type: String,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A bulk message returned by GET /flows/bulk-messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BulkMessageItem {
+    pub id: String,
+    pub label: Option<String>,
+    pub sender_phone: Option<String>,
+    pub message_body: String,
+    pub recipient_count: i32,
+    pub sent_count: i32,
+    pub delivered_count: i32,
+    pub failed_count: i32,
+    pub status: String,
+    pub scheduled_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A form reactor entry returned by GET /flows/form-reactor
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormReactorItem {
+    pub id: String,
+    pub name: String,
+    pub form_fields: Option<String>,
+    pub call_count: i32,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A chat widget returned by GET /flows/chat-widgets
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatWidgetItem {
+    pub id: String,
+    pub name: String,
+    pub website_url: Option<String>,
+    pub routing_type: Option<String>,
+    pub agent_count: i32,
+    pub custom_fields_count: i32,
+    pub status: String,
+    pub chat_count: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
