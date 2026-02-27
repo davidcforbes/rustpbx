@@ -28,6 +28,7 @@ pub mod middleware;
 pub mod numbers;
 pub mod pagination;
 pub mod tags;
+pub mod trust_center;
 
 /// Shared state for all iiz API handlers.
 ///
@@ -75,9 +76,10 @@ pub fn router(state: IizState) -> Router {
                 .put(tags::update)
                 .delete(tags::delete),
         )
+        // -- Trust Center section (Phase F7.2) --
+        .nest("/trust-center", trust_center::router())
         // Section routers will be nested here in later phases:
         // .nest("/reports", reports::router())
-        // .nest("/trust-center", trust_center::router())
         .with_state(state);
 
     Router::new().nest("/api/v1", api)
