@@ -17,6 +17,7 @@ use axum::Router;
 
 use crate::iiz::pool::IizPools;
 
+pub mod activities;
 pub mod ai_tools;
 pub mod auth;
 pub mod contacts;
@@ -53,6 +54,8 @@ pub struct IizState {
 /// - `/api/v1/trust-center`
 pub fn router(state: IizState) -> Router {
     let api = Router::new()
+        // -- Activities section (Phase F6.3) --
+        .nest("/activities", activities::router())
         // -- Contacts section (Phase F1.3) --
         .nest("/contacts", contacts::router())
         // -- Numbers section (Phase F2.2) --
@@ -73,7 +76,6 @@ pub fn router(state: IizState) -> Router {
                 .delete(tags::delete),
         )
         // Section routers will be nested here in later phases:
-        // .nest("/activities", activities::router())
         // .nest("/reports", reports::router())
         // .nest("/trust-center", trust_center::router())
         .with_state(state);
