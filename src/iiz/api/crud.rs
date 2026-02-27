@@ -11,7 +11,7 @@
 ///
 /// # Arguments
 ///
-/// - `table`: Path to the Diesel `table!` macro (e.g. `crate::iiz::schema::iiz::blocked_numbers`)
+/// - `table`: Path to the Diesel `table!` module (e.g. `crate::iiz::schema::iiz::blocked_numbers`)
 /// - `entity`: The Queryable struct for reading rows
 /// - `new_entity`: The Insertable struct for creating rows
 /// - `update_entity`: The AsChangeset struct for patching rows
@@ -28,8 +28,8 @@
 ///
 /// ```ignore
 /// mod blocked_numbers {
-///     use crate::crud_handlers;
-///     crud_handlers!(
+///     use crate::iiz::models::contacts::{BlockedNumber, NewBlockedNumber, UpdateBlockedNumber};
+///     crate::crud_handlers!(
 ///         table: crate::iiz::schema::iiz::blocked_numbers,
 ///         entity: BlockedNumber,
 ///         new_entity: NewBlockedNumber,
@@ -40,7 +40,7 @@
 #[macro_export]
 macro_rules! crud_handlers {
     (
-        table: $table:path,
+        table: $($table_path:ident)::+,
         entity: $entity:ty,
         new_entity: $new_entity:ty,
         update_entity: $update_entity:ty $(,)?
@@ -64,21 +64,21 @@ macro_rules! crud_handlers {
             let (offset, limit) = params.normalize();
 
             // RLS handles account_id filtering; deleted_at filtering via RLS policy.
-            let total: i64 = {
-                use $table::dsl::*;
-                $table::table.count().get_result(&mut *conn).await.map_err(ApiError::from)?
-            };
+            use $($table_path)::+::dsl::created_at;
 
-            let items: Vec<$entity> = {
-                use $table::dsl::*;
-                $table::table
-                    .order(created_at.desc())
-                    .offset(offset)
-                    .limit(limit)
-                    .load(&mut *conn)
-                    .await
-                    .map_err(ApiError::from)?
-            };
+            let total: i64 = $($table_path)::+::table
+                .count()
+                .get_result(&mut *conn)
+                .await
+                .map_err(ApiError::from)?;
+
+            let items: Vec<$entity> = $($table_path)::+::table
+                .order(created_at.desc())
+                .offset(offset)
+                .limit(limit)
+                .load(&mut *conn)
+                .await
+                .map_err(ApiError::from)?;
 
             let meta = PaginationMeta::new(params.page.max(1), limit, total);
             Ok(axum::Json(ListResponse {
@@ -90,12 +90,11 @@ macro_rules! crud_handlers {
         pub async fn get(
             axum::extract::State(state): axum::extract::State<IizState>,
             auth: AuthContext,
-            Path(id): Path<Uuid>,
+            Path(resource_id): Path<Uuid>,
         ) -> Result<axum::Json<$entity>, ApiError> {
             let mut conn = get_tenant_conn(&state, &auth).await?;
-            use $table::dsl;
-            let item: $entity = dsl::$table
-                .find(id)
+            let item: $entity = $($table_path)::+::table
+                .find(resource_id)
                 .first(&mut *conn)
                 .await
                 .map_err(ApiError::from)?;
@@ -108,7 +107,7 @@ macro_rules! crud_handlers {
             axum::Json(payload): axum::Json<$new_entity>,
         ) -> Result<(axum::http::StatusCode, axum::Json<$entity>), ApiError> {
             let mut conn = get_tenant_conn(&state, &auth).await?;
-            let item: $entity = diesel::insert_into($table::table)
+            let item: $entity = diesel::insert_into($($table_path)::+::table)
                 .values(&payload)
                 .get_result(&mut *conn)
                 .await
@@ -119,12 +118,11 @@ macro_rules! crud_handlers {
         pub async fn update(
             axum::extract::State(state): axum::extract::State<IizState>,
             auth: AuthContext,
-            Path(id): Path<Uuid>,
+            Path(resource_id): Path<Uuid>,
             axum::Json(payload): axum::Json<$update_entity>,
         ) -> Result<axum::Json<$entity>, ApiError> {
             let mut conn = get_tenant_conn(&state, &auth).await?;
-            use $table::dsl;
-            let item: $entity = diesel::update(dsl::$table.find(id))
+            let item: $entity = diesel::update($($table_path)::+::table.find(resource_id))
                 .set(&payload)
                 .get_result(&mut *conn)
                 .await
@@ -135,11 +133,11 @@ macro_rules! crud_handlers {
         pub async fn delete(
             axum::extract::State(state): axum::extract::State<IizState>,
             auth: AuthContext,
-            Path(id): Path<Uuid>,
+            Path(resource_id): Path<Uuid>,
         ) -> Result<axum::http::StatusCode, ApiError> {
             let mut conn = get_tenant_conn(&state, &auth).await?;
-            use $table::dsl::*;
-            diesel::update($table::table.find(id))
+            use $($table_path)::+::dsl::deleted_at;
+            diesel::update($($table_path)::+::table.find(resource_id))
                 .set(deleted_at.eq(Some(chrono::Utc::now())))
                 .execute(&mut *conn)
                 .await

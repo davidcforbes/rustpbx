@@ -18,10 +18,12 @@ use axum::Router;
 use crate::iiz::pool::IizPools;
 
 pub mod auth;
+pub mod contacts;
 pub mod crud;
 pub mod error;
 pub mod middleware;
 pub mod pagination;
+pub mod tags;
 
 /// Shared state for all iiz API handlers.
 ///
@@ -48,9 +50,21 @@ pub struct IizState {
 /// - `/api/v1/trust-center`
 pub fn router(state: IizState) -> Router {
     let api = Router::new()
+        // -- Contacts section (Phase F1.3) --
+        .nest("/contacts", contacts::router())
+        // -- Tags (cross-cutting, used by multiple sections) --
+        .route(
+            "/tags",
+            axum::routing::get(tags::list).post(tags::create),
+        )
+        .route(
+            "/tags/{id}",
+            axum::routing::get(tags::get)
+                .put(tags::update)
+                .delete(tags::delete),
+        )
         // Section routers will be nested here in later phases:
         // .nest("/activities", activities::router())
-        // .nest("/contacts", contacts::router())
         // .nest("/numbers", numbers::router())
         // .nest("/flows", flows::router())
         // .nest("/ai-tools", ai_tools::router())
