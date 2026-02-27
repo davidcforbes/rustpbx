@@ -87,6 +87,104 @@ pub struct DntEntryItem {
     pub created_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Numbers section
+// -------------------------------------------------------------------------
+
+/// A tracking number returned by GET /numbers/tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackingNumberItem {
+    pub id: String,
+    pub number: String,
+    pub source_id: Option<String>,
+    pub routing_description: Option<String>,
+    pub routing_type: Option<String>,
+    pub routing_target_type: Option<String>,
+    pub routing_target_id: Option<String>,
+    pub text_enabled: bool,
+    pub receiving_number_id: Option<String>,
+    pub number_type: String,
+    pub number_class: String,
+    pub pool_id: Option<String>,
+    pub billing_date: Option<i32>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A tracking source returned by GET /numbers/sources
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackingSourceItem {
+    pub id: String,
+    pub name: String,
+    pub source_type: Option<String>,
+    pub position: i32,
+    pub last_touch: bool,
+    pub number_count: i32,
+    pub call_count: i32,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A receiving number returned by GET /numbers/receiving
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingNumberItem {
+    pub id: String,
+    pub number: String,
+    pub description: Option<String>,
+    pub tracking_count: i32,
+    pub total_calls: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A target number returned by GET /numbers/targets
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TargetNumberItem {
+    pub id: String,
+    pub number: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub target_type: String,
+    pub priority: i32,
+    pub concurrency_cap: Option<i32>,
+    pub weight: i32,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A text-enabled number returned by GET /numbers/text
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextNumberItem {
+    pub id: String,
+    pub number: String,
+    pub name: Option<String>,
+    pub is_assigned: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A call settings profile returned by GET /numbers/call-settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallSettingItem {
+    pub id: String,
+    pub name: String,
+    pub is_default: bool,
+    pub greeting_enabled: bool,
+    pub whisper_enabled: bool,
+    pub inbound_recording: bool,
+    pub outbound_recording: bool,
+    pub transcription_enabled: bool,
+    pub caller_id_enabled: bool,
+    pub enhanced_caller_id: bool,
+    pub caller_id_override: bool,
+    pub spam_filter_enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
