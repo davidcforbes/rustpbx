@@ -21,6 +21,7 @@ pub mod auth;
 pub mod contacts;
 pub mod crud;
 pub mod error;
+pub mod flows;
 pub mod middleware;
 pub mod numbers;
 pub mod pagination;
@@ -55,6 +56,8 @@ pub fn router(state: IizState) -> Router {
         .nest("/contacts", contacts::router())
         // -- Numbers section (Phase F2.2) --
         .nest("/numbers", numbers::router())
+        // -- Flows section (Phase F3.2) --
+        .nest("/flows", flows::router())
         // -- Tags (cross-cutting, used by multiple sections) --
         .route(
             "/tags",
@@ -68,7 +71,6 @@ pub fn router(state: IizState) -> Router {
         )
         // Section routers will be nested here in later phases:
         // .nest("/activities", activities::router())
-        // .nest("/flows", flows::router())
         // .nest("/ai-tools", ai_tools::router())
         // .nest("/reports", reports::router())
         // .nest("/trust-center", trust_center::router())
