@@ -333,6 +333,25 @@ pub struct ChatWidgetItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for AI Tools section
+// -------------------------------------------------------------------------
+
+/// A knowledge bank returned by GET /ai-tools/knowledge-banks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeBankItem {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub document_count: i32,
+    pub total_size_bytes: i64,
+    pub status: String,
+    pub last_import_at: Option<String>,
+    pub used_by: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
