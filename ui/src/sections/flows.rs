@@ -4,8 +4,9 @@ use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
 use crate::api::types::{
-    BulkMessageItem, ChatWidgetItem, FormReactorItem, ListResponse, PaginationMeta, QueueItem,
-    ScheduleItem, SmartRouterItem, TriggerItem, VoiceMenuItem, WebhookItem,
+    ApiLogEntryItem, BulkMessageItem, ChatWidgetItem, FormReactorItem, ListResponse,
+    PaginationMeta, QueueItem, ScheduleItem, SmartRouterItem, TriggerItem, VoiceMenuItem,
+    WebhookItem,
 };
 
 // ---------------------------------------------------------------------------
@@ -1535,29 +1536,11 @@ exports.handler = async (event, context) => {
 // API Logs page
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Debug)]
-struct ApiLogEntry {
-    source: &'static str,
-    request_url: &'static str,
-    response_code: u16,
-    date: &'static str,
-    activity: &'static str,
-}
-
-fn mock_api_logs() -> Vec<ApiLogEntry> {
-    vec![
-        ApiLogEntry { source: "Webhook: 4iiz AI Outbound SMS", request_url: "POST https://gfphuh6fxq...lambda-url.us-east-1.on.aws/", response_code: 200, date: "2026-02-24 10:42 AM", activity: "Call #284719" },
-        ApiLogEntry { source: "Webhook: #Na Calls to Tickets", request_url: "POST https://hooks.zapier.com/hooks/catch/123...", response_code: 200, date: "2026-02-24 10:38 AM", activity: "Call #284718" },
-        ApiLogEntry { source: "Trigger: FKM Tagging - Outbound", request_url: "POST https://api.4iiz.com/v1/triggers/execute", response_code: 200, date: "2026-02-24 10:35 AM", activity: "Call #284717" },
-        ApiLogEntry { source: "Webhook: AnswerHero", request_url: "POST https://hooks.zapier.com/hooks/catch/456...", response_code: 404, date: "2026-02-24 10:30 AM", activity: "Call #284716" },
-        ApiLogEntry { source: "Webhook: Offline-Comms-test1", request_url: "POST https://abc123.ngrok.io/webhook", response_code: 404, date: "2026-02-24 10:25 AM", activity: "Call #284715" },
-        ApiLogEntry { source: "Webhook: 4iiz AI SMS hook", request_url: "POST https://xyz789.lambda-url.us-east-1.on.aws/", response_code: 200, date: "2026-02-24 10:20 AM", activity: "Text #91024" },
-    ]
-}
-
 #[component]
 pub fn ApiLogsPage() -> impl IntoView {
-    let logs = mock_api_logs();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ApiLogEntryItem>>("/activities/api-logs?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
@@ -1588,44 +1571,60 @@ pub fn ApiLogsPage() -> impl IntoView {
                 <button class="btn btn-sm btn-ghost text-gray-500">"Reset"</button>
             </div>
             <div class="flex-1 overflow-y-auto p-6">
-                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-                    <div class="grid grid-cols-[32px_220px_1fr_100px_160px_120px_60px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
-                        <div class="col-header"></div>
-                        <div class="col-header">"Source"</div>
-                        <div class="col-header">"Request URL"</div>
-                        <div class="col-header">"Response Code"</div>
-                        <div class="col-header">"Date"</div>
-                        <div class="col-header">"Activity"</div>
-                        <div class="col-header"></div>
-                    </div>
-
-                    {logs.into_iter().map(|l| {
-                        let badge_class = if l.response_code == 200 {
-                            "badge badge-sm bg-green-500 text-white border-none"
-                        } else {
-                            "badge badge-sm bg-red-500 text-white border-none"
-                        };
+                {move || match data.get() {
+                    None => loading_view().into_any(),
+                    Some(Err(e)) => error_view(e).into_any(),
+                    Some(Ok(resp)) => {
+                        let items = resp.items.clone();
+                        let meta = resp.pagination.clone();
                         view! {
-                            <div class="activity-row grid grid-cols-[32px_220px_1fr_100px_160px_120px_60px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
-                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronDown /></span>
-                                </button>
-                                <div class="text-sm text-gray-700">{l.source}</div>
-                                <div class="text-xs text-gray-400 truncate">{l.request_url}</div>
-                                <div><span class=badge_class>{l.response_code}</span></div>
-                                <div class="text-xs text-gray-500">{l.date}</div>
-                                <div class="text-xs text-iiz-blue-link">{l.activity}</div>
-                                <div>
-                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"Retry"</button>
-                                </div>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
+                            <>
+                                <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                                    <div class="grid grid-cols-[32px_220px_1fr_100px_160px_120px_60px] gap-1 px-4 py-2 border-b border-gray-200 min-w-max">
+                                        <div class="col-header"></div>
+                                        <div class="col-header">"Source"</div>
+                                        <div class="col-header">"Request URL"</div>
+                                        <div class="col-header">"Response Code"</div>
+                                        <div class="col-header">"Date"</div>
+                                        <div class="col-header">"Activity"</div>
+                                        <div class="col-header"></div>
+                                    </div>
 
-                <div class="flex items-center justify-center mt-4">
-                    <button class="btn btn-sm btn-ghost text-iiz-cyan">"Load More"</button>
-                </div>
+                                    {items.into_iter().map(|l| {
+                                        let source = l.source.clone().unwrap_or_default();
+                                        let request_url = format!("{} {}", l.method, l.endpoint);
+                                        let response_code = l.response_code.unwrap_or(0);
+                                        let activity = l.activity_description.clone().unwrap_or_default();
+                                        let date = fmt_date(&l.timestamp);
+                                        let time = fmt_time(&l.timestamp);
+                                        let date_str = format!("{} {}", date, time);
+                                        let badge_class = if response_code >= 200 && response_code < 300 {
+                                            "badge badge-sm bg-green-500 text-white border-none"
+                                        } else {
+                                            "badge badge-sm bg-red-500 text-white border-none"
+                                        };
+                                        view! {
+                                            <div class="activity-row grid grid-cols-[32px_220px_1fr_100px_160px_120px_60px] gap-1 px-4 py-2.5 items-center cursor-pointer min-w-max">
+                                                <button class="btn btn-xs btn-ghost text-gray-400">
+                                                    <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronDown /></span>
+                                                </button>
+                                                <div class="text-sm text-gray-700">{source}</div>
+                                                <div class="text-xs text-gray-400 truncate">{request_url}</div>
+                                                <div><span class=badge_class>{response_code}</span></div>
+                                                <div class="text-xs text-gray-500">{date_str}</div>
+                                                <div class="text-xs text-iiz-blue-link">{activity}</div>
+                                                <div>
+                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">"Retry"</button>
+                                                </div>
+                                            </div>
+                                        }
+                                    }).collect::<Vec<_>>()}
+                                </div>
+                                {pagination_footer(&meta)}
+                            </>
+                        }.into_any()
+                    }
+                }}
             </div>
         </div>
     }

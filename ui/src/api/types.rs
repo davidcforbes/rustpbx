@@ -352,6 +352,116 @@ pub struct KnowledgeBankItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Activities section
+// -------------------------------------------------------------------------
+
+/// A text record returned by GET /activities/texts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextRecordItem {
+    pub id: String,
+    pub contact_phone: Option<String>,
+    pub tracking_number_id: Option<String>,
+    pub direction: String,
+    pub preview: Option<String>,
+    pub status: String,
+    pub sent_at: String,
+    pub created_at: String,
+}
+
+/// A chat record returned by GET /activities/chats
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatRecordItem {
+    pub id: String,
+    pub visitor_name: Option<String>,
+    pub visitor_detail: Option<String>,
+    pub channel: Option<String>,
+    pub message_count: i32,
+    pub agent_id: Option<String>,
+    pub widget_id: Option<String>,
+    pub status: String,
+    pub duration_secs: i32,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub created_at: String,
+}
+
+/// A form record returned by GET /activities/forms
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormRecordItem {
+    pub id: String,
+    pub contact_name: Option<String>,
+    pub contact_phone: Option<String>,
+    pub contact_email: Option<String>,
+    pub form_name: Option<String>,
+    pub source: Option<String>,
+    pub tracking_number: Option<String>,
+    pub status: String,
+    pub submitted_at: String,
+    pub created_at: String,
+}
+
+/// A fax record returned by GET /activities/fax
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FaxRecordItem {
+    pub id: String,
+    pub from_number: Option<String>,
+    pub to_number: Option<String>,
+    pub direction: String,
+    pub pages: i32,
+    pub status: String,
+    pub document_url: Option<String>,
+    pub sent_at: String,
+    pub created_at: String,
+}
+
+/// A video record returned by GET /activities/video
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoRecordItem {
+    pub id: String,
+    pub participant_name: Option<String>,
+    pub participant_email: Option<String>,
+    pub host_agent_id: Option<String>,
+    pub platform: Option<String>,
+    pub has_recording: bool,
+    pub recording_url: Option<String>,
+    pub duration_secs: i32,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub created_at: String,
+}
+
+/// An export record returned by GET /activities/exports
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportRecordItem {
+    pub id: String,
+    pub name: Option<String>,
+    pub export_type: Option<String>,
+    pub format: String,
+    pub date_range: Option<String>,
+    pub record_count: i32,
+    pub status: String,
+    pub download_url: Option<String>,
+    pub requested_by_id: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+}
+
+/// An API log entry returned by GET /activities/api-logs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiLogEntryItem {
+    pub id: String,
+    pub source: Option<String>,
+    pub method: String,
+    pub endpoint: String,
+    pub response_code: Option<i32>,
+    pub duration_ms: Option<i32>,
+    pub activity_description: Option<String>,
+    pub error_message: Option<String>,
+    pub timestamp: String,
+    pub created_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
