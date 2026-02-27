@@ -11,6 +11,7 @@ pub mod communication;
 pub mod contacts;
 pub mod engagement;
 pub mod enums;
+pub mod ephemeral;
 pub mod flows;
 pub mod numbers;
 pub mod reports;
@@ -47,6 +48,10 @@ pub use automations::{
     UpdateTrigger, UpdateTriggerAction, UpdateTriggerCondition, UpdateWebhook,
     UpdateWebhookSubscription, UpdateWorkflow, UpdateWorkflowEdge, UpdateWorkflowNode, Webhook,
     WebhookSubscription, Workflow, WorkflowEdge, WorkflowNode,
+};
+pub use ephemeral::{
+    FrequencyLimit, Location, NewFrequencyLimit, NewLocation, NewPresence, Presence,
+    UpdateFrequencyLimit, UpdateLocation, UpdatePresence,
 };
 pub use engagement::{
     BulkMessage, ChatWidget, FormReactorEntry, KeywordSpottingConfig, KeywordSpottingKeyword,
