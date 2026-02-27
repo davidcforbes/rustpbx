@@ -22,6 +22,7 @@ pub mod ai_tools;
 pub mod auth;
 pub mod contacts;
 pub mod crud;
+pub mod ephemeral;
 pub mod error;
 pub mod flows;
 pub mod middleware;
@@ -81,6 +82,8 @@ pub fn router(state: IizState) -> Router {
         .nest("/trust-center", trust_center::router())
         // -- Reports section (Phase F8.2) --
         .nest("/reports", reports::router())
+        // -- Ephemeral section (Phase F9.2) --
+        .nest("/ephemeral", ephemeral::router())
         .with_state(state);
 
     Router::new().nest("/api/v1", api)
