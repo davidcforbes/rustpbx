@@ -13,6 +13,7 @@ pub mod engagement;
 pub mod enums;
 pub mod flows;
 pub mod numbers;
+pub mod reports;
 pub mod tags;
 pub mod trust_center;
 
@@ -85,6 +86,11 @@ pub use activities::{
     NewCallAiSummary, NewCallAnnotation, NewCallDailySummary, NewCallFlowEvent, NewCallKeywordHit,
     NewCallRecord, NewCallTag, NewCallTranscriptionSegment, NewCallVisitorSession,
     NewMonitoringEvent, UpdateActiveCall, UpdateCallAnnotation, UpdateCallDailySummary,
+};
+pub use reports::{
+    Appointment, CustomReport, NewAppointment, NewCustomReport, NewNotification,
+    NewNotificationRule, Notification, NotificationRule, UpdateAppointment, UpdateCustomReport,
+    UpdateNotification, UpdateNotificationRule,
 };
 pub use communication::{
     ChatRecord, ExportRecord, FaxRecord, FormRecord, NewChatRecord, NewExportRecord, NewFaxRecord,
