@@ -482,6 +482,69 @@ pub struct A2pCampaignItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Reports section
+// -------------------------------------------------------------------------
+
+/// A custom report returned by GET /reports/custom-reports
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomReportItem {
+    pub id: String,
+    pub name: String,
+    pub report_type: Option<String>,
+    pub date_range_type: String,
+    pub schedule: Option<String>,
+    pub is_shared: bool,
+    pub last_run_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A notification rule returned by GET /reports/notification-rules
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationRuleItem {
+    pub id: String,
+    pub name: String,
+    pub metric: String,
+    pub condition_operator: String,
+    pub threshold_value: f64,
+    pub time_window_minutes: i32,
+    pub notification_method: String,
+    pub cooldown_minutes: i32,
+    pub is_active: bool,
+    pub trigger_count: i32,
+    pub last_triggered_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// An appointment returned by GET /reports/appointments
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentItem {
+    pub id: String,
+    pub scheduled_at: String,
+    pub caller_name: Option<String>,
+    pub caller_phone: Option<String>,
+    pub appointment_type: String,
+    pub status: String,
+    pub revenue: Option<f64>,
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A tag returned by GET /tags
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagItem {
+    pub id: String,
+    pub name: String,
+    pub color: Option<String>,
+    pub description: Option<String>,
+    pub usage_count: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {

@@ -2,6 +2,12 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
+use crate::api::api_get;
+use crate::api::types::{
+    AppointmentItem, CustomReportItem, ListResponse, NotificationRuleItem, TagItem,
+    TrackingSourceItem,
+};
+
 // ---------------------------------------------------------------------------
 // Reports side navigation
 // ---------------------------------------------------------------------------
@@ -90,49 +96,31 @@ pub fn ReportsSideNav() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Data types
+// Shared helpers
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Debug)]
-struct SourceRow {
-    name: &'static str,
-    badge_pct: &'static str,
-    badge_color: &'static str,
-    total: &'static str,
-    total_pct: &'static str,
-    period_unique: &'static str,
-    period_unique_pct: &'static str,
-    globally_unique: &'static str,
-    globally_unique_pct: &'static str,
-    ring_avg: &'static str,
-    ring_total: &'static str,
-    talk_avg: &'static str,
-    talk_total: &'static str,
-    total_time_avg: &'static str,
-    total_time_total: &'static str,
+/// Truncate an ISO-8601 datetime to just the date portion.
+fn fmt_date(iso: &str) -> String {
+    if iso.len() >= 10 { iso[..10].to_string() } else { iso.to_string() }
 }
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
+/// Loading spinner placeholder.
+fn loading_view() -> impl IntoView {
+    view! {
+        <div class="flex-1 flex items-center justify-center p-8">
+            <span class="loading loading-spinner loading-md text-iiz-cyan"></span>
+            <span class="ml-2 text-gray-500">"Loading..."</span>
+        </div>
+    }
+}
 
-fn mock_source_rows() -> Vec<SourceRow> {
-    vec![
-        SourceRow { name: "Google Organic", badge_pct: "73%", badge_color: "bg-green-500", total: "80,374", total_pct: "73.03%", period_unique: "19,988", period_unique_pct: "18.16%", globally_unique: "6,260", globally_unique_pct: "5.69%", ring_avg: "0:25", ring_total: "33,489.12", talk_avg: "2:22", talk_total: "190,487.08", total_time_avg: "2:55", total_time_total: "234,167.90" },
-        SourceRow { name: "Customer Service Line", badge_pct: "20%", badge_color: "bg-orange-500", total: "22,270", total_pct: "20.24%", period_unique: "6,809", period_unique_pct: "6.19%", globally_unique: "425", globally_unique_pct: "0.39%", ring_avg: "0:30", ring_total: "11,135.00", talk_avg: "2:05", talk_total: "46,429.17", total_time_avg: "2:40", total_time_total: "59,386.67" },
-        SourceRow { name: "Tiktok Organic", badge_pct: "2%", badge_color: "bg-red-500", total: "2,526", total_pct: "2.30%", period_unique: "1,746", period_unique_pct: "1.59%", globally_unique: "1,219", globally_unique_pct: "1.11%", ring_avg: "0:28", ring_total: "1,178.80", talk_avg: "2:10", talk_total: "5,473.00", total_time_avg: "2:45", total_time_total: "6,946.50" },
-        SourceRow { name: "Facebook Paid", badge_pct: "3%", badge_color: "bg-red-500", total: "1,942", total_pct: "1.76%", period_unique: "1,178", period_unique_pct: "1.07%", globally_unique: "771", globally_unique_pct: "0.70%", ring_avg: "0:27", ring_total: "873.90", talk_avg: "2:15", talk_total: "4,369.50", total_time_avg: "2:48", total_time_total: "5,437.60" },
-        SourceRow { name: "Facebook Organic", badge_pct: "1%", badge_color: "bg-green-500", total: "701", total_pct: "0.64%", period_unique: "556", period_unique_pct: "0.51%", globally_unique: "410", globally_unique_pct: "0.37%", ring_avg: "0:26", ring_total: "303.77", talk_avg: "2:20", talk_total: "1,635.67", total_time_avg: "2:50", total_time_total: "1,986.17" },
-        SourceRow { name: "Book of Truths Trum", badge_pct: "1%", badge_color: "bg-green-500", total: "625", total_pct: "0.57%", period_unique: "326", period_unique_pct: "0.30%", globally_unique: "81", globally_unique_pct: "0.07%", ring_avg: "0:24", ring_total: "250.00", talk_avg: "2:30", talk_total: "1,562.50", total_time_avg: "3:00", total_time_total: "1,875.00" },
-        SourceRow { name: "Radio La Ley", badge_pct: "\u{2014}", badge_color: "bg-gray-400", total: "425", total_pct: "0.39%", period_unique: "302", period_unique_pct: "0.27%", globally_unique: "136", globally_unique_pct: "0.12%", ring_avg: "0:29", ring_total: "205.42", talk_avg: "2:12", talk_total: "935.00", total_time_avg: "2:45", total_time_total: "1,168.75" },
-        SourceRow { name: "Website", badge_pct: "0%", badge_color: "bg-red-500", total: "288", total_pct: "0.26%", period_unique: "194", period_unique_pct: "0.18%", globally_unique: "88", globally_unique_pct: "0.08%", ring_avg: "0:31", ring_total: "148.80", talk_avg: "1:58", talk_total: "566.40", total_time_avg: "2:35", total_time_total: "744.00" },
-        SourceRow { name: "Instagram Organic", badge_pct: "0%", badge_color: "bg-red-500", total: "187", total_pct: "0.17%", period_unique: "127", period_unique_pct: "0.12%", globally_unique: "86", globally_unique_pct: "0.08%", ring_avg: "0:25", ring_total: "77.92", talk_avg: "2:18", talk_total: "430.10", total_time_avg: "2:48", total_time_total: "523.60" },
-        SourceRow { name: "Yelp Organic", badge_pct: "\u{2014}", badge_color: "bg-gray-400", total: "173", total_pct: "0.16%", period_unique: "119", period_unique_pct: "0.11%", globally_unique: "59", globally_unique_pct: "0.05%", ring_avg: "0:27", ring_total: "77.85", talk_avg: "2:05", talk_total: "360.42", total_time_avg: "2:35", total_time_total: "447.58" },
-        SourceRow { name: "Mass SMS", badge_pct: "0%", badge_color: "bg-green-500", total: "167", total_pct: "0.15%", period_unique: "129", period_unique_pct: "0.12%", globally_unique: "8", globally_unique_pct: "0.01%", ring_avg: "0:22", ring_total: "61.23", talk_avg: "2:45", talk_total: "459.25", total_time_avg: "3:10", total_time_total: "529.17" },
-        SourceRow { name: "WhatsApp", badge_pct: "0%", badge_color: "bg-red-500", total: "110", total_pct: "0.10%", period_unique: "68", period_unique_pct: "0.06%", globally_unique: "38", globally_unique_pct: "0.03%", ring_avg: "0:30", ring_total: "55.00", talk_avg: "2:00", talk_total: "220.00", total_time_avg: "2:35", total_time_total: "284.17" },
-        SourceRow { name: "Mystery Shopper", badge_pct: "0%", badge_color: "bg-green-500", total: "74", total_pct: "0.07%", period_unique: "35", period_unique_pct: "0.03%", globally_unique: "4", globally_unique_pct: "0.00%", ring_avg: "0:18", ring_total: "22.20", talk_avg: "3:05", talk_total: "228.17", total_time_avg: "3:25", total_time_total: "253.17" },
-        SourceRow { name: "Google Ads", badge_pct: "0%", badge_color: "bg-red-500", total: "67", total_pct: "0.06%", period_unique: "45", period_unique_pct: "0.04%", globally_unique: "20", globally_unique_pct: "0.02%", ring_avg: "0:26", ring_total: "29.03", talk_avg: "2:10", talk_total: "145.17", total_time_avg: "2:40", total_time_total: "178.67" },
-    ]
+/// Error message display.
+fn error_view(msg: String) -> impl IntoView {
+    view! {
+        <div class="flex-1 flex items-center justify-center p-8">
+            <div class="text-red-500 text-sm">{msg}</div>
+        </div>
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +129,9 @@ fn mock_source_rows() -> Vec<SourceRow> {
 
 #[component]
 pub fn ActivityReportPage() -> impl IntoView {
-    let sources = mock_source_rows();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TrackingSourceItem>>("/numbers/sources?page=1&per_page=50").await
+    });
 
     view! {
         <div class="flex flex-col h-full">
@@ -200,10 +190,9 @@ pub fn ActivityReportPage() -> impl IntoView {
             </div>
 
             <div class="flex-1 overflow-y-auto">
-                // Chart placeholder
+                // Chart placeholder (static — needs aggregation endpoint)
                 <div class="bg-white border-b border-gray-200 p-4">
                     <div class="h-48 bg-gray-50 rounded-lg border border-gray-200 flex items-end justify-center gap-1 px-4 pb-4">
-                        // Simplified bar chart representation
                         {[35, 42, 38, 45, 50, 47, 12, 8, 44, 46, 43, 41, 48, 11, 7, 45, 47, 44, 42, 49, 10, 6, 43, 45, 41, 39, 46, 9, 5].into_iter().enumerate().map(|(i, h)| {
                             let height = format!("height: {}%; min-height: 4px;", h * 2);
                             let color = if h < 15 { "bg-gray-300" } else { "bg-green-400" };
@@ -223,81 +212,51 @@ pub fn ActivityReportPage() -> impl IntoView {
                     </div>
                 </div>
 
-                // Data table
+                // Data table — API-driven source rows
                 <div class="overflow-x-auto">
                     // Column headers
                     <div class="grid grid-cols-[180px_80px_80px_80px_80px_80px_80px] gap-1 px-4 py-2 bg-gray-50 border-b border-gray-200 min-w-max">
                         <div class="col-header">"Source"</div>
-                        <div class="col-header text-right">"Total"</div>
-                        <div class="col-header text-right">"Period Unique"</div>
-                        <div class="col-header text-right">"Globally Unique"</div>
-                        <div class="col-header text-right">"Ring Time"</div>
-                        <div class="col-header text-right">"Talk Time"</div>
-                        <div class="col-header text-right">"Total Time"</div>
+                        <div class="col-header text-right">"Calls"</div>
+                        <div class="col-header text-right">"Status"</div>
+                        <div class="col-header text-right">"Position"</div>
+                        <div class="col-header text-right">"Numbers"</div>
+                        <div class="col-header text-right">"Type"</div>
+                        <div class="col-header text-right">"Created"</div>
                     </div>
 
-                    // Totals row
-                    <div class="grid grid-cols-[180px_80px_80px_80px_80px_80px_80px] gap-1 px-4 py-2 bg-gray-50 border-b border-gray-300 font-semibold min-w-max">
-                        <div class="text-sm">"Total"</div>
-                        <div class="text-right">
-                            <div class="text-sm">"110,050"</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm">"31,721"</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm">"9,671"</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs">"0:27 avg"</div>
-                            <div class="text-xs text-gray-400 font-normal">"51,342.78"</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs">"2:18 avg"</div>
-                            <div class="text-xs text-gray-400 font-normal">"254,905.82"</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs">"2:52 avg"</div>
-                            <div class="text-xs text-gray-400 font-normal">"316,130.67"</div>
-                        </div>
-                    </div>
-
-                    // Source rows
-                    {sources.into_iter().map(|s| {
-                        let badge_class = format!("inline-block w-10 text-center text-[10px] text-white rounded px-1 py-0.5 {}", s.badge_color);
-                        view! {
-                            <div class="activity-row grid grid-cols-[180px_80px_80px_80px_80px_80px_80px] gap-1 px-4 py-2 items-center min-w-max">
-                                <div class="flex items-center gap-2">
-                                    <span class=badge_class>{s.badge_pct}</span>
-                                    <span class="text-sm truncate">{s.name}</span>
+                    // Source rows from API
+                    {move || match data.get() {
+                        None => loading_view().into_any(),
+                        Some(Err(e)) => error_view(e).into_any(),
+                        Some(Ok(resp)) => {
+                            let items = resp.items.clone();
+                            view! {
+                                <div>
+                                    {items.into_iter().map(|s| {
+                                        let status_class = if s.status == "active" {
+                                            "badge badge-sm bg-green-100 text-green-700 border-green-200"
+                                        } else {
+                                            "badge badge-sm bg-gray-100 text-gray-500 border-gray-200"
+                                        };
+                                        view! {
+                                            <div class="activity-row grid grid-cols-[180px_80px_80px_80px_80px_80px_80px] gap-1 px-4 py-2 items-center min-w-max">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-sm truncate font-medium">{s.name.clone()}</span>
+                                                </div>
+                                                <div class="text-right text-sm">{s.call_count.to_string()}</div>
+                                                <div class="text-right"><span class=status_class>{s.status.clone()}</span></div>
+                                                <div class="text-right text-sm">{s.position.to_string()}</div>
+                                                <div class="text-right text-sm">{s.number_count.to_string()}</div>
+                                                <div class="text-right text-sm text-gray-500">{s.source_type.clone().unwrap_or_else(|| "\u{2014}".to_string())}</div>
+                                                <div class="text-right text-sm text-gray-500">{fmt_date(&s.created_at)}</div>
+                                            </div>
+                                        }
+                                    }).collect::<Vec<_>>()}
                                 </div>
-                                <div class="text-right">
-                                    <div class="text-sm">{s.total}</div>
-                                    <div class="text-xs text-gray-400">{s.total_pct}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm">{s.period_unique}</div>
-                                    <div class="text-xs text-gray-400">{s.period_unique_pct}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm">{s.globally_unique}</div>
-                                    <div class="text-xs text-gray-400">{s.globally_unique_pct}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xs">{s.ring_avg}" avg"</div>
-                                    <div class="text-xs text-gray-400">{s.ring_total}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xs">{s.talk_avg}" avg"</div>
-                                    <div class="text-xs text-gray-400">{s.talk_total}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xs">{s.total_time_avg}" avg"</div>
-                                    <div class="text-xs text-gray-400">{s.total_time_total}</div>
-                                </div>
-                            </div>
+                            }.into_any()
                         }
-                    }).collect::<Vec<_>>()}
+                    }}
                 </div>
             </div>
         </div>
@@ -3150,6 +3109,10 @@ pub fn RealTimePage() -> impl IntoView {
 
 #[component]
 pub fn AppointmentsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<AppointmentItem>>("/reports/appointments?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -3185,7 +3148,7 @@ pub fn AppointmentsPage() -> impl IntoView {
             </header>
 
             <div class="flex-1 overflow-y-auto bg-iiz-gray-bg">
-                // KPI cards
+                // KPI cards (static — needs aggregation endpoint)
                 <div class="grid grid-cols-4 gap-4 p-4">
                     <div class="card bg-white border border-gray-200">
                         <div class="card-body p-4">
@@ -3217,7 +3180,7 @@ pub fn AppointmentsPage() -> impl IntoView {
                     </div>
                 </div>
 
-                // Chart: Weekly trend bars
+                // Chart: Weekly trend bars (static — needs aggregation endpoint)
                 <div class="bg-white border mx-4 mb-4 rounded-lg p-4">
                     <h3 class="text-sm font-semibold text-gray-700 mb-3">"Weekly Appointments Trend"</h3>
                     <div class="h-36 flex items-end justify-around gap-3 px-4">
@@ -3236,7 +3199,7 @@ pub fn AppointmentsPage() -> impl IntoView {
                     </div>
                 </div>
 
-                // Data table
+                // Data table — API-driven
                 <div class="mx-4 mb-4 card bg-white border border-gray-200">
                     <div class="overflow-x-auto">
                         <table class="table table-sm w-full">
@@ -3245,48 +3208,50 @@ pub fn AppointmentsPage() -> impl IntoView {
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Date/Time"</th>
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Caller"</th>
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Phone"</th>
-                                    <th class="text-xs font-medium text-gray-500 uppercase">"Source"</th>
-                                    <th class="text-xs font-medium text-gray-500 uppercase">"Agent"</th>
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Type"</th>
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
                                     <th class="text-xs font-medium text-gray-500 uppercase">"Notes"</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {[
-                                    ("Feb 24, 9:00 AM", "John Smith", "(910) 555-0142", "Google", "Maria G.", "New", "Confirmed", "Initial consultation"),
-                                    ("Feb 24, 9:30 AM", "Maria Lopez", "(910) 555-0198", "Facebook", "James W.", "Follow-up", "Completed", "Case review"),
-                                    ("Feb 24, 10:00 AM", "Robert Chen", "(919) 555-0234", "Direct", "Sarah C.", "Consultation", "Confirmed", "Estate planning"),
-                                    ("Feb 24, 10:30 AM", "Sarah Davis", "(910) 555-0312", "Google", "Emily D.", "New", "No-Show", "---"),
-                                    ("Feb 24, 11:00 AM", "James Wilson", "(336) 555-0187", "TikTok", "Maria G.", "New", "Confirmed", "Personal injury consult"),
-                                    ("Feb 24, 1:00 PM", "Emily Brown", "(704) 555-0265", "Radio", "James W.", "Follow-up", "Pending", "Document review"),
-                                    ("Feb 24, 2:00 PM", "Carlos Reyes", "(910) 555-0421", "Google", "Sarah C.", "Consultation", "Confirmed", "Immigration case"),
-                                    ("Feb 24, 3:30 PM", "Lisa Park", "(919) 555-0543", "Facebook", "Robert T.", "New", "Pending", "Family law inquiry"),
-                                ].into_iter().map(|(datetime, caller, phone, source, agent, appt_type, status, notes)| {
-                                    let type_class = match appt_type {
-                                        "New" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
-                                        "Follow-up" => "badge badge-sm bg-blue-100 text-blue-700 border-blue-200",
-                                        _ => "badge badge-sm bg-purple-100 text-purple-700 border-purple-200",
-                                    };
-                                    let status_class = match status {
-                                        "Confirmed" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
-                                        "Completed" => "badge badge-sm bg-gray-100 text-gray-700 border-gray-200",
-                                        "No-Show" => "badge badge-sm bg-red-100 text-red-700 border-red-200",
-                                        _ => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
-                                    };
-                                    view! {
-                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                            <td class="text-sm font-medium">{datetime}</td>
-                                            <td class="text-sm text-gray-700">{caller}</td>
-                                            <td class="text-sm text-iiz-cyan">{phone}</td>
-                                            <td class="text-sm text-gray-600">{source}</td>
-                                            <td class="text-sm text-gray-600">{agent}</td>
-                                            <td><span class=type_class>{appt_type}</span></td>
-                                            <td><span class=status_class>{status}</span></td>
-                                            <td class="text-sm text-gray-500 truncate max-w-[150px]">{notes}</td>
-                                        </tr>
+                                {move || match data.get() {
+                                    None => loading_view().into_any(),
+                                    Some(Err(e)) => error_view(e).into_any(),
+                                    Some(Ok(resp)) => {
+                                        let items = resp.items.clone();
+                                        view! {
+                                            <>
+                                                {items.into_iter().map(|a| {
+                                                    let type_class = match a.appointment_type.as_str() {
+                                                        "new" | "New" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                        "follow_up" | "Follow-up" => "badge badge-sm bg-blue-100 text-blue-700 border-blue-200",
+                                                        _ => "badge badge-sm bg-purple-100 text-purple-700 border-purple-200",
+                                                    };
+                                                    let status_class = match a.status.as_str() {
+                                                        "confirmed" | "Confirmed" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                        "completed" | "Completed" => "badge badge-sm bg-gray-100 text-gray-700 border-gray-200",
+                                                        "no_show" | "No-Show" => "badge badge-sm bg-red-100 text-red-700 border-red-200",
+                                                        _ => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                    };
+                                                    let sched = fmt_date(&a.scheduled_at);
+                                                    let caller = a.caller_name.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                                    let phone = a.caller_phone.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                                    let notes = a.notes.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                                    view! {
+                                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                            <td class="text-sm font-medium">{sched}</td>
+                                                            <td class="text-sm text-gray-700">{caller}</td>
+                                                            <td class="text-sm text-iiz-cyan">{phone}</td>
+                                                            <td><span class=type_class>{a.appointment_type.clone()}</span></td>
+                                                            <td><span class=status_class>{a.status.clone()}</span></td>
+                                                            <td class="text-sm text-gray-500 truncate max-w-[150px]">{notes}</td>
+                                                        </tr>
+                                                    }
+                                                }).collect::<Vec<_>>()}
+                                            </>
+                                        }.into_any()
                                     }
-                                }).collect::<Vec<_>>()}
+                                }}
                             </tbody>
                         </table>
                     </div>
@@ -3717,6 +3682,10 @@ pub fn AgencyUsagePage() -> impl IntoView {
 
 #[component]
 pub fn CustomReportsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<CustomReportItem>>("/reports/custom-reports?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -3740,21 +3709,32 @@ pub fn CustomReportsPage() -> impl IntoView {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[
-                                        ("Weekly Call Summary", "Activity", "Every Monday", "Feb 17, 2026", "Jan 05, 2025"),
-                                        ("Monthly ROI Dashboard", "ROI", "1st of month", "Feb 01, 2026", "Mar 12, 2025"),
-                                        ("Daily Missed Calls Alert", "Missed Calls", "Daily at 6pm", "Feb 24, 2026", "Jun 20, 2025"),
-                                    ].into_iter().map(|(name, report_type, schedule, last_run, created)| {
-                                        view! {
-                                            <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
-                                                <td class="text-sm font-medium text-iiz-cyan">{name}</td>
-                                                <td class="text-sm text-gray-600">{report_type}</td>
-                                                <td class="text-sm text-gray-600">{schedule}</td>
-                                                <td class="text-sm text-gray-600">{last_run}</td>
-                                                <td class="text-sm text-gray-600">{created}</td>
-                                            </tr>
+                                    {move || match data.get() {
+                                        None => loading_view().into_any(),
+                                        Some(Err(e)) => error_view(e).into_any(),
+                                        Some(Ok(resp)) => {
+                                            let items = resp.items.clone();
+                                            view! {
+                                                <>
+                                                    {items.into_iter().map(|r| {
+                                                        let rtype = r.report_type.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                                        let sched = r.schedule.clone().unwrap_or_else(|| "\u{2014}".to_string());
+                                                        let last_run = r.last_run_at.as_deref().map(|d| fmt_date(d)).unwrap_or_else(|| "Never".to_string());
+                                                        let created = fmt_date(&r.created_at);
+                                                        view! {
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                                                                <td class="text-sm font-medium text-iiz-cyan">{r.name.clone()}</td>
+                                                                <td class="text-sm text-gray-600">{rtype}</td>
+                                                                <td class="text-sm text-gray-600">{sched}</td>
+                                                                <td class="text-sm text-gray-600">{last_run}</td>
+                                                                <td class="text-sm text-gray-600">{created}</td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </>
+                                            }.into_any()
                                         }
-                                    }).collect::<Vec<_>>()}
+                                    }}
                                 </tbody>
                             </table>
                         </div>
@@ -3767,6 +3747,10 @@ pub fn CustomReportsPage() -> impl IntoView {
 
 #[component]
 pub fn NotificationsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<NotificationRuleItem>>("/reports/notification-rules?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -3783,35 +3767,41 @@ pub fn NotificationsPage() -> impl IntoView {
                                 <thead>
                                     <tr class="border-b border-gray-200">
                                         <th class="text-xs font-medium text-gray-500 uppercase">"Name"</th>
-                                        <th class="text-xs font-medium text-gray-500 uppercase">"Type"</th>
-                                        <th class="text-xs font-medium text-gray-500 uppercase">"Recipients"</th>
-                                        <th class="text-xs font-medium text-gray-500 uppercase">"Trigger"</th>
+                                        <th class="text-xs font-medium text-gray-500 uppercase">"Method"</th>
+                                        <th class="text-xs font-medium text-gray-500 uppercase">"Metric"</th>
+                                        <th class="text-xs font-medium text-gray-500 uppercase">"Triggered"</th>
                                         <th class="text-xs font-medium text-gray-500 uppercase">"Active"</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[
-                                        ("Missed Call Alert", "Email", "team@dienerlaw.net", "Missed call", true),
-                                        ("High Volume Warning", "SMS", "+1 (910) 555-0101", "> 50 calls/hr", true),
-                                        ("Daily Summary", "Email", "chris@dienerlaw.net", "Daily at 6pm", true),
-                                        ("Weekend Calls", "Email + SMS", "on-call@dienerlaw.net", "Weekend call", false),
-                                    ].into_iter().map(|(name, notif_type, recipients, trigger, active)| {
-                                        view! {
-                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                <td class="text-sm font-medium">{name}</td>
-                                                <td class="text-sm text-gray-600">{notif_type}</td>
-                                                <td class="text-sm text-gray-600">{recipients}</td>
-                                                <td class="text-sm text-gray-600">{trigger}</td>
-                                                <td>
-                                                    {if active {
-                                                        view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
-                                                    } else {
-                                                        view! { <span class="badge badge-sm bg-gray-100 text-gray-500 border-gray-200">"Inactive"</span> }.into_any()
-                                                    }}
-                                                </td>
-                                            </tr>
+                                    {move || match data.get() {
+                                        None => loading_view().into_any(),
+                                        Some(Err(e)) => error_view(e).into_any(),
+                                        Some(Ok(resp)) => {
+                                            let items = resp.items.clone();
+                                            view! {
+                                                <>
+                                                    {items.into_iter().map(|n| {
+                                                        view! {
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td class="text-sm font-medium">{n.name.clone()}</td>
+                                                                <td class="text-sm text-gray-600">{n.notification_method.clone()}</td>
+                                                                <td class="text-sm text-gray-600">{format!("{} {} {}", &n.metric, &n.condition_operator, n.threshold_value)}</td>
+                                                                <td class="text-sm text-gray-600">{n.trigger_count.to_string()}" times"</td>
+                                                                <td>
+                                                                    {if n.is_active {
+                                                                        view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
+                                                                    } else {
+                                                                        view! { <span class="badge badge-sm bg-gray-100 text-gray-500 border-gray-200">"Inactive"</span> }.into_any()
+                                                                    }}
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </>
+                                            }.into_any()
                                         }
-                                    }).collect::<Vec<_>>()}
+                                    }}
                                 </tbody>
                             </table>
                         </div>
@@ -3886,6 +3876,10 @@ pub fn ScoringPage() -> impl IntoView {
 
 #[component]
 pub fn TagsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TagItem>>("/tags?page=1&per_page=50").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -3898,34 +3892,35 @@ pub fn TagsPage() -> impl IntoView {
                 <div class="max-w-2xl mx-auto p-6">
                     <div class="card bg-white border border-gray-200">
                         <div class="card-body p-6">
-                            <div class="space-y-3">
-                                {[
-                                    ("New Client", "bg-green-500", "1,245"),
-                                    ("Returning Client", "bg-blue-500", "3,892"),
-                                    ("Urgent", "bg-red-500", "456"),
-                                    ("Follow-up Required", "bg-orange-500", "2,103"),
-                                    ("Consultation Booked", "bg-purple-500", "892"),
-                                    ("Spanish Speaker", "bg-yellow-500", "1,567"),
-                                    ("After Hours", "bg-gray-500", "743"),
-                                    ("VIP Client", "bg-pink-500", "189"),
-                                ].into_iter().map(|(name, color, count)| {
-                                    let dot_class = format!("w-3 h-3 rounded-full {}", color);
+                            {move || match data.get() {
+                                None => loading_view().into_any(),
+                                Some(Err(e)) => error_view(e).into_any(),
+                                Some(Ok(resp)) => {
+                                    let items = resp.items.clone();
                                     view! {
-                                        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                            <div class="flex items-center gap-3">
-                                                <span class=dot_class></span>
-                                                <span class="text-sm font-medium text-gray-700">{name}</span>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-xs text-gray-400">{count}" uses"</span>
-                                                <button class="btn btn-xs btn-ghost text-gray-400">
-                                                    <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                                                </button>
-                                            </div>
+                                        <div class="space-y-3">
+                                            {items.into_iter().map(|tag| {
+                                                let color = tag.color.as_deref().unwrap_or("bg-gray-500");
+                                                let dot_class = format!("w-3 h-3 rounded-full {}", color);
+                                                view! {
+                                                    <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                        <div class="flex items-center gap-3">
+                                                            <span class=dot_class></span>
+                                                            <span class="text-sm font-medium text-gray-700">{tag.name.clone()}</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-3">
+                                                            <span class="text-xs text-gray-400">{tag.usage_count.to_string()}" uses"</span>
+                                                            <button class="btn btn-xs btn-ghost text-gray-400">
+                                                                <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }).collect::<Vec<_>>()}
                                         </div>
-                                    }
-                                }).collect::<Vec<_>>()}
-                            </div>
+                                    }.into_any()
+                                }
+                            }}
                         </div>
                     </div>
                 </div>
