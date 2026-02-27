@@ -1,4 +1,4 @@
-//! Reports section router -- custom reports, notifications, and appointments.
+//! Reports section router -- custom reports, notifications, appointments, and dashboards.
 
 use axum::routing::get;
 use axum::Router;
@@ -7,11 +7,14 @@ use crate::iiz::api::IizState;
 
 mod appointments;
 mod custom_reports;
+pub mod dashboard;
 mod notifications;
 
 /// Build the `/reports` section router.
 pub fn router() -> Router<IizState> {
     Router::new()
+        // --- Dashboard (aggregation) ---
+        .route("/dashboard/{report_type}", get(dashboard::get_dashboard))
         // --- Custom Reports ---
         .route(
             "/custom-reports",

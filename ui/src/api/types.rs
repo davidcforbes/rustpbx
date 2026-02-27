@@ -834,6 +834,61 @@ pub struct CallRecordItem {
     pub created_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Dashboard report types (generic for all report pages)
+// -------------------------------------------------------------------------
+
+/// A KPI card on a dashboard report.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReportKpi {
+    pub label: String,
+    pub value: String,
+    pub subtitle: Option<String>,
+    pub trend: Option<String>,
+    pub color: Option<String>,
+}
+
+/// A data point in a report chart.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChartPoint {
+    pub label: String,
+    pub values: Vec<f64>,
+}
+
+/// A legend entry for a report chart.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChartLegend {
+    pub label: String,
+    pub color: String,
+}
+
+/// Chart data for a dashboard report.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReportChart {
+    pub title: String,
+    pub chart_type: String,
+    pub legend: Vec<ChartLegend>,
+    pub points: Vec<ChartPoint>,
+}
+
+/// A table row in a dashboard report.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableRow {
+    pub cells: Vec<String>,
+}
+
+/// Complete dashboard data returned by GET /reports/dashboard/:type
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardData {
+    pub report_type: String,
+    pub kpis: Vec<ReportKpi>,
+    pub chart: Option<ReportChart>,
+    pub table_headers: Vec<String>,
+    pub table_rows: Vec<TableRow>,
+    pub table_footer: Option<Vec<String>>,
+    pub column_alignments: Option<Vec<String>>,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
