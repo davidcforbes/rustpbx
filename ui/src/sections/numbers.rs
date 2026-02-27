@@ -4,8 +4,8 @@ use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
 use crate::api::types::{
-    CallSettingItem, ListResponse, PaginationMeta, ReceivingNumberItem, TargetNumberItem,
-    TextNumberItem, TrackingNumberItem, TrackingSourceItem,
+    CallSettingItem, ListResponse, NumberPoolItem, PaginationMeta, ReceivingNumberItem,
+    TargetNumberItem, TextNumberItem, TrackingNumberItem, TrackingSourceItem,
 };
 
 // ---------------------------------------------------------------------------
@@ -1040,150 +1040,80 @@ pub fn PortNumbersPage() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Number Pools page - Form-based configuration (UNCHANGED)
+// Number Pools page - list of existing number pools
 // ---------------------------------------------------------------------------
 
 #[component]
 pub fn NumberPoolsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<NumberPoolItem>>("/numbers/pools?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
-            // Breadcrumb header
-            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0">
-                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Number Pools"</a>
-                <span class="text-xs text-gray-400">">"</span>
-                <span class="text-xs text-gray-500">"New"</span>
-                <span class="text-xs text-gray-400">">"</span>
-                <span class="text-xs font-medium text-gray-700">"General"</span>
+            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
+                <div class="mr-auto">
+                    <h1 class="text-lg font-semibold text-gray-800">"Number Pools"</h1>
+                    <p class="text-xs text-gray-500">"Manage groups of tracking numbers for dynamic insertion"</p>
+                </div>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"+ New Pool"</button>
             </header>
 
-            // Form content
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="max-w-2xl space-y-4">
-                    // Card 1: General
-                    <div class="bg-white border border-gray-200 rounded-lg">
-                        <div class="px-4 py-3 border-b border-gray-200">
-                            <h3 class="text-sm font-semibold text-gray-700">"General"</h3>
-                        </div>
-                        <div class="p-4 space-y-4">
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">
-                                    "Name"
-                                    <span class="text-red-500 ml-0.5">"*"</span>
-                                </label>
-                                <input type="text" class="input input-bordered w-full" />
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Description"</label>
-                                <textarea class="textarea textarea-bordered w-full h-20" placeholder="Optional description..."></textarea>
-                            </div>
-                        </div>
+            {move || match data.get() {
+                None => view! {
+                    <div class="flex-1 flex items-center justify-center p-8">
+                        <span class="loading loading-spinner loading-md text-iiz-cyan"></span>
+                        <span class="ml-2 text-gray-500">"Loading..."</span>
                     </div>
-
-                    // Card 2: Tracking
-                    <div class="bg-white border border-gray-200 rounded-lg">
-                        <div class="px-4 py-3 border-b border-gray-200">
-                            <h3 class="text-sm font-semibold text-gray-700">"Tracking"</h3>
-                        </div>
-                        <div class="p-4 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700">"Custom Tracking Source"</label>
-                                <input type="checkbox" class="toggle toggle-sm" />
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Visitor Type"</label>
-                                <select class="select select-bordered w-full">
-                                    <option selected>"All Visitors"</option>
-                                    <option>"New Visitors"</option>
-                                    <option>"Returning Visitors"</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Estimated Visitor Count"</label>
-                                <input type="number" value="1" class="input input-bordered w-32" />
-                            </div>
-                        </div>
+                }.into_any(),
+                Some(Err(e)) => view! {
+                    <div class="flex-1 flex items-center justify-center p-8">
+                        <div class="text-red-500 text-sm">{e}</div>
                     </div>
-
-                    // Card 3: Numbers Management
-                    <div class="bg-white border border-gray-200 rounded-lg">
-                        <div class="px-4 py-3 border-b border-gray-200">
-                            <h3 class="text-sm font-semibold text-gray-700">"Numbers Management"</h3>
+                }.into_any(),
+                Some(Ok(resp)) => {
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <div class="flex flex-col flex-1 overflow-hidden">
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="table table-sm w-full">
+                                    <thead>
+                                        <tr class="text-xs text-gray-500 uppercase">
+                                            <th>"Name"</th>
+                                            <th>"Description"</th>
+                                            <th>"Type"</th>
+                                            <th>"Members"</th>
+                                            <th>"Active"</th>
+                                            <th>"Created"</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {resp.items.into_iter().map(|item| {
+                                            view! {
+                                                <tr class="hover:bg-gray-50 cursor-pointer">
+                                                    <td class="font-medium text-gray-800">{item.name.clone()}</td>
+                                                    <td class="text-sm text-gray-600">{item.description.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td class="text-sm text-gray-600">{item.pool_type.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td class="text-sm text-gray-600">{fmt_number(item.member_count)}</td>
+                                                    <td>
+                                                        {if item.is_active {
+                                                            view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
+                                                        } else {
+                                                            view! { <span class="badge badge-sm bg-gray-100 text-gray-500">"Inactive"</span> }.into_any()
+                                                        }}
+                                                    </td>
+                                                    <td class="text-xs text-gray-500">{fmt_date(&item.created_at)}</td>
+                                                </tr>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {pagination_footer(&meta)}
                         </div>
-                        <div class="p-4 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700">"Auto Management"</label>
-                                <input type="checkbox" class="toggle toggle-sm toggle-success" checked />
-                            </div>
-
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Target Accuracy"</label>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-lg font-bold text-iiz-cyan">"99%"</span>
-                                    <input type="range" min="90" max="100" value="99" class="range range-xs range-primary flex-1" />
-                                </div>
-                            </div>
-
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-                                "Based on your visitor count, we recommend "
-                                <span class="font-bold">"1"</span>
-                                " tracking number(s) to maintain the target accuracy level."
-                            </div>
-
-                            <div class="text-sm text-gray-500">
-                                "Cost: "
-                                <span class="font-medium text-gray-700">"$1.26/mo per number"</span>
-                            </div>
-
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Country"</label>
-                                <select class="select select-bordered w-full">
-                                    <option selected>"US +1"</option>
-                                    <option>"CA +1"</option>
-                                    <option>"GB +44"</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-2">"Number Type"</label>
-                                <div class="flex items-center gap-4">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="number_type" class="radio radio-sm radio-primary" checked />
-                                        <span class="text-sm text-gray-700">"Local"</span>
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="number_type" class="radio radio-sm radio-primary" />
-                                        <span class="text-sm text-gray-700">"Toll Free"</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-1">"Area Code"</label>
-                                <select class="select select-bordered w-32">
-                                    <option selected>"205"</option>
-                                    <option>"212"</option>
-                                    <option>"276"</option>
-                                    <option>"310"</option>
-                                    <option>"404"</option>
-                                    <option>"512"</option>
-                                    <option>"702"</option>
-                                    <option>"919"</option>
-                                </select>
-                            </div>
-
-                            <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700">"Allow Overlay"</label>
-                                <input type="checkbox" class="toggle toggle-sm" />
-                            </div>
-                        </div>
-                    </div>
-
-                    // Save button
-                    <div class="flex justify-end">
-                        <button class="btn bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save"</button>
-                    </div>
-                </div>
-            </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }

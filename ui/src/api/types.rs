@@ -747,6 +747,93 @@ pub struct ReminderItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for AI Tools section — additional
+// -------------------------------------------------------------------------
+
+/// An AskAI config returned by GET /ai-tools/ask-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AskAiConfigItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub model_provider: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A Voice AI agent returned by GET /ai-tools/voice-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceAiAgentItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub welcome_message: Option<String>,
+    pub voice_name: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A Chat AI agent returned by GET /ai-tools/chat-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatAiAgentItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for Numbers section — additional
+// -------------------------------------------------------------------------
+
+/// A number pool returned by GET /numbers/pools
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NumberPoolItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub pool_type: Option<String>,
+    pub member_count: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for Activities section — Call Records
+// -------------------------------------------------------------------------
+
+/// A call record returned by GET /activities/calls
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallRecordItem {
+    pub id: String,
+    pub caller_name: Option<String>,
+    pub caller_number: Option<String>,
+    pub caller_city: Option<String>,
+    pub caller_state: Option<String>,
+    pub caller_country: Option<String>,
+    pub tracking_number_id: Option<String>,
+    pub tracking_source_id: Option<String>,
+    pub receiving_number_id: Option<String>,
+    pub direction: String,
+    pub status: String,
+    pub duration_secs: i32,
+    pub talk_time_secs: Option<i32>,
+    pub ring_time_secs: Option<i32>,
+    pub has_recording: bool,
+    pub has_voicemail: bool,
+    pub agent_id: Option<String>,
+    pub queue_id: Option<String>,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub created_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {

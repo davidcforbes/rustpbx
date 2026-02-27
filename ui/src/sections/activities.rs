@@ -5,8 +5,8 @@ use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
 use crate::api::types::{
-    ChatRecordItem, ExportRecordItem, FaxRecordItem, FormRecordItem, ListResponse, PaginationMeta,
-    TextRecordItem, VideoRecordItem,
+    CallRecordItem, ChatRecordItem, ExportRecordItem, FaxRecordItem, FormRecordItem, ListResponse,
+    PaginationMeta, TextRecordItem, VideoRecordItem,
 };
 use crate::components::{CallDetailPanel, FilterBar};
 
@@ -44,237 +44,57 @@ pub struct CallRecord {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data -- mirrors the prototype's Alpine.js `calls` array
+// Map API response to local CallRecord struct
 // ---------------------------------------------------------------------------
 
-fn mock_calls() -> Vec<CallRecord> {
-    vec![
-        CallRecord {
-            id: "4045529975".into(),
-            name: "Francisco Javier 26-49335".into(),
-            phone: "(714) 737-3835".into(),
-            location: "Cypress, CA US".into(),
-            source: "Google Organic".into(),
-            source_number: "(949) 649-6378".into(),
-            source_name: "Santa Ana Office - Google My Business".into(),
-            has_audio: false,
-            duration: "00:00".into(),
-            date: "Wed Feb 25th".into(),
-            time: "04:46 PM".into(),
-            status: "Hangup".into(),
-            agent: "Javi Guerrero".into(),
-            agent_initials: "JG".into(),
-            agent_color: "#0277bd".into(),
-            automation: String::new(),
-            tags: vec!["agent_assigned".into()],
-            case_description: "U-Visa Investigation (Not Detained)".into(),
-            contact_category: String::new(),
-            crm_contact_id: "4307460001363256958".into(),
-            crm_matter_id: "4307460001306053781".into(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: String::new(),
-        },
-        CallRecord {
-            id: "4045529976".into(),
-            name: "Martha A Morales - Fb".into(),
-            phone: "(979) 567-8615".into(),
-            location: "Bryan, TX US".into(),
-            source: "Google Organic".into(),
-            source_number: "(603) 218-2269".into(),
-            source_name: "Dallas Office - Google My Business".into(),
-            has_audio: true,
-            duration: "01:03".into(),
-            date: "Wed Feb 25th".into(),
-            time: "04:45 PM".into(),
-            status: "Answered".into(),
-            agent: "Fernanda Padilla".into(),
-            agent_initials: "FP".into(),
-            agent_color: "#7b1fa2".into(),
-            automation: String::new(),
-            tags: vec![],
-            case_description: String::new(),
-            contact_category: String::new(),
-            crm_contact_id: String::new(),
-            crm_matter_id: String::new(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: "Appointments Set?: No".into(),
-        },
-        CallRecord {
-            id: "4045529977".into(),
-            name: "Mirian Elizabeth Ocampo Diaz 25-42709".into(),
-            phone: "(910) 305-3917".into(),
-            location: "Fayetteville, NC US".into(),
-            source: "Google Organic".into(),
-            source_number: "(919) 725-8000".into(),
-            source_name: "Durham Office - Google My Business".into(),
-            has_audio: true,
-            duration: "00:35".into(),
-            date: "Wed Feb 25th".into(),
-            time: "04:44 PM".into(),
-            status: "Answered".into(),
-            agent: "Daniela Nubia".into(),
-            agent_initials: "DN".into(),
-            agent_color: "#00897b".into(),
-            automation: "Answered Calls Lookup - Missed Calls Automation".into(),
-            tags: vec![],
-            case_description: "Adjustment Of Status Relative Petition".into(),
-            contact_category: "Customer Service".into(),
-            crm_contact_id: "4307460001924153177".into(),
-            crm_matter_id: "4307460010060854368".into(),
-            case_subtype: "Document Collection (AOS-IR)".into(),
-            matter_status: String::new(),
-            answered_by: "agent_assigned".into(),
-        },
-        CallRecord {
-            id: "4045529978".into(),
-            name: "Raquel Escobar".into(),
-            phone: "(714) 981-6483".into(),
-            location: "Placentia, CA US".into(),
-            source: "Google Organic".into(),
-            source_number: "(949) 649-6378".into(),
-            source_name: "Santa Ana Office - Google My Business".into(),
-            has_audio: false,
-            duration: "54:07".into(),
-            date: "Wed Feb 25th".into(),
-            time: "04:45 PM".into(),
-            status: "in progress".into(),
-            agent: "Brandon Nunez".into(),
-            agent_initials: "BN".into(),
-            agent_color: "#c62828".into(),
-            automation: String::new(),
-            tags: vec![
-                "repeated caller".into(),
-                "spanish ivr".into(),
-                "sales call".into(),
-            ],
-            case_description: String::new(),
-            contact_category: String::new(),
-            crm_contact_id: String::new(),
-            crm_matter_id: String::new(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: "Answered?: \u{2714}".into(),
-        },
-        CallRecord {
-            id: "4045529979".into(),
-            name: "Karla Velazquez Girlfriend Olvan Josue Fajardo Dominguez 25-36648".into(),
-            phone: "(240) 733-5285".into(),
-            location: "Durham, NC".into(),
-            source: "Google Organic".into(),
-            source_number: "(919) 725-8000".into(),
-            source_name: "Durham Office - Google My Business".into(),
-            has_audio: true,
-            duration: "03:42".into(),
-            date: "Wed Feb 25th".into(),
-            time: "04:45 PM".into(),
-            status: "Answered".into(),
-            agent: "Judith Andrade".into(),
-            agent_initials: "JA".into(),
-            agent_color: "#4527a0".into(),
-            automation: String::new(),
-            tags: vec![],
-            case_description: "U-Visa Investigation".into(),
-            contact_category: "Customer Service".into(),
-            crm_contact_id: "4307460008623341469".into(),
-            crm_matter_id: "4307460009004326759".into(),
-            case_subtype: "0023 - Follow up Call to Agency (UVil)".into(),
-            matter_status: String::new(),
-            answered_by: String::new(),
-        },
-        CallRecord {
-            id: "4045529980".into(),
-            name: "Jose Ramon Garcia Sanchez 25-45997".into(),
-            phone: "(602) 930-7605".into(),
-            location: "Phoenix, AZ US".into(),
-            source: "Google Organic".into(),
-            source_number: "(602) 838-6665".into(),
-            source_name: "Phoenix Office - Google My Business".into(),
-            has_audio: false,
-            duration: "01:08".into(),
-            date: "Wed Feb 25th".into(),
-            time: "02:39 PM".into(),
-            status: "in progress".into(),
-            agent: "Oswaldo Aguilera".into(),
-            agent_initials: "OA".into(),
-            agent_color: "#0277bd".into(),
-            automation: "Initial Language Selection".into(),
-            tags: vec![
-                "repeated caller".into(),
-                "spanish ivr".into(),
-                "inbound to make payment".into(),
-            ],
-            case_description: String::new(),
-            contact_category: String::new(),
-            crm_contact_id: String::new(),
-            crm_matter_id: String::new(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: String::new(),
-        },
-        CallRecord {
-            id: "4045529981".into(),
-            name: "Clemente Aldahir Gonzalez".into(),
-            phone: "(657) 520-8092".into(),
-            location: "Santa Ana, CA US".into(),
-            source: "Tiktok Organic".into(),
-            source_number: "(657) 279-5506".into(),
-            source_name: "TikTok Organic".into(),
-            has_audio: false,
-            duration: "02:49".into(),
-            date: "Wed Feb 25th".into(),
-            time: "02:37 PM".into(),
-            status: "in progress".into(),
-            agent: "Israel Navarro".into(),
-            agent_initials: "IN".into(),
-            agent_color: "#558b2f".into(),
-            automation: "Initial Language Selection".into(),
-            tags: vec![
-                "repeated caller".into(),
-                "spanish ivr".into(),
-                "sales call".into(),
-            ],
-            case_description: String::new(),
-            contact_category: String::new(),
-            crm_contact_id: String::new(),
-            crm_matter_id: String::new(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: String::new(),
-        },
-        CallRecord {
-            id: "4045529982".into(),
-            name: "Adolfo Angel Valerio Armijo 25-47527".into(),
-            phone: "(323) 598-3978".into(),
-            location: "Montebello, CA US".into(),
-            source: "Google Organic".into(),
-            source_number: "(949) 649-6378".into(),
-            source_name: "Santa Ana Office - Google My Business".into(),
-            has_audio: false,
-            duration: "03:05".into(),
-            date: "Wed Feb 25th".into(),
-            time: "02:37 PM".into(),
-            status: "in progress".into(),
-            agent: String::new(),
-            agent_initials: "+".into(),
-            agent_color: "#9e9e9e".into(),
-            automation: "Initial Language Selection".into(),
-            tags: vec![
-                "repeated caller".into(),
-                "english ivr".into(),
-                "cs routed per priming".into(),
-                "cs smart router".into(),
-            ],
-            case_description: String::new(),
-            contact_category: String::new(),
-            crm_contact_id: String::new(),
-            crm_matter_id: String::new(),
-            case_subtype: String::new(),
-            matter_status: String::new(),
-            answered_by: String::new(),
-        },
-    ]
+fn call_record_from_api(item: CallRecordItem) -> CallRecord {
+    let location = match (&item.caller_city, &item.caller_state) {
+        (Some(city), Some(state)) => format!("{}, {}", city, state),
+        (Some(city), None) => city.clone(),
+        (None, Some(state)) => state.clone(),
+        _ => String::new(),
+    };
+    let duration = {
+        let mins = item.duration_secs / 60;
+        let secs = item.duration_secs % 60;
+        format!("{:02}:{:02}", mins, secs)
+    };
+    let date = if item.started_at.len() >= 10 {
+        item.started_at[..10].to_string()
+    } else {
+        item.started_at.clone()
+    };
+    let time = if item.started_at.len() >= 19 {
+        item.started_at[11..16].to_string()
+    } else {
+        String::new()
+    };
+    CallRecord {
+        id: item.id,
+        name: item.caller_name.unwrap_or_default(),
+        phone: item.caller_number.unwrap_or_default(),
+        location,
+        source: String::new(),
+        source_number: String::new(),
+        source_name: String::new(),
+        has_audio: item.has_recording,
+        duration,
+        date,
+        time,
+        status: item.status,
+        agent: String::new(),
+        agent_initials: String::new(),
+        agent_color: "#0277bd".to_string(),
+        automation: String::new(),
+        tags: vec![],
+        case_description: String::new(),
+        contact_category: String::new(),
+        crm_contact_id: String::new(),
+        crm_matter_id: String::new(),
+        case_subtype: String::new(),
+        matter_status: String::new(),
+        answered_by: String::new(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +219,9 @@ pub fn ActivitiesSideNav() -> impl IntoView {
 
 #[component]
 pub fn CallsPage() -> impl IntoView {
-    let calls = mock_calls();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<CallRecordItem>>("/activities/calls?page=1&per_page=25").await
+    });
     let selected_call = RwSignal::new(Option::<CallRecord>::None);
 
     view! {
@@ -440,42 +262,76 @@ pub fn CallsPage() -> impl IntoView {
                 </div>
             </div>
 
-            // Call rows
+            // Call rows -- from API
             <div class="flex-1 overflow-y-auto">
-                {calls
-                    .into_iter()
-                    .map(|call| {
-                        let call_for_click = call.clone();
-                        let call_id_sel = call.id.clone();
-                        let is_selected = move || {
-                            selected_call
-                                .get()
-                                .as_ref()
-                                .map(|c| c.id == call_id_sel)
-                                .unwrap_or(false)
-                        };
+                {move || match data.get() {
+                    None => view! {
+                        <div class="flex-1 flex items-center justify-center p-8">
+                            <span class="loading loading-spinner loading-md text-iiz-cyan"></span>
+                            <span class="ml-2 text-gray-500">"Loading calls..."</span>
+                        </div>
+                    }.into_any(),
+                    Some(Err(e)) => view! {
+                        <div class="flex-1 flex items-center justify-center p-8">
+                            <div class="text-red-500 text-sm">{e}</div>
+                        </div>
+                    }.into_any(),
+                    Some(Ok(resp)) => {
+                        let calls: Vec<CallRecord> = resp.items.into_iter().map(call_record_from_api).collect();
                         view! {
-                            <CallRow
-                                call=call
-                                selected=Signal::derive(is_selected)
-                                on_click=move |_| {
-                                    selected_call.set(Some(call_for_click.clone()));
-                                }
-                            />
-                        }
-                    })
-                    .collect::<Vec<_>>()}
+                            <div>
+                                {calls
+                                    .into_iter()
+                                    .map(|call| {
+                                        let call_for_click = call.clone();
+                                        let call_id_sel = call.id.clone();
+                                        let is_selected = move || {
+                                            selected_call
+                                                .get()
+                                                .as_ref()
+                                                .map(|c| c.id == call_id_sel)
+                                                .unwrap_or(false)
+                                        };
+                                        view! {
+                                            <CallRow
+                                                call=call
+                                                selected=Signal::derive(is_selected)
+                                                on_click=move |_| {
+                                                    selected_call.set(Some(call_for_click.clone()));
+                                                }
+                                            />
+                                        }
+                                    })
+                                    .collect::<Vec<_>>()}
+                            </div>
+                        }.into_any()
+                    }
+                }}
             </div>
 
-            // Status bar
+            // Status bar with real pagination
             <div class="h-10 bg-white border-t border-gray-200 flex items-center px-4 text-sm text-gray-500 flex-shrink-0">
-                <span>"Showing 1-8 of 3,700,569 results"</span>
+                <span>
+                    {move || {
+                        data.get()
+                            .and_then(|r| r.ok())
+                            .map(|r| format!("Showing page {} of {} ({} total)", r.pagination.page, r.pagination.total_pages, r.pagination.total_items))
+                            .unwrap_or_else(|| "Loading...".to_string())
+                    }}
+                </span>
                 <div class="flex-1"></div>
                 <div class="flex items-center gap-1">
                     <button class="btn btn-xs btn-ghost text-gray-400">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronLeft /></span>
                     </button>
-                    <span class="text-xs">"Page 1"</span>
+                    <span class="text-xs">
+                        {move || {
+                            data.get()
+                                .and_then(|r| r.ok())
+                                .map(|r| format!("Page {}", r.pagination.page))
+                                .unwrap_or_default()
+                        }}
+                    </span>
                     <button class="btn btn-xs btn-ghost text-gray-400">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsChevronRight /></span>
                     </button>
