@@ -51,6 +51,6 @@ CREATE TABLE iiz.scoring_configs (
     deleted_at          TIMESTAMPTZ,
     CONSTRAINT uq_scoring_configs_account UNIQUE (account_id)
 );
-CREATE INDEX idx_sc_account ON iiz.scoring_configs (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_scoring_configs_account ON iiz.scoring_configs (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('scoring_configs');
 SELECT iiz.add_notify_trigger('scoring_configs');

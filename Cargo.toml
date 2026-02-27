@@ -136,6 +136,11 @@ totp-rs = { version = "5.7.0", features = ["qr", "gen_secret"] }
 ldap3 = "0.12.1"
 lettre = { version = "0.11", optional = true, features = ["smtp-transport", "tokio1-native-tls", "builder"] }
 
+# 4iiz ORM (Diesel + diesel-async for PostgreSQL)
+diesel = { version = "2.2", features = ["postgres", "uuid", "chrono", "serde_json"] }
+diesel-async = { version = "0.5", features = ["postgres", "bb8"] }
+pgvector = { version = "0.4", features = ["diesel"] }
+
 # AI Voice Pipeline - Audio Processing
 nnnoiseless = "0.5.2"
 realfft = "3.3"

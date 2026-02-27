@@ -34,6 +34,6 @@ CREATE TABLE iiz.summary_configs (
     deleted_at              TIMESTAMPTZ,
     CONSTRAINT uq_summary_configs_account UNIQUE (account_id)
 );
-CREATE INDEX idx_sc_account ON iiz.summary_configs (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_summary_configs_account ON iiz.summary_configs (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('summary_configs');
 SELECT iiz.add_notify_trigger('summary_configs');

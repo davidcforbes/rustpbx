@@ -21,7 +21,7 @@ CREATE UNLOGGED TABLE iiz.active_calls (
     updated_at          TIMESTAMPTZ     NOT NULL DEFAULT now(),
     deleted_at          TIMESTAMPTZ
 );
-CREATE INDEX idx_ac_account ON iiz.active_calls (account_id);
+CREATE INDEX idx_active_calls_account ON iiz.active_calls (account_id);
 CREATE INDEX idx_ac_agent ON iiz.active_calls (agent_id) WHERE agent_id IS NOT NULL;
 SELECT iiz.add_updated_at_trigger('active_calls');
 

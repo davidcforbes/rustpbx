@@ -59,7 +59,7 @@ CREATE TABLE iiz.call_annotations (
     deleted_at          TIMESTAMPTZ
 );
 
-CREATE INDEX idx_ca_account  ON iiz.call_annotations (account_id);
+CREATE INDEX idx_call_annotations_account  ON iiz.call_annotations (account_id);
 CREATE INDEX idx_ca_outcome  ON iiz.call_annotations (outcome) WHERE outcome IS NOT NULL;
 
 SELECT iiz.add_updated_at_trigger('call_annotations');

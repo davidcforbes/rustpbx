@@ -44,7 +44,7 @@ CREATE TABLE iiz.custom_reports (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at          TIMESTAMPTZ
 );
-CREATE INDEX idx_cr_account ON iiz.custom_reports (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_custom_reports_account ON iiz.custom_reports (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('custom_reports');
 SELECT iiz.add_notify_trigger('custom_reports');
 

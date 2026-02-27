@@ -69,7 +69,7 @@ CREATE TABLE iiz.voice_registrations (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at              TIMESTAMPTZ
 );
-CREATE INDEX idx_vr_account ON iiz.voice_registrations (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_voice_registrations_account ON iiz.voice_registrations (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('voice_registrations');
 SELECT iiz.add_notify_trigger('voice_registrations');
 

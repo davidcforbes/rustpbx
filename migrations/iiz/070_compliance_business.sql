@@ -38,6 +38,6 @@ CREATE TABLE iiz.authorized_contacts (
     deleted_at          TIMESTAMPTZ
 );
 CREATE INDEX idx_ac_business ON iiz.authorized_contacts (business_info_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_ac_account ON iiz.authorized_contacts (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_authorized_contacts_account ON iiz.authorized_contacts (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('authorized_contacts');
 SELECT iiz.add_notify_trigger('authorized_contacts');

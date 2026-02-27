@@ -4,9 +4,10 @@
 //! to PostgreSQL in lexicographic filename order. Each migration runs in its
 //! own transaction. Applied versions are tracked in `iiz.schema_migrations`.
 //!
-//! This intentionally avoids SeaORM's migration framework because over half
-//! the DDL is PostgreSQL-specific (partitioning, RLS, PL/pgSQL triggers,
-//! pgvector). SeaORM is used for runtime queries only, not schema management.
+//! This intentionally uses raw SQL rather than an ORM's migration framework
+//! because over half the DDL is PostgreSQL-specific (partitioning, RLS,
+//! PL/pgSQL triggers, pgvector). Diesel is used for runtime queries only,
+//! not schema management.
 
 use anyhow::{Context, Result};
 use sqlx::PgPool;

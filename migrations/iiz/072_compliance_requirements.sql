@@ -13,7 +13,7 @@ CREATE TABLE iiz.compliance_requirements (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at              TIMESTAMPTZ
 );
-CREATE INDEX idx_cr_account ON iiz.compliance_requirements (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_compliance_requirements_account ON iiz.compliance_requirements (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('compliance_requirements');
 SELECT iiz.add_notify_trigger('compliance_requirements');
 
@@ -34,7 +34,7 @@ CREATE TABLE iiz.compliance_applications (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at              TIMESTAMPTZ
 );
-CREATE INDEX idx_ca_account ON iiz.compliance_applications (account_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_compliance_applications_account ON iiz.compliance_applications (account_id) WHERE deleted_at IS NULL;
 SELECT iiz.add_updated_at_trigger('compliance_applications');
 SELECT iiz.add_notify_trigger('compliance_applications');
 

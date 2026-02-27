@@ -1,7 +1,14 @@
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::PgPool;
-use std::str::FromStr;
-use std::time::Duration;
+//! Four segregated Diesel-async connection pools per the storage architecture.
+//!
+//! Each pool sets `search_path`, `timezone`, and `statement_timeout` on connect.
+//! The `set_tenant()` method sets the RLS context variable before queries.
+
+use diesel_async::pooled_connection::bb8::{Pool, PooledConnection};
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::AsyncPgConnection;
+use diesel_async::RunQueryDsl;
+
+pub type PgPool = Pool<AsyncPgConnection>;
 
 /// Four segregated connection pools per the storage architecture.
 pub struct IizPools {
@@ -36,65 +43,41 @@ impl Default for PoolConfig {
     }
 }
 
+/// Build a single pool with the given max connections.
+async fn build_pool(database_url: &str, max_connections: u32) -> anyhow::Result<PgPool> {
+    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
+    let pool = Pool::builder()
+        .max_size(max_connections)
+        .build(manager)
+        .await?;
+    Ok(pool)
+}
+
 impl IizPools {
-    pub async fn connect(config: &PoolConfig) -> Result<Self, sqlx::Error> {
-        let base_opts = PgConnectOptions::from_str(&config.database_url)?;
+    pub async fn connect(config: &PoolConfig) -> anyhow::Result<Self> {
+        let call_processing = build_pool(&config.database_url, config.call_processing_max).await?;
+        let api_crud = build_pool(&config.database_url, config.api_crud_max).await?;
+        let background = build_pool(&config.database_url, config.background_max).await?;
+        let reports = build_pool(&config.database_url, config.reports_max).await?;
 
-        let call_processing = PgPoolOptions::new()
-            .max_connections(config.call_processing_max)
-            .acquire_timeout(Duration::from_secs(5))
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    sqlx::query("SET search_path = iiz, public; SET timezone = 'UTC';")
-                        .execute(&mut *conn)
-                        .await?;
-                    Ok(())
-                })
-            })
-            .connect_with(base_opts.clone())
-            .await?;
-
-        let api_crud = PgPoolOptions::new()
-            .max_connections(config.api_crud_max)
-            .acquire_timeout(Duration::from_secs(10))
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    sqlx::query("SET search_path = iiz, public; SET timezone = 'UTC'; SET statement_timeout = '30s';")
-                        .execute(&mut *conn)
-                        .await?;
-                    Ok(())
-                })
-            })
-            .connect_with(base_opts.clone())
-            .await?;
-
-        let background = PgPoolOptions::new()
-            .max_connections(config.background_max)
-            .acquire_timeout(Duration::from_secs(30))
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    sqlx::query("SET search_path = iiz, public; SET timezone = 'UTC'; SET statement_timeout = '300s';")
-                        .execute(&mut *conn)
-                        .await?;
-                    Ok(())
-                })
-            })
-            .connect_with(base_opts.clone())
-            .await?;
-
-        let reports = PgPoolOptions::new()
-            .max_connections(config.reports_max)
-            .acquire_timeout(Duration::from_secs(10))
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    sqlx::query("SET search_path = iiz, public; SET timezone = 'UTC'; SET statement_timeout = '60s';")
-                        .execute(&mut *conn)
-                        .await?;
-                    Ok(())
-                })
-            })
-            .connect_with(base_opts)
-            .await?;
+        // Initialize each pool's first connection with search_path and timezone.
+        for (pool, timeout) in [
+            (&call_processing, "5s"),
+            (&api_crud, "30s"),
+            (&background, "300s"),
+            (&reports, "60s"),
+        ] {
+            let mut conn = pool.get().await?;
+            diesel::sql_query("SET search_path = iiz, public")
+                .execute(&mut *conn)
+                .await?;
+            diesel::sql_query("SET timezone = 'UTC'")
+                .execute(&mut *conn)
+                .await?;
+            diesel::sql_query(&format!("SET statement_timeout = '{}'", timeout))
+                .execute(&mut *conn)
+                .await?;
+        }
 
         Ok(Self {
             call_processing,
@@ -104,16 +87,19 @@ impl IizPools {
         })
     }
 
-    /// Set the tenant context on a pool connection.
+    /// Set the tenant context on a connection.
     /// Must be called before any query touching RLS-protected tables.
-    pub async fn set_tenant(
-        pool: &PgPool,
+    pub async fn set_tenant<'a>(
+        pool: &'a PgPool,
         account_id: &uuid::Uuid,
-    ) -> Result<sqlx::pool::PoolConnection<sqlx::Postgres>, sqlx::Error> {
-        let mut conn = pool.acquire().await?;
-        sqlx::query(&format!("SET app.current_account_id = '{}'", account_id))
-            .execute(&mut *conn)
-            .await?;
+    ) -> anyhow::Result<PooledConnection<'a, AsyncPgConnection>> {
+        let mut conn = pool.get().await?;
+        diesel::sql_query(&format!(
+            "SET app.current_account_id = '{}'",
+            account_id
+        ))
+        .execute(&mut *conn)
+        .await?;
         Ok(conn)
     }
 }

@@ -71,4 +71,4 @@ CREATE TABLE iiz.video_records (
     deleted_at          TIMESTAMPTZ
 );
 
-CREATE INDEX idx_vr_account ON iiz.video_records (account_id);
+CREATE INDEX idx_video_records_account ON iiz.video_records (account_id);

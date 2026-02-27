@@ -14,9 +14,15 @@ import os
 import psycopg2
 import pytest
 
+_host = os.environ.get("PG_HOST", "localhost")
+_port = os.environ.get("PG_PORT", "5433")
+_user = os.environ.get("PG_USER", "postgres")
+_password = os.environ.get("PG_PASSWORD", "test")
+_database = os.environ.get("PG_DATABASE", "iiz_test")
+
 DATABASE_URL = os.environ.get(
     "IIZ_TEST_DATABASE_URL",
-    "postgresql://postgres:test@localhost:5433/iiz_test"
+    f"postgresql://{_user}:{_password}@{_host}:{_port}/{_database}"
 )
 
 MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "migrations", "iiz")
