@@ -1,0 +1,4 @@
+[print_schema]
+file = "src/iiz/schema.rs"
+schema = "iiz"
+except_tables = ["_2026_", "schema_migrations"]
