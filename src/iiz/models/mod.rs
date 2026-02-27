@@ -14,6 +14,7 @@ pub mod enums;
 pub mod flows;
 pub mod numbers;
 pub mod tags;
+pub mod trust_center;
 
 // Re-export enum types for convenience
 pub use enums::*;
@@ -89,6 +90,16 @@ pub use communication::{
     ChatRecord, ExportRecord, FaxRecord, FormRecord, NewChatRecord, NewExportRecord, NewFaxRecord,
     NewFormRecord, NewTextMessage, NewTextRecord, NewVideoRecord, TextMessage, TextRecord,
     UpdateChatRecord, UpdateExportRecord, VideoRecord,
+};
+pub use trust_center::{
+    A2pCampaign, AuthorizedContact, BusinessInfo, ComplianceAddress, ComplianceApplication,
+    ComplianceRequirement, NewA2pCampaign, NewAuthorizedContact, NewBusinessInfo,
+    NewComplianceAddress, NewComplianceApplication, NewComplianceRequirement,
+    NewTollFreeRegistration, NewVoiceRegistration, NewVoiceRegistrationHistoryEntry,
+    TollFreeRegistration, UpdateA2pCampaign, UpdateAuthorizedContact, UpdateBusinessInfo,
+    UpdateComplianceAddress, UpdateComplianceApplication, UpdateComplianceRequirement,
+    UpdateTollFreeRegistration, UpdateVoiceRegistration, VoiceRegistration,
+    VoiceRegistrationHistoryEntry,
 };
 
 // Common type aliases used across models
