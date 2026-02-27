@@ -185,6 +185,78 @@ pub struct CallSettingItem {
     pub updated_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Flows section
+// -------------------------------------------------------------------------
+
+/// A voice menu returned by GET /flows/voice-menus
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceMenuItem {
+    pub id: String,
+    pub name: String,
+    pub greeting_type: String,
+    pub greeting_audio_url: Option<String>,
+    pub greeting_text: Option<String>,
+    pub speech_recognition: bool,
+    pub speech_language: Option<String>,
+    pub timeout_secs: i32,
+    pub max_retries: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A queue returned by GET /flows/queues
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueueItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub strategy: String,
+    pub schedule_id: Option<String>,
+    pub repeat_callers: bool,
+    pub caller_id_display: Option<String>,
+    pub max_wait_secs: i32,
+    pub no_answer_destination_type: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A smart router returned by GET /flows/smart-routers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartRouterItem {
+    pub id: String,
+    pub name: String,
+    pub priority: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A schedule returned by GET /flows/schedules
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScheduleItem {
+    pub id: String,
+    pub name: String,
+    pub timezone: String,
+    pub monday_open: Option<String>,
+    pub monday_close: Option<String>,
+    pub tuesday_open: Option<String>,
+    pub tuesday_close: Option<String>,
+    pub wednesday_open: Option<String>,
+    pub wednesday_close: Option<String>,
+    pub thursday_open: Option<String>,
+    pub thursday_close: Option<String>,
+    pub friday_open: Option<String>,
+    pub friday_close: Option<String>,
+    pub saturday_open: Option<String>,
+    pub saturday_close: Option<String>,
+    pub sunday_open: Option<String>,
+    pub sunday_close: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {
