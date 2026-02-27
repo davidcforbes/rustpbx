@@ -6,6 +6,7 @@
 pub mod accounts;
 pub mod contacts;
 pub mod enums;
+pub mod flows;
 pub mod numbers;
 pub mod tags;
 
@@ -32,6 +33,18 @@ pub use numbers::{
     UpdateTrackingSource,
 };
 pub use tags::{NewTag, Tag, UpdateTag};
+pub use flows::{
+    AgentScript, GeoRouter, GeoRouterRule, NewAgentScript, NewGeoRouter, NewGeoRouterRule,
+    NewQueue, NewQueueAgent, NewRoutingTable, NewRoutingTableRoute, NewSchedule,
+    NewScheduleHoliday, NewScoringConfig, NewSmartRouter, NewSmartRouterRule, NewVoiceMenu,
+    NewVoiceMenuOption, NewVoicemailBox, NewVoicemailMessage, Queue, QueueAgent, RoutingTable,
+    RoutingTableRoute, Schedule, ScheduleHoliday, ScoringConfig, SmartRouter, SmartRouterRule,
+    UpdateAgentScript, UpdateGeoRouter, UpdateGeoRouterRule, UpdateQueue, UpdateQueueAgent,
+    UpdateRoutingTable, UpdateRoutingTableRoute, UpdateSchedule, UpdateScheduleHoliday,
+    UpdateScoringConfig, UpdateSmartRouter, UpdateSmartRouterRule, UpdateVoiceMenu,
+    UpdateVoiceMenuOption, UpdateVoicemailBox, UpdateVoicemailMessage, VoiceMenu, VoiceMenuOption,
+    VoicemailBox, VoicemailMessage,
+};
 
 // Common type aliases used across models
 pub use chrono::{DateTime, Utc};
