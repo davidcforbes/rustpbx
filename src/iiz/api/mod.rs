@@ -17,6 +17,7 @@ use axum::Router;
 
 use crate::iiz::pool::IizPools;
 
+pub mod ai_tools;
 pub mod auth;
 pub mod contacts;
 pub mod crud;
@@ -58,6 +59,8 @@ pub fn router(state: IizState) -> Router {
         .nest("/numbers", numbers::router())
         // -- Flows section (Phase F3.2) --
         .nest("/flows", flows::router())
+        // -- AI Tools section (Phase F5.2) --
+        .nest("/ai-tools", ai_tools::router())
         // -- Tags (cross-cutting, used by multiple sections) --
         .route(
             "/tags",
@@ -71,7 +74,6 @@ pub fn router(state: IizState) -> Router {
         )
         // Section routers will be nested here in later phases:
         // .nest("/activities", activities::router())
-        // .nest("/ai-tools", ai_tools::router())
         // .nest("/reports", reports::router())
         // .nest("/trust-center", trust_center::router())
         .with_state(state);
