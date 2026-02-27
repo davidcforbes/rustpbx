@@ -139,7 +139,11 @@ lettre = { version = "0.11", optional = true, features = ["smtp-transport", "tok
 # 4iiz ORM (Diesel + diesel-async for PostgreSQL)
 diesel = { version = "2.2", features = ["postgres", "uuid", "chrono", "serde_json"] }
 diesel-async = { version = "0.5", features = ["postgres", "bb8"] }
+diesel-derive-enum = { version = "2.1", features = ["postgres"] }
 pgvector = { version = "0.4", features = ["diesel"] }
+
+# 4iiz API (JWT auth)
+jsonwebtoken = "9"
 
 # AI Voice Pipeline - Audio Processing
 nnnoiseless = "0.5.2"
