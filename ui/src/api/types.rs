@@ -462,6 +462,26 @@ pub struct ApiLogEntryItem {
     pub created_at: String,
 }
 
+// -------------------------------------------------------------------------
+// Domain response types for Trust Center section
+// -------------------------------------------------------------------------
+
+/// An A2P campaign returned by GET /trust-center/a2p-campaigns
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2pCampaignItem {
+    pub id: String,
+    pub campaign_name: String,
+    pub brand_name: Option<String>,
+    pub use_case: Option<String>,
+    pub assigned_numbers: i32,
+    pub max_numbers: Option<i32>,
+    pub monthly_cost: Option<f64>,
+    pub carrier: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 impl<T> ApiResponse<T> {
     /// Create an error response (used as fallback when JSON parsing fails).
     pub fn error(_status: u16, msg: &str) -> Self {

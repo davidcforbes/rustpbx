@@ -2,6 +2,9 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
+use crate::api::api_get;
+use crate::api::types::{A2pCampaignItem, ListResponse};
+
 // ---------------------------------------------------------------------------
 // Trust Center side navigation
 // ---------------------------------------------------------------------------
@@ -52,29 +55,33 @@ pub fn TrustCenterSideNav() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// Data types
+// Shared helpers
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Debug)]
-struct Campaign {
-    name: &'static str,
-    created: &'static str,
-    status: &'static str,
-    assigned_numbers: u32,
-    max_numbers: u32,
-    cost: &'static str,
-    carrier: &'static str,
+/// Truncate an ISO-8601 datetime to just the date portion.
+fn fmt_date(iso: &str) -> String {
+    if iso.len() >= 10 { iso[..10].to_string() } else { iso.to_string() }
 }
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
+/// Loading spinner placeholder.
+fn loading_view() -> impl IntoView {
+    view! {
+        <div class="flex items-center justify-center h-32">
+            <span class="loading loading-spinner loading-lg text-iiz-cyan"></span>
+        </div>
+    }
+}
 
-fn mock_campaigns() -> Vec<Campaign> {
-    vec![
-        Campaign { name: "General Campaign", created: "2023-05-22", status: "Approved", assigned_numbers: 116, max_numbers: 400, cost: "$1.5/mo", carrier: "Carrier A" },
-        Campaign { name: "New Campaign", created: "2023-11-03", status: "Approved", assigned_numbers: 59, max_numbers: 400, cost: "$1.5/mo", carrier: "Carrier A" },
-    ]
+/// Error message display.
+fn error_view(msg: String) -> impl IntoView {
+    view! {
+        <div class="flex items-center justify-center h-32">
+            <div class="text-center">
+                <div class="text-red-500 text-lg font-semibold">"Error"</div>
+                <div class="text-gray-500 mt-1">{msg}</div>
+            </div>
+        </div>
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +90,9 @@ fn mock_campaigns() -> Vec<Campaign> {
 
 #[component]
 pub fn BusinessInfoPage() -> impl IntoView {
-    let campaigns = mock_campaigns();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<A2pCampaignItem>>("/trust-center/a2p-campaigns?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
@@ -162,68 +171,83 @@ pub fn BusinessInfoPage() -> impl IntoView {
                                 <span class="text-sm text-gray-500">"Show expired campaigns"</span>
                             </label>
 
-                            <div class="overflow-x-auto">
-                                <table class="table table-sm w-full">
-                                    <thead>
-                                        <tr class="border-b border-gray-200">
-                                            <th class="text-xs font-medium text-gray-500 uppercase w-16"></th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Name"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Created"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Assigned Numbers"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Cost"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Carrier"</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {campaigns.into_iter().map(|c| {
-                                            let nums = format!("({}/{})", c.assigned_numbers, c.max_numbers);
-                                            view! {
-                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                    <td>
-                                                        <button class="btn btn-xs btn-ghost text-iiz-cyan">
-                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEye /></span>
-                                                        </button>
-                                                    </td>
-                                                    <td class="font-medium text-sm">{c.name}</td>
-                                                    <td class="text-sm text-gray-600">{c.created}</td>
-                                                    <td>
-                                                        <span class="flex items-center gap-1 text-sm text-green-600">
-                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckLg /></span>
-                                                            {c.status}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="flex items-center gap-1.5">
-                                                            <span class="w-4 h-4 inline-flex text-green-600"><Icon icon=icondata::BsCheckLg /></span>
-                                                            <span class="text-sm">{nums}</span>
-                                                            <button class="text-gray-400 hover:text-gray-600">
-                                                                <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPencil /></span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                    <td class="text-sm text-gray-600">{c.cost}</td>
-                                                    <td class="text-sm text-gray-600">{c.carrier}</td>
-                                                </tr>
-                                            }
-                                        }).collect::<Vec<_>>()}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {move || match data.get() {
+                                None => loading_view().into_any(),
+                                Some(Err(e)) => error_view(e).into_any(),
+                                Some(Ok(resp)) => {
+                                    let items = resp.items.clone();
+                                    let total = resp.pagination.total_items;
+                                    view! {
+                                        <>
+                                            <div class="overflow-x-auto">
+                                                <table class="table table-sm w-full">
+                                                    <thead>
+                                                        <tr class="border-b border-gray-200">
+                                                            <th class="text-xs font-medium text-gray-500 uppercase w-16"></th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Name"</th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Created"</th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Assigned Numbers"</th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Cost"</th>
+                                                            <th class="text-xs font-medium text-gray-500 uppercase">"Carrier"</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {items.into_iter().map(|c| {
+                                                            let nums = format!("({}/{})", c.assigned_numbers, c.max_numbers.unwrap_or(0));
+                                                            let cost = c.monthly_cost.map(|v| format!("${v}/mo")).unwrap_or_default();
+                                                            let carrier = c.carrier.clone().unwrap_or_default();
+                                                            let created = fmt_date(&c.created_at);
+                                                            view! {
+                                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                    <td>
+                                                                        <button class="btn btn-xs btn-ghost text-iiz-cyan">
+                                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEye /></span>
+                                                                        </button>
+                                                                    </td>
+                                                                    <td class="font-medium text-sm">{c.campaign_name.clone()}</td>
+                                                                    <td class="text-sm text-gray-600">{created}</td>
+                                                                    <td>
+                                                                        <span class="flex items-center gap-1 text-sm text-green-600">
+                                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckLg /></span>
+                                                                            {c.status.clone()}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="flex items-center gap-1.5">
+                                                                            <span class="w-4 h-4 inline-flex text-green-600"><Icon icon=icondata::BsCheckLg /></span>
+                                                                            <span class="text-sm">{nums}</span>
+                                                                            <button class="text-gray-400 hover:text-gray-600">
+                                                                                <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="text-sm text-gray-600">{cost}</td>
+                                                                    <td class="text-sm text-gray-600">{carrier}</td>
+                                                                </tr>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </tbody>
+                                                </table>
+                                            </div>
 
-                            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                                <div class="flex items-center gap-6 text-sm">
-                                    <div>
-                                        <span class="text-gray-500">"Local Text Registration Status:"</span>
-                                        <span class="text-green-600 font-medium ml-1">"approved"</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-500">"Campaigns:"</span>
-                                        <span class="font-medium ml-1">"2/50"</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Add Campaigns"</button>
-                            </div>
+                                            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                                                <div class="flex items-center gap-6 text-sm">
+                                                    <div>
+                                                        <span class="text-gray-500">"Local Text Registration Status:"</span>
+                                                        <span class="text-green-600 font-medium ml-1">"approved"</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-gray-500">"Campaigns:"</span>
+                                                        <span class="font-medium ml-1">{format!("{}/50", total)}</span>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Add Campaigns"</button>
+                                            </div>
+                                        </>
+                                    }.into_any()
+                                }
+                            }}
                         </div>
                     </div>
 
@@ -293,7 +317,9 @@ pub fn BusinessInfoPage() -> impl IntoView {
 
 #[component]
 pub fn LocalTextPage() -> impl IntoView {
-    let campaigns = mock_campaigns();
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<A2pCampaignItem>>("/trust-center/a2p-campaigns?page=1&per_page=25").await
+    });
 
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
@@ -322,46 +348,58 @@ pub fn LocalTextPage() -> impl IntoView {
                                 "Manage your local text messaging campaigns. Each campaign must be registered and approved before sending messages."
                             </p>
 
-                            <div class="overflow-x-auto mt-4">
-                                <table class="table table-sm w-full">
-                                    <thead>
-                                        <tr class="border-b border-gray-200">
-                                            <th class="text-xs font-medium text-gray-500 uppercase w-16"></th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Name"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Created"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Assigned Numbers"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Cost"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Carrier"</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {campaigns.into_iter().map(|c| {
-                                            let nums = format!("({}/{})", c.assigned_numbers, c.max_numbers);
-                                            view! {
-                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                    <td>
-                                                        <button class="btn btn-xs btn-ghost text-iiz-cyan">
-                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEye /></span>
-                                                        </button>
-                                                    </td>
-                                                    <td class="font-medium text-sm">{c.name}</td>
-                                                    <td class="text-sm text-gray-600">{c.created}</td>
-                                                    <td>
-                                                        <span class="flex items-center gap-1 text-sm text-green-600">
-                                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckLg /></span>
-                                                            {c.status}
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-sm text-gray-600">{nums}</td>
-                                                    <td class="text-sm text-gray-600">{c.cost}</td>
-                                                    <td class="text-sm text-gray-600">{c.carrier}</td>
-                                                </tr>
-                                            }
-                                        }).collect::<Vec<_>>()}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {move || match data.get() {
+                                None => loading_view().into_any(),
+                                Some(Err(e)) => error_view(e).into_any(),
+                                Some(Ok(resp)) => {
+                                    let items = resp.items.clone();
+                                    view! {
+                                        <div class="overflow-x-auto mt-4">
+                                            <table class="table table-sm w-full">
+                                                <thead>
+                                                    <tr class="border-b border-gray-200">
+                                                        <th class="text-xs font-medium text-gray-500 uppercase w-16"></th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Name"</th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Created"</th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Assigned Numbers"</th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Cost"</th>
+                                                        <th class="text-xs font-medium text-gray-500 uppercase">"Carrier"</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {items.into_iter().map(|c| {
+                                                        let nums = format!("({}/{})", c.assigned_numbers, c.max_numbers.unwrap_or(0));
+                                                        let cost = c.monthly_cost.map(|v| format!("${v}/mo")).unwrap_or_default();
+                                                        let carrier = c.carrier.clone().unwrap_or_default();
+                                                        let created = fmt_date(&c.created_at);
+                                                        view! {
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td>
+                                                                    <button class="btn btn-xs btn-ghost text-iiz-cyan">
+                                                                        <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsEye /></span>
+                                                                    </button>
+                                                                </td>
+                                                                <td class="font-medium text-sm">{c.campaign_name.clone()}</td>
+                                                                <td class="text-sm text-gray-600">{created}</td>
+                                                                <td>
+                                                                    <span class="flex items-center gap-1 text-sm text-green-600">
+                                                                        <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckLg /></span>
+                                                                        {c.status.clone()}
+                                                                    </span>
+                                                                </td>
+                                                                <td class="text-sm text-gray-600">{nums}</td>
+                                                                <td class="text-sm text-gray-600">{cost}</td>
+                                                                <td class="text-sm text-gray-600">{carrier}</td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
                         </div>
                     </div>
 
