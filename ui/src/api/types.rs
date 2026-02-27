@@ -483,6 +483,85 @@ pub struct A2pCampaignItem {
 }
 
 // -------------------------------------------------------------------------
+// Domain response types for Trust Center section
+// -------------------------------------------------------------------------
+
+/// A compliance requirement returned by GET /trust-center/requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceRequirementItem {
+    pub id: String,
+    pub name: String,
+    pub requirement_type: Option<String>,
+    pub country: Option<String>,
+    pub description: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A compliance application returned by GET /trust-center/applications
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceApplicationItem {
+    pub id: String,
+    pub name: String,
+    pub application_type: Option<String>,
+    pub country: Option<String>,
+    pub status: String,
+    pub submitted_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A compliance address returned by GET /trust-center/addresses
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceAddressItem {
+    pub id: String,
+    pub label: Option<String>,
+    pub street_line1: String,
+    pub city: String,
+    pub state: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: String,
+    pub is_verified: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A caller ID CNAM entry returned by GET /numbers/caller-id
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallerIdCnamItem {
+    pub id: String,
+    pub number: String,
+    pub display_name: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A toll-free registration returned by GET /trust-center/toll-free
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TollFreeRegistrationItem {
+    pub id: String,
+    pub number: Option<String>,
+    pub business_name: Option<String>,
+    pub use_case: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A voice registration returned by GET /trust-center/voice-registrations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceRegistrationItem {
+    pub id: String,
+    pub business_name: Option<String>,
+    pub status: String,
+    pub attestation_level: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
 // Domain response types for Reports section
 // -------------------------------------------------------------------------
 
