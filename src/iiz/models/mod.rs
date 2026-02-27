@@ -4,7 +4,9 @@
 //! the Diesel ORM and API serialization.
 
 pub mod accounts;
+pub mod automations;
 pub mod contacts;
+pub mod engagement;
 pub mod enums;
 pub mod flows;
 pub mod numbers;
@@ -33,6 +35,24 @@ pub use numbers::{
     UpdateTrackingSource,
 };
 pub use tags::{NewTag, Tag, UpdateTag};
+pub use automations::{
+    Lambda, LambdaEnvVar, NewLambda, NewLambdaEnvVar, NewTrigger, NewTriggerAction,
+    NewTriggerCondition, NewWebhook, NewWebhookSubscription, NewWorkflow, NewWorkflowEdge,
+    NewWorkflowNode, Trigger, TriggerAction, TriggerCondition, UpdateLambda, UpdateLambdaEnvVar,
+    UpdateTrigger, UpdateTriggerAction, UpdateTriggerCondition, UpdateWebhook,
+    UpdateWebhookSubscription, UpdateWorkflow, UpdateWorkflowEdge, UpdateWorkflowNode, Webhook,
+    WebhookSubscription, Workflow, WorkflowEdge, WorkflowNode,
+};
+pub use engagement::{
+    BulkMessage, ChatWidget, FormReactorEntry, KeywordSpottingConfig, KeywordSpottingKeyword,
+    KeywordSpottingNumber, LeadReactorAction, LeadReactorConfig, NewBulkMessage, NewChatWidget,
+    NewFormReactorEntry, NewKeywordSpottingConfig, NewKeywordSpottingKeyword,
+    NewKeywordSpottingNumber, NewLeadReactorAction, NewLeadReactorConfig, NewReminder,
+    NewSmartDialerConfig, Reminder, SmartDialerConfig, UpdateBulkMessage, UpdateChatWidget,
+    UpdateFormReactorEntry, UpdateKeywordSpottingConfig, UpdateKeywordSpottingKeyword,
+    UpdateKeywordSpottingNumber, UpdateLeadReactorAction, UpdateLeadReactorConfig, UpdateReminder,
+    UpdateSmartDialerConfig,
+};
 pub use flows::{
     AgentScript, GeoRouter, GeoRouterRule, NewAgentScript, NewGeoRouter, NewGeoRouterRule,
     NewQueue, NewQueueAgent, NewRoutingTable, NewRoutingTableRoute, NewSchedule,
