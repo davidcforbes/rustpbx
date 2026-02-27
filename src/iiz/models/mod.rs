@@ -4,6 +4,7 @@
 //! the Diesel ORM and API serialization.
 
 pub mod accounts;
+pub mod ai_tools;
 pub mod automations;
 pub mod contacts;
 pub mod engagement;
@@ -64,6 +65,15 @@ pub use flows::{
     UpdateScoringConfig, UpdateSmartRouter, UpdateSmartRouterRule, UpdateVoiceMenu,
     UpdateVoiceMenuOption, UpdateVoicemailBox, UpdateVoicemailMessage, VoiceMenu, VoiceMenuOption,
     VoicemailBox, VoicemailMessage,
+};
+pub use ai_tools::{
+    AskAiConfig, ChatAiAgent, ChatAiConfig, DialogflowConfig, KnowledgeBank,
+    KnowledgeBankDocument, KnowledgeBankEmbedding, NewAskAiConfig, NewChatAiAgent,
+    NewChatAiConfig, NewDialogflowConfig, NewKnowledgeBank, NewKnowledgeBankDocument,
+    NewKnowledgeBankEmbedding, NewSummaryConfig, NewVoiceAiAgent, SummaryConfig,
+    UpdateAskAiConfig, UpdateChatAiAgent, UpdateChatAiConfig, UpdateDialogflowConfig,
+    UpdateKnowledgeBank, UpdateKnowledgeBankDocument, UpdateKnowledgeBankEmbedding,
+    UpdateSummaryConfig, UpdateVoiceAiAgent, VoiceAiAgent,
 };
 
 // Common type aliases used across models
