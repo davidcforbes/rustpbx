@@ -3,7 +3,7 @@ use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
-use crate::api::types::{A2pCampaignItem, ListResponse};
+use crate::api::types::{ListResponse, A2pCampaignItem, ComplianceRequirementItem, ComplianceApplicationItem, ComplianceAddressItem, CallerIdCnamItem, TollFreeRegistrationItem, VoiceRegistrationItem};
 
 // ---------------------------------------------------------------------------
 // Trust Center side navigation
@@ -456,6 +456,10 @@ pub fn LocalTextPage() -> impl IntoView {
 
 #[component]
 pub fn TollFreeTextPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<TollFreeRegistrationItem>>("/trust-center/toll-free?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -536,6 +540,54 @@ pub fn TollFreeTextPage() -> impl IntoView {
                             </div>
                         </div>
                     </div>
+
+                    // Existing registrations
+                    <div class="card bg-white border border-gray-200">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-lg font-semibold">"Existing Registrations"</h2>
+                            <div class="overflow-x-auto mt-4">
+                                <table class="table table-sm w-full">
+                                    <thead>
+                                        <tr class="border-b border-gray-200">
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Number"</th>
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Business"</th>
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Created"</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {move || match data.get() {
+                                            None => loading_view().into_any(),
+                                            Some(Err(e)) => error_view(e).into_any(),
+                                            Some(Ok(resp)) => {
+                                                let items = resp.items.clone();
+                                                view! {
+                                                    <>
+                                                        {items.into_iter().map(|r| {
+                                                            let status_badge = match r.status.as_str() {
+                                                                "approved" | "active" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                                "pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                                _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
+                                                            };
+                                                            let created = fmt_date(&r.created_at);
+                                                            view! {
+                                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                    <td class="text-sm font-mono text-gray-700">{r.number.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                    <td class="text-sm text-gray-600">{r.business_name.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                    <td><span class=status_badge>{r.status.clone()}</span></td>
+                                                                    <td class="text-sm text-gray-600">{created}</td>
+                                                                </tr>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </>
+                                                }.into_any()
+                                            }
+                                        }}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -548,6 +600,10 @@ pub fn TollFreeTextPage() -> impl IntoView {
 
 #[component]
 pub fn VoiceRegPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<VoiceRegistrationItem>>("/trust-center/voice-registrations?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -614,25 +670,40 @@ pub fn VoiceRegPage() -> impl IntoView {
                                     <thead>
                                         <tr class="border-b border-gray-200">
                                             <th class="text-xs font-medium text-gray-500 uppercase">"Date"</th>
-                                            <th class="text-xs font-medium text-gray-500 uppercase">"Action"</th>
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Business"</th>
                                             <th class="text-xs font-medium text-gray-500 uppercase">"Status"</th>
+                                            <th class="text-xs font-medium text-gray-500 uppercase">"Attestation"</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="border-b border-gray-100">
-                                            <td class="text-sm text-gray-600">"2023-05-15"</td>
-                                            <td class="text-sm text-gray-600">"Initial Registration"</td>
-                                            <td>
-                                                <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Approved"</span>
-                                            </td>
-                                        </tr>
-                                        <tr class="border-b border-gray-100">
-                                            <td class="text-sm text-gray-600">"2025-05-15"</td>
-                                            <td class="text-sm text-gray-600">"Annual Re-verification"</td>
-                                            <td>
-                                                <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Approved"</span>
-                                            </td>
-                                        </tr>
+                                        {move || match data.get() {
+                                            None => loading_view().into_any(),
+                                            Some(Err(e)) => error_view(e).into_any(),
+                                            Some(Ok(resp)) => {
+                                                let items = resp.items.clone();
+                                                view! {
+                                                    <>
+                                                        {items.into_iter().map(|r| {
+                                                            let status_badge = match r.status.as_str() {
+                                                                "approved" | "active" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                                "pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                                "rejected" => "badge badge-sm bg-red-100 text-red-700 border-red-200",
+                                                                _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
+                                                            };
+                                                            let created = fmt_date(&r.created_at);
+                                                            view! {
+                                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                    <td class="text-sm text-gray-600">{created}</td>
+                                                                    <td class="text-sm text-gray-600">{r.business_name.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                    <td><span class=status_badge>{r.status.clone()}</span></td>
+                                                                    <td class="text-sm text-gray-600">{r.attestation_level.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                </tr>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </>
+                                                }.into_any()
+                                            }
+                                        }}
                                     </tbody>
                                 </table>
                             </div>
@@ -650,6 +721,10 @@ pub fn VoiceRegPage() -> impl IntoView {
 
 #[component]
 pub fn CallerIdPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<CallerIdCnamItem>>("/numbers/caller-id?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full overflow-y-auto">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -672,7 +747,7 @@ pub fn CallerIdPage() -> impl IntoView {
                     // Info
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <p class="text-sm text-gray-600">
-                            "Caller ID (CNAM) displays your business name to recipients when making outbound calls. Display depends on the recipient's carrier and device settings and is not guaranteed on every call. Updates may take up to 48 hours to propagate."
+                            "Caller ID (CNAM) displays your business name to recipients when making outbound calls. Display depends on the recipient\u{2019}s carrier and device settings and is not guaranteed on every call. Updates may take up to 48 hours to propagate."
                         </p>
                     </div>
 
@@ -693,31 +768,38 @@ pub fn CallerIdPage() -> impl IntoView {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {[
-                                            ("+1 (910) 555-0101", "DIENER LAW", "Active", "2025-12-10"),
-                                            ("+1 (910) 555-0102", "DIENER LAW", "Active", "2025-12-10"),
-                                            ("+1 (910) 555-0103", "DIENER LAW", "Active", "2025-12-10"),
-                                            ("+1 (707) 283-3106", "Not Set", "Pending", "\u{2014}"),
-                                            ("+1 (910) 555-0200", "Not Set", "Not Configured", "\u{2014}"),
-                                        ].into_iter().map(|(number, cnam, status, updated)| {
-                                            let status_class = match status {
-                                                "Active" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
-                                                "Pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
-                                                _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
-                                            };
-                                            let cnam_class = if cnam == "Not Set" { "text-sm text-gray-400 italic" } else { "text-sm text-gray-800 font-medium" };
-                                            view! {
-                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                    <td class="text-sm font-mono text-gray-700">{number}</td>
-                                                    <td class=cnam_class>{cnam}</td>
-                                                    <td><span class=status_class>{status}</span></td>
-                                                    <td class="text-sm text-gray-600">{updated}</td>
-                                                    <td>
-                                                        <button class="btn btn-xs btn-outline text-iiz-cyan border-iiz-cyan">"Update CNAM"</button>
-                                                    </td>
-                                                </tr>
+                                        {move || match data.get() {
+                                            None => loading_view().into_any(),
+                                            Some(Err(e)) => error_view(e).into_any(),
+                                            Some(Ok(resp)) => {
+                                                let items = resp.items.clone();
+                                                view! {
+                                                    <>
+                                                        {items.into_iter().map(|r| {
+                                                            let status_class = match r.status.as_str() {
+                                                                "active" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                                "pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                                _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
+                                                            };
+                                                            let cnam_display = r.display_name.clone().unwrap_or_else(|| "Not Set".to_string());
+                                                            let cnam_class = if cnam_display == "Not Set" { "text-sm text-gray-400 italic" } else { "text-sm text-gray-800 font-medium" };
+                                                            let updated = fmt_date(&r.updated_at);
+                                                            view! {
+                                                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                    <td class="text-sm font-mono text-gray-700">{r.number.clone()}</td>
+                                                                    <td class=cnam_class>{cnam_display}</td>
+                                                                    <td><span class=status_class>{r.status.clone()}</span></td>
+                                                                    <td class="text-sm text-gray-600">{updated}</td>
+                                                                    <td>
+                                                                        <button class="btn btn-xs btn-outline text-iiz-cyan border-iiz-cyan">"Update CNAM"</button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </>
+                                                }.into_any()
                                             }
-                                        }).collect::<Vec<_>>()}
+                                        }}
                                     </tbody>
                                 </table>
                             </div>
@@ -735,6 +817,10 @@ pub fn CallerIdPage() -> impl IntoView {
 
 #[component]
 pub fn RequirementsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ComplianceRequirementItem>>("/trust-center/requirements?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -761,27 +847,32 @@ pub fn RequirementsPage() -> impl IntoView {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[
-                                        ("United States", "STIR/SHAKEN Registration", "Completed", "Business verification, EIN"),
-                                        ("United States", "A2P 10DLC Registration", "Completed", "Campaign registration, use case"),
-                                        ("Canada", "CRTC Compliance", "Not Started", "Business address proof, CRTC filing"),
-                                        ("United Kingdom", "Ofcom Registration", "Not Started", "UK business address, Ofcom filing"),
-                                        ("Germany", "BNetzA Registration", "Not Started", "German business registration, address proof"),
-                                    ].into_iter().map(|(country, requirement, status, docs)| {
-                                        let status_badge = match status {
-                                            "Completed" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
-                                            "In Progress" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
-                                            _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
-                                        };
-                                        view! {
-                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                <td class="text-sm font-medium">{country}</td>
-                                                <td class="text-sm text-gray-600">{requirement}</td>
-                                                <td><span class=status_badge>{status}</span></td>
-                                                <td class="text-xs text-gray-500">{docs}</td>
-                                            </tr>
+                                    {move || match data.get() {
+                                        None => loading_view().into_any(),
+                                        Some(Err(e)) => error_view(e).into_any(),
+                                        Some(Ok(resp)) => {
+                                            let items = resp.items.clone();
+                                            view! {
+                                                <>
+                                                    {items.into_iter().map(|r| {
+                                                        let status_badge = match r.status.as_str() {
+                                                            "completed" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                            "in_progress" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                            _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
+                                                        };
+                                                        view! {
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td class="text-sm font-medium">{r.country.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                <td class="text-sm text-gray-600">{r.name.clone()}</td>
+                                                                <td><span class=status_badge>{r.status.clone()}</span></td>
+                                                                <td class="text-xs text-gray-500">{r.description.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </>
+                                            }.into_any()
                                         }
-                                    }).collect::<Vec<_>>()}
+                                    }}
                                 </tbody>
                             </table>
                         </div>
@@ -798,6 +889,10 @@ pub fn RequirementsPage() -> impl IntoView {
 
 #[component]
 pub fn ApplicationsPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ComplianceApplicationItem>>("/trust-center/applications?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -822,27 +917,36 @@ pub fn ApplicationsPage() -> impl IntoView {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[
-                                        ("STIR/SHAKEN Verification", "United States", "Approved", "2023-05-10", "2023-05-15"),
-                                        ("A2P 10DLC Brand Registration", "United States", "Approved", "2023-05-12", "2023-05-22"),
-                                        ("CRTC Filing - Local Numbers", "Canada", "Pending", "2026-02-18", "2026-02-18"),
-                                    ].into_iter().map(|(app, country, status, submitted, updated)| {
-                                        let status_badge = match status {
-                                            "Approved" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
-                                            "Pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
-                                            "Rejected" => "badge badge-sm bg-red-100 text-red-700 border-red-200",
-                                            _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
-                                        };
-                                        view! {
-                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                <td class="text-sm font-medium">{app}</td>
-                                                <td class="text-sm text-gray-600">{country}</td>
-                                                <td><span class=status_badge>{status}</span></td>
-                                                <td class="text-sm text-gray-600">{submitted}</td>
-                                                <td class="text-sm text-gray-600">{updated}</td>
-                                            </tr>
+                                    {move || match data.get() {
+                                        None => loading_view().into_any(),
+                                        Some(Err(e)) => error_view(e).into_any(),
+                                        Some(Ok(resp)) => {
+                                            let items = resp.items.clone();
+                                            view! {
+                                                <>
+                                                    {items.into_iter().map(|r| {
+                                                        let status_badge = match r.status.as_str() {
+                                                            "approved" => "badge badge-sm bg-green-100 text-green-700 border-green-200",
+                                                            "pending" => "badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                            "rejected" => "badge badge-sm bg-red-100 text-red-700 border-red-200",
+                                                            _ => "badge badge-sm bg-gray-100 text-gray-500 border-gray-200",
+                                                        };
+                                                        let submitted = r.submitted_at.as_deref().map(fmt_date).unwrap_or_else(|| "\u{2014}".to_string());
+                                                        let updated = fmt_date(&r.updated_at);
+                                                        view! {
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td class="text-sm font-medium">{r.name.clone()}</td>
+                                                                <td class="text-sm text-gray-600">{r.country.as_deref().unwrap_or("\u{2014}").to_string()}</td>
+                                                                <td><span class=status_badge>{r.status.clone()}</span></td>
+                                                                <td class="text-sm text-gray-600">{submitted}</td>
+                                                                <td class="text-sm text-gray-600">{updated}</td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </>
+                                            }.into_any()
                                         }
-                                    }).collect::<Vec<_>>()}
+                                    }}
                                 </tbody>
                             </table>
                         </div>
@@ -859,6 +963,10 @@ pub fn ApplicationsPage() -> impl IntoView {
 
 #[component]
 pub fn AddressesPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ComplianceAddressItem>>("/trust-center/addresses?page=1&per_page=25").await
+    });
+
     view! {
         <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -883,33 +991,48 @@ pub fn AddressesPage() -> impl IntoView {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {[
-                                        ("Headquarters", "3333 Jaeckle Dr, Suite 130, Wilmington, NC 28403", "United States", true, "2023-05-10"),
-                                        ("Branch Office", "101 N Cherry St, Suite 200, Winston-Salem, NC 27101", "United States", false, "2026-01-15"),
-                                    ].into_iter().map(|(label, address, country, verified, updated)| {
-                                        view! {
-                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                                <td class="text-sm font-medium">{label}</td>
-                                                <td class="text-sm text-gray-600">{address}</td>
-                                                <td class="text-sm text-gray-600">{country}</td>
-                                                <td>
-                                                    {if verified {
+                                    {move || match data.get() {
+                                        None => loading_view().into_any(),
+                                        Some(Err(e)) => error_view(e).into_any(),
+                                        Some(Ok(resp)) => {
+                                            let items = resp.items.clone();
+                                            view! {
+                                                <>
+                                                    {items.into_iter().map(|r| {
+                                                        let label = r.label.as_deref().unwrap_or("\u{2014}").to_string();
+                                                        let mut addr_parts = vec![r.street_line1.clone(), r.city.clone()];
+                                                        if let Some(ref st) = r.state { addr_parts.push(st.clone()); }
+                                                        if let Some(ref pc) = r.postal_code { addr_parts.push(pc.clone()); }
+                                                        let full_addr = addr_parts.join(", ");
+                                                        let updated = fmt_date(&r.updated_at);
+                                                        let verified = r.is_verified;
                                                         view! {
-                                                            <span class="flex items-center gap-1 text-green-600">
-                                                                <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckCircleFill /></span>
-                                                                <span class="text-sm">"Verified"</span>
-                                                            </span>
-                                                        }.into_any()
-                                                    } else {
-                                                        view! {
-                                                            <span class="text-sm text-gray-400">"Unverified"</span>
-                                                        }.into_any()
-                                                    }}
-                                                </td>
-                                                <td class="text-sm text-gray-600">{updated}</td>
-                                            </tr>
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td class="text-sm font-medium">{label}</td>
+                                                                <td class="text-sm text-gray-600">{full_addr}</td>
+                                                                <td class="text-sm text-gray-600">{r.country.clone()}</td>
+                                                                <td>
+                                                                    {if verified {
+                                                                        view! {
+                                                                            <span class="flex items-center gap-1 text-green-600">
+                                                                                <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCheckCircleFill /></span>
+                                                                                <span class="text-sm">"Verified"</span>
+                                                                            </span>
+                                                                        }.into_any()
+                                                                    } else {
+                                                                        view! {
+                                                                            <span class="text-sm text-gray-400">"Unverified"</span>
+                                                                        }.into_any()
+                                                                    }}
+                                                                </td>
+                                                                <td class="text-sm text-gray-600">{updated}</td>
+                                                            </tr>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </>
+                                            }.into_any()
                                         }
-                                    }).collect::<Vec<_>>()}
+                                    }}
                                 </tbody>
                             </table>
                         </div>

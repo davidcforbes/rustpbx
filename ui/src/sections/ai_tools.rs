@@ -3,7 +3,7 @@ use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
 use crate::api::api_get;
-use crate::api::types::{KnowledgeBankItem, ListResponse, PaginationMeta};
+use crate::api::types::{AskAiConfigItem, ChatAiAgentItem, KnowledgeBankItem, ListResponse, PaginationMeta, VoiceAiAgentItem};
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -190,119 +190,72 @@ pub fn AIToolsSideNav() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// AskAI page - trigger configuration with preset dropdown + workflows
+// AskAI page - list of existing AskAI configurations
 // ---------------------------------------------------------------------------
 
 #[component]
 pub fn AskAIPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<AskAiConfigItem>>("/ai-tools/ask-ai?page=1&per_page=25").await
+    });
+
     view! {
-        <div class="flex flex-col h-full overflow-y-auto">
-            // Breadcrumb header
+        <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
-                <div class="breadcrumbs text-sm">
-                    <ul>
-                        <li><span class="text-gray-500">"Triggers"</span></li>
-                        <li><span class="text-gray-500">"New"</span></li>
-                        <li><span class="text-iiz-cyan font-medium">"General"</span></li>
-                    </ul>
+                <div class="mr-auto">
+                    <h1 class="text-lg font-semibold text-gray-800">"AskAI Configurations"</h1>
+                    <p class="text-xs text-gray-500">"Manage AI-powered question answering configurations"</p>
                 </div>
-                <div class="flex-1"></div>
-                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsInfoCircle /></span>
-                    "Info"
-                </a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"+ New AskAI"</button>
             </header>
 
-            <div class="flex-1 overflow-y-auto bg-iiz-gray-bg">
-                <div class="max-w-3xl mx-auto p-6 space-y-6">
-                    // Info banner
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h3 class="font-semibold text-iiz-dark">"AskAI"</h3>
-                        <p class="text-sm text-gray-600 mt-1">
-                            "AskAI allows you to ask any natural language question and get a concise ChatGPT powered answer, which can then be entered into a "
-                            <a class="text-iiz-cyan hover:underline cursor-pointer">"custom field"</a>
-                            " for easy reporting. Please note that at least one custom field must be created."
-                        </p>
-                        <p class="text-sm text-gray-600 mt-1">
-                            "See our "
-                            <a class="text-iiz-cyan hover:underline cursor-pointer">"knowledge base"</a>
-                            " for more information."
-                        </p>
-                    </div>
-
-                    // General card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"General"</h2>
-
-                            <div class="space-y-4 mt-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Name"</label>
-                                    <input type="text" class="input input-bordered w-full" placeholder="Enter trigger name" />
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Use a Preset"</label>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline gap-2">
-                                            <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsGearFill /></span>
-                                            "Select Preset"
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Tracking Numbers"</label>
-                                    <button class="btn btn-sm btn-outline text-gray-400" disabled>
-                                        "Edit Assigned Tracking Numbers"
-                                    </button>
-                                    <p class="text-xs text-gray-400 mt-1">"(save first to assign)"</p>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Delay workflow"</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="number" value="0" class="input input-sm input-bordered w-20" />
-                                        <select class="select select-sm select-bordered">
-                                            <option selected>"seconds"</option>
-                                            <option>"minutes"</option>
-                                            <option>"hours"</option>
-                                        </select>
-                                    </div>
-                                    <p class="text-xs text-gray-400 mt-1">"This allows you to delay the start of your workflow by the given amount of time."</p>
-                                </div>
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <div class="flex flex-col flex-1 overflow-hidden">
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="table table-sm w-full">
+                                    <thead>
+                                        <tr class="text-xs text-gray-500 uppercase">
+                                            <th>"Name"</th>
+                                            <th>"Provider"</th>
+                                            <th>"Active"</th>
+                                            <th>"Created"</th>
+                                            <th>"Updated"</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {resp.items.into_iter().map(|item| {
+                                            view! {
+                                                <tr class="hover:bg-gray-50 cursor-pointer">
+                                                    <td>
+                                                        <div class="font-medium text-gray-800">{item.name.clone()}</div>
+                                                        <div class="text-xs text-gray-400">{item.description.clone().unwrap_or_else(|| "-".to_string())}</div>
+                                                    </td>
+                                                    <td class="text-sm text-gray-600">{item.model_provider.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td>
+                                                        {if item.is_active {
+                                                            view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
+                                                        } else {
+                                                            view! { <span class="badge badge-sm bg-gray-100 text-gray-500">"Inactive"</span> }.into_any()
+                                                        }}
+                                                    </td>
+                                                    <td class="text-xs text-gray-500">{fmt_date(&item.created_at)}</td>
+                                                    <td class="text-xs text-gray-500">{fmt_date(&item.updated_at)}</td>
+                                                </tr>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <div class="mt-6">
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
-                            </div>
+                            {pagination_footer(&meta)}
                         </div>
-                    </div>
-
-                    // Workflows card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h2 class="card-title text-lg font-semibold">"Workflows"</h2>
-                                    <p class="text-sm text-gray-500">"Perform actions in response to this trigger"</p>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <a class="text-xs text-gray-500 hover:underline cursor-pointer">"Switch to Visualization"</a>
-                                    <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"+ Add Workflow"</button>
-                                </div>
-                            </div>
-
-                            <div class="text-center py-8">
-                                <p class="text-sm text-gray-500">
-                                    <span class="font-medium">"No workflows added."</span>
-                                    " Click the 'Add Workflow' button above to get started."
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
@@ -652,207 +605,136 @@ pub fn KnowledgeBanksPage() -> impl IntoView {
 }
 
 // ---------------------------------------------------------------------------
-// VoiceAI page - agent creation form
+// VoiceAI page - list of existing Voice AI agents
 // ---------------------------------------------------------------------------
 
 #[component]
 pub fn VoiceAIPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<VoiceAiAgentItem>>("/ai-tools/voice-ai?page=1&per_page=25").await
+    });
+
     view! {
-        <div class="flex flex-col h-full overflow-y-auto">
+        <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
-                <div class="breadcrumbs text-sm">
-                    <ul>
-                        <li><span class="text-gray-500">"VoiceAI Agents"</span></li>
-                        <li><span class="text-gray-500">"New"</span></li>
-                        <li><span class="text-iiz-cyan font-medium">"Name"</span></li>
-                    </ul>
+                <div class="mr-auto">
+                    <h1 class="text-lg font-semibold text-gray-800">"Voice AI Agents"</h1>
+                    <p class="text-xs text-gray-500">"Manage AI-powered voice agents for call handling"</p>
                 </div>
-                <div class="flex-1"></div>
-                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsInfoCircle /></span>
-                    "Info"
-                </a>
-                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer">"Feedback"</a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"+ New Voice AI"</button>
             </header>
 
-            <div class="flex-1 overflow-y-auto bg-iiz-gray-bg">
-                <div class="max-w-3xl mx-auto p-6 space-y-6">
-                    // Name card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"Name"</h2>
-
-                            <div class="space-y-4 mt-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Name your AI"</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="text" class="input input-bordered flex-1" placeholder="Enter agent name" />
-                                        <span class="w-6 h-6 inline-flex text-red-400"><Icon icon=icondata::BsChatFill /></span>
-                                    </div>
-                                    <p class="text-xs text-gray-400 mt-1">"A reference for your AI Agent"</p>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Description (optional)"</label>
-                                    <input type="text" class="input input-bordered w-full" placeholder="Additional details about your AI Agent" />
-                                    <p class="text-xs text-gray-400 mt-1">"Additional details to help with documentation"</p>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Welcome message for callers"</label>
-                                    <input type="text" class="input input-bordered w-full" value="Thank you for contacting us. How can I help you?" />
-                                    <p class="text-xs text-gray-400 mt-1">"Your AI Agent will repeat this message when a customer first connects"</p>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Instructions:"</label>
-                                    <textarea class="textarea textarea-bordered w-full h-32" placeholder="Describe how VoiceAI should engage with callers, such as tone, behavior, and expected outcomes."></textarea>
-                                    <p class="text-xs text-gray-400 mt-1">
-                                        <a class="text-iiz-cyan hover:underline cursor-pointer">"Learn more about prompt engineering."</a>
-                                    </p>
-                                </div>
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <div class="flex flex-col flex-1 overflow-hidden">
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="table table-sm w-full">
+                                    <thead>
+                                        <tr class="text-xs text-gray-500 uppercase">
+                                            <th>"Name"</th>
+                                            <th>"Description"</th>
+                                            <th>"Voice"</th>
+                                            <th>"Active"</th>
+                                            <th>"Created"</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {resp.items.into_iter().map(|item| {
+                                            view! {
+                                                <tr class="hover:bg-gray-50 cursor-pointer">
+                                                    <td class="font-medium text-gray-800">{item.name.clone()}</td>
+                                                    <td class="text-sm text-gray-600">{item.description.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td class="text-sm text-gray-600">{item.voice_name.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td>
+                                                        {if item.is_active {
+                                                            view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
+                                                        } else {
+                                                            view! { <span class="badge badge-sm bg-gray-100 text-gray-500">"Inactive"</span> }.into_any()
+                                                        }}
+                                                    </td>
+                                                    <td class="text-xs text-gray-500">{fmt_date(&item.created_at)}</td>
+                                                </tr>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <div class="mt-6">
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
-                            </div>
+                            {pagination_footer(&meta)}
                         </div>
-                    </div>
-
-                    // Personality card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"Personality"</h2>
-
-                            <div class="mt-4">
-                                <h3 class="text-sm font-semibold text-gray-700">"Select a Voice"</h3>
-                                <p class="text-sm text-gray-500 mt-1">"Preview and choose from a variety of voice types."</p>
-                                <p class="text-xs text-gray-400 mt-2">"Emotion Aware AI uses a curated set of voices optimized for real-time emotion detection."</p>
-
-                                <div class="grid grid-cols-3 gap-3 mt-4">
-                                    {["Allison", "Aria", "Davis", "Emily", "Guy", "Jenny"].into_iter().map(|name| {
-                                        view! {
-                                            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-iiz-cyan cursor-pointer">
-                                                <input type="radio" name="voice" class="radio radio-sm radio-primary" />
-                                                <div>
-                                                    <div class="text-sm font-medium">{name}</div>
-                                                    <div class="text-xs text-gray-400">"en-US"</div>
-                                                </div>
-                                                <button class="ml-auto btn btn-xs btn-ghost text-gray-400">
-                                                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsPlayFill /></span>
-                                                </button>
-                                            </label>
-                                        }
-                                    }).collect::<Vec<_>>()}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }
 
 // ---------------------------------------------------------------------------
-// ChatAI page - chat agent configuration (BETA)
+// ChatAI page - list of existing Chat AI agents
 // ---------------------------------------------------------------------------
 
 #[component]
 pub fn ChatAIPage() -> impl IntoView {
+    let data = LocalResource::new(|| async move {
+        api_get::<ListResponse<ChatAiAgentItem>>("/ai-tools/chat-ai?page=1&per_page=25").await
+    });
+
     view! {
-        <div class="flex flex-col h-full overflow-y-auto">
+        <div class="flex flex-col h-full">
             <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 flex-shrink-0">
-                <div class="breadcrumbs text-sm">
-                    <ul>
-                        <li><span class="text-gray-500">"ChatAI's"</span></li>
-                        <li><span class="text-gray-500">"New"</span></li>
-                        <li><span class="text-iiz-cyan font-medium">"General"</span></li>
-                    </ul>
+                <div class="mr-auto">
+                    <h1 class="text-lg font-semibold text-gray-800">"Chat AI Agents"</h1>
+                    <p class="text-xs text-gray-500">"Manage AI-powered chat agents"</p>
                 </div>
-                <div class="flex-1"></div>
                 <span class="badge badge-sm bg-yellow-100 text-yellow-700 border-yellow-200">"BETA"</span>
-                <a class="text-xs text-iiz-cyan hover:underline cursor-pointer flex items-center gap-1">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsInfoCircle /></span>
-                    "Info"
-                </a>
+                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"+ New Chat AI"</button>
             </header>
 
-            <div class="flex-1 overflow-y-auto bg-iiz-gray-bg">
-                <div class="max-w-3xl mx-auto p-6 space-y-6">
-                    // General card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"General"</h2>
-
-                            <div class="space-y-4 mt-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Name"</label>
-                                    <input type="text" class="input input-bordered w-full" placeholder="Enter agent name" />
-                                    <p class="text-xs text-gray-400 mt-1">"User facing - pick a customer facing name"</p>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Description"</label>
-                                    <input type="text" class="input input-bordered w-full" placeholder="Brief description of this chat agent" />
-                                </div>
+            {move || match data.get() {
+                None => loading_view().into_any(),
+                Some(Err(e)) => error_view(e).into_any(),
+                Some(Ok(resp)) => {
+                    let meta = resp.pagination.clone();
+                    view! {
+                        <div class="flex flex-col flex-1 overflow-hidden">
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="table table-sm w-full">
+                                    <thead>
+                                        <tr class="text-xs text-gray-500 uppercase">
+                                            <th>"Name"</th>
+                                            <th>"Description"</th>
+                                            <th>"Active"</th>
+                                            <th>"Created"</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {resp.items.into_iter().map(|item| {
+                                            view! {
+                                                <tr class="hover:bg-gray-50 cursor-pointer">
+                                                    <td class="font-medium text-gray-800">{item.name.clone()}</td>
+                                                    <td class="text-sm text-gray-600">{item.description.clone().unwrap_or_else(|| "-".to_string())}</td>
+                                                    <td>
+                                                        {if item.is_active {
+                                                            view! { <span class="badge badge-sm bg-green-100 text-green-700 border-green-200">"Active"</span> }.into_any()
+                                                        } else {
+                                                            view! { <span class="badge badge-sm bg-gray-100 text-gray-500">"Inactive"</span> }.into_any()
+                                                        }}
+                                                    </td>
+                                                    <td class="text-xs text-gray-500">{fmt_date(&item.created_at)}</td>
+                                                </tr>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <div class="mt-6">
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
-                            </div>
+                            {pagination_footer(&meta)}
                         </div>
-                    </div>
-
-                    // Knowledge Banks card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"Knowledge Banks"</h2>
-
-                            <div class="space-y-4 mt-4">
-                                <div>
-                                    <label class="text-sm font-medium text-gray-700 block mb-1">"Choose a Knowledge Bank"</label>
-                                    <select class="select select-bordered w-full">
-                                        <option selected disabled>"Select a knowledge bank..."</option>
-                                        <option>"General FAQ"</option>
-                                        <option>"Product Documentation"</option>
-                                        <option>"Legal Resources"</option>
-                                    </select>
-                                </div>
-
-                                <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" class="toggle toggle-sm" checked />
-                                    <span class="text-sm">"Include Source"</span>
-                                </label>
-
-                                <div>
-                                    <button class="btn btn-sm btn-outline">"Manage Knowledge Banks"</button>
-                                </div>
-                            </div>
-
-                            <div class="mt-6">
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    // Instructions card
-                    <div class="card bg-white border border-gray-200">
-                        <div class="card-body p-6">
-                            <h2 class="card-title text-lg font-semibold">"Instructions"</h2>
-
-                            <div class="mt-4">
-                                <textarea class="textarea textarea-bordered w-full h-40" placeholder="Provide instructions for how the AI chat agent should behave. Include tone, topics to cover, escalation rules, and any specific responses for common questions."></textarea>
-                                <p class="text-xs text-gray-400 mt-1">"These instructions guide the AI agent's responses to customer messages."</p>
-                            </div>
-
-                            <div class="mt-6">
-                                <button class="btn btn-sm bg-iiz-cyan hover:bg-iiz-cyan/80 text-white border-none">"Save Changes"</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    }.into_any()
+                }
+            }}
         </div>
     }
 }

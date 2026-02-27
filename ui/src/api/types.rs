@@ -483,6 +483,85 @@ pub struct A2pCampaignItem {
 }
 
 // -------------------------------------------------------------------------
+// Domain response types for Trust Center section
+// -------------------------------------------------------------------------
+
+/// A compliance requirement returned by GET /trust-center/requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceRequirementItem {
+    pub id: String,
+    pub name: String,
+    pub requirement_type: Option<String>,
+    pub country: Option<String>,
+    pub description: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A compliance application returned by GET /trust-center/applications
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceApplicationItem {
+    pub id: String,
+    pub name: String,
+    pub application_type: Option<String>,
+    pub country: Option<String>,
+    pub status: String,
+    pub submitted_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A compliance address returned by GET /trust-center/addresses
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceAddressItem {
+    pub id: String,
+    pub label: Option<String>,
+    pub street_line1: String,
+    pub city: String,
+    pub state: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: String,
+    pub is_verified: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A caller ID CNAM entry returned by GET /numbers/caller-id
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallerIdCnamItem {
+    pub id: String,
+    pub number: String,
+    pub display_name: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A toll-free registration returned by GET /trust-center/toll-free
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TollFreeRegistrationItem {
+    pub id: String,
+    pub number: Option<String>,
+    pub business_name: Option<String>,
+    pub use_case: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A voice registration returned by GET /trust-center/voice-registrations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceRegistrationItem {
+    pub id: String,
+    pub business_name: Option<String>,
+    pub status: String,
+    pub attestation_level: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
 // Domain response types for Reports section
 // -------------------------------------------------------------------------
 
@@ -543,6 +622,216 @@ pub struct TagItem {
     pub usage_count: i32,
     pub created_at: String,
     pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for Flows section — additional
+// -------------------------------------------------------------------------
+
+/// A geo router returned by GET /flows/geo-routers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeoRouterItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// An agent script returned by GET /flows/agent-scripts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentScriptItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A routing table returned by GET /flows/routing-tables
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutingTableItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A voicemail box returned by GET /flows/voicemails
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoicemailBoxItem {
+    pub id: String,
+    pub name: String,
+    pub greeting_type: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A keyword spotting config returned by GET /flows/keyword-spotting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeywordSpottingItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A lambda returned by GET /flows/lambdas
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LambdaItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub runtime: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A workflow returned by GET /flows/workflows
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A lead reactor config returned by GET /flows/lead-reactor
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LeadReactorItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A smart dialer config returned by GET /flows/smart-dialers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartDialerItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A dialogflow config returned by GET /flows/dialogflow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DialogflowItem {
+    pub id: String,
+    pub name: String,
+    pub project_id: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A reminder returned by GET /flows/reminders
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReminderItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for AI Tools section — additional
+// -------------------------------------------------------------------------
+
+/// An AskAI config returned by GET /ai-tools/ask-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AskAiConfigItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub model_provider: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A Voice AI agent returned by GET /ai-tools/voice-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoiceAiAgentItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub welcome_message: Option<String>,
+    pub voice_name: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// A Chat AI agent returned by GET /ai-tools/chat-ai
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatAiAgentItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for Numbers section — additional
+// -------------------------------------------------------------------------
+
+/// A number pool returned by GET /numbers/pools
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NumberPoolItem {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub pool_type: Option<String>,
+    pub member_count: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// -------------------------------------------------------------------------
+// Domain response types for Activities section — Call Records
+// -------------------------------------------------------------------------
+
+/// A call record returned by GET /activities/calls
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallRecordItem {
+    pub id: String,
+    pub caller_name: Option<String>,
+    pub caller_number: Option<String>,
+    pub caller_city: Option<String>,
+    pub caller_state: Option<String>,
+    pub caller_country: Option<String>,
+    pub tracking_number_id: Option<String>,
+    pub tracking_source_id: Option<String>,
+    pub receiving_number_id: Option<String>,
+    pub direction: String,
+    pub status: String,
+    pub duration_secs: i32,
+    pub talk_time_secs: Option<i32>,
+    pub ring_time_secs: Option<i32>,
+    pub has_recording: bool,
+    pub has_voicemail: bool,
+    pub agent_id: Option<String>,
+    pub queue_id: Option<String>,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+    pub created_at: String,
 }
 
 impl<T> ApiResponse<T> {
