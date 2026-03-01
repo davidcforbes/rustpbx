@@ -223,6 +223,119 @@ pub struct Config {
     pub ambiance: Option<crate::media::ambiance::AmbianceOption>,
     #[serde(default)]
     pub invite_handler: Option<InviteHandlerConfig>,
+    /// Root directory for all runtime-generated data (archives, exports, billing CSVs).
+    /// Sub-paths are derived automatically unless individually overridden.
+    #[serde(default = "default_storage_dir")]
+    pub storage_dir: String,
+    #[cfg(feature = "addon-observability")]
+    #[serde(default)]
+    pub metrics: Option<MetricsConfig>,
+    #[cfg(feature = "commerce")]
+    #[serde(default)]
+    pub licenses: Option<LicenseConfig>,
+}
+
+fn default_storage_dir() -> String {
+    "storage".to_string()
+}
+
+// ─── Observability / Metrics config ──────────────────────────────────────────
+
+fn default_metrics_path() -> String {
+    "/metrics".into()
+}
+
+fn default_healthz_path() -> String {
+    "/healthz".into()
+}
+
+fn bool_true() -> bool {
+    true
+}
+
+/// Configuration for the community Prometheus exporter (`addon-observability`).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MetricsConfig {
+    /// Expose the Prometheus scrape endpoint. Default: true.
+    #[serde(default = "bool_true")]
+    pub enabled: bool,
+    /// HTTP path for the Prometheus scrape endpoint. Default: `/metrics`.
+    #[serde(default = "default_metrics_path")]
+    pub path: String,
+    /// HTTP path for the liveness probe. Default: `/healthz`.
+    #[serde(default = "default_healthz_path")]
+    pub healthz_path: String,
+    /// Optional bearer token required on `GET /metrics`.  Omit to allow
+    /// unauthenticated access (fine when the endpoint is not publicly reachable).
+    pub token: Option<String>,
+}
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            path: default_metrics_path(),
+            healthz_path: default_healthz_path(),
+            token: None,
+        }
+    }
+}
+
+// -- Commerce license configuration -------------------------------------------
+
+#[cfg(feature = "commerce")]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct LicenseConfig {
+    /// Mapping from addon ID to a license key name.
+    #[serde(default)]
+    pub addons: HashMap<String, String>,
+    /// License keys (name -> key value). Kept separate so keys are not exposed in the UI.
+    #[serde(default)]
+    pub keys: HashMap<String, String>,
+}
+
+#[cfg(feature = "commerce")]
+impl LicenseConfig {
+    /// Get the license key for a specific addon.
+    /// Returns `(key_name, key_value)` if found.
+    pub fn get_license_for_addon(&self, addon_id: &str) -> Option<(&str, &str)> {
+        let key_name = self.addons.get(addon_id)?;
+        let key_value = self.keys.get(key_name)?;
+        Some((key_name, key_value))
+    }
+
+    /// Get all addons associated with a specific license key.
+    pub fn get_addons_for_key(&self, key_name: &str) -> Vec<&str> {
+        self.addons
+            .iter()
+            .filter(|(_, v)| *v == key_name)
+            .map(|(k, _)| k.as_str())
+            .collect()
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+impl Config {
+    /// Resolved directory for call-record archives.
+    /// Priority: `[archive] archive_dir` > `{storage_dir}/archive`
+    pub fn archive_dir(&self) -> String {
+        self.archive
+            .as_ref()
+            .and_then(|a| a.archive_dir.as_deref())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{}/archive", self.storage_dir))
+    }
+
+    /// Resolved directory for wholesale billing CSV archives.
+    /// Priority: `[addons.wholesale] bills_dir` > `{storage_dir}/wholesale/bills`
+    pub fn wholesale_bills_dir(&self) -> String {
+        self.addons
+            .get("wholesale")
+            .and_then(|m| m.get("bills_dir"))
+            .cloned()
+            .unwrap_or_else(|| format!("{}/wholesale/bills", self.storage_dir))
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -231,6 +344,9 @@ pub struct ArchiveConfig {
     pub archive_time: String,
     pub timezone: Option<String>,
     pub retention_days: u32,
+    /// Override the archive directory. Defaults to `{storage_dir}/archive`.
+    #[serde(default)]
+    pub archive_dir: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -375,6 +491,9 @@ pub enum SipFlowConfig {
         flush_interval_secs: u64,
         #[serde(default = "default_sipflow_id_cache_size")]
         id_cache_size: usize,
+        /// Optional upload target for recording WAV files.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        upload: Option<SipFlowUploadConfig>,
     },
     Remote {
         udp_addr: String,
@@ -398,6 +517,32 @@ fn default_sipflow_timeout() -> u64 {
 
 fn default_sipflow_id_cache_size() -> usize {
     8192
+}
+
+/// Upload destination for SipFlow recordings (WAV files generated from captured RTP).
+/// When configured, the WAV for each completed call is uploaded asynchronously
+/// after the call ends.
+#[derive(Debug, Deserialize, Clone, Serialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+pub enum SipFlowUploadConfig {
+    S3 {
+        vendor: S3Vendor,
+        bucket: String,
+        region: String,
+        access_key: String,
+        secret_key: String,
+        endpoint: String,
+        /// Key prefix / folder inside the bucket (default: empty).
+        #[serde(default)]
+        root: String,
+    },
+    Http {
+        /// Endpoint that receives a multipart/form-data POST with the WAV file.
+        url: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        headers: Option<HashMap<String, String>>,
+    },
 }
 
 fn default_voicemail_enabled() -> bool {
@@ -973,6 +1118,11 @@ impl Default for Config {
             rtp_bind_ip: None,
             ambiance: None,
             invite_handler: None,
+            storage_dir: default_storage_dir(),
+            #[cfg(feature = "addon-observability")]
+            metrics: None,
+            #[cfg(feature = "commerce")]
+            licenses: None,
         }
     }
 }

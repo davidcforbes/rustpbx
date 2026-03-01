@@ -622,7 +622,9 @@ fn trunk_config_from_model(model: &sip_trunk::Model) -> Option<routing::TrunkCon
         country: None,
         policy: None,
         register: None,
+        register_enabled: None,
         register_expires: None,
+        register_extra_headers: None,
     })
 }
 

@@ -25,6 +25,9 @@ pub mod utils;
 pub mod version; // Admin console
 pub mod voicemail;
 
+#[cfg(feature = "addon-observability")]
+pub mod metrics;
+
 // AI Voice Agent modules (from active-call)
 pub mod event;
 pub mod net_tool;

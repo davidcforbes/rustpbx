@@ -22,6 +22,7 @@ pub mod registrar;
 pub mod routing;
 pub mod server;
 pub mod trunk_register;
+pub mod trunk_registrar;
 pub mod tests;
 pub mod user;
 pub mod user_db;

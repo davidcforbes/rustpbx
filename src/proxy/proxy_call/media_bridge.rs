@@ -649,6 +649,63 @@ impl MediaBridge {
         let mut forwarders = FuturesUnordered::new();
         let mut started_track_ids = std::collections::HashSet::new();
 
+        // Helper closure to start a track forwarder, deduplicating by leg+track_id.
+        // Returns Some(future) if the forwarder was started, None if already running.
+        let start_forwarder =
+            |leg_peer: Arc<dyn MediaPeer>,
+             track: Arc<dyn MediaStreamTrack>,
+             target_pc: rustrtc::PeerConnection,
+             target_params: rustrtc::RtpCodecParameters,
+             source_codec: CodecType,
+             target_codec: CodecType,
+             leg_enum: Leg,
+             source_dtmf_pt: Option<u8>,
+             target_dtmf_pt: Option<u8>,
+             rec: Arc<Mutex<Option<Recorder>>>,
+             cid: String,
+             backend: Option<Arc<dyn SipFlowBackend>>,
+             in_gain: f32,
+             out_gain: f32,
+             qual: Arc<CallQuality>,
+             mon: Arc<Mutex<Option<MonitorLeg>>>,
+             track_id: &str,
+             started_ids: &mut std::collections::HashSet<String>| {
+                let key = format!("{:?}-{}", leg_enum, track_id);
+                if started_ids.insert(key) {
+                    info!(
+                        leg = ?leg_enum,
+                        track_id,
+                        "Starting track forwarder"
+                    );
+                    Some(Self::forward_track(
+                        leg_peer,
+                        track,
+                        target_pc,
+                        target_params,
+                        source_codec,
+                        target_codec,
+                        leg_enum,
+                        source_dtmf_pt,
+                        target_dtmf_pt,
+                        None,
+                        rec,
+                        cid,
+                        backend,
+                        in_gain,
+                        out_gain,
+                        qual,
+                        mon,
+                    ))
+                } else {
+                    debug!(
+                        leg = ?leg_enum,
+                        track_id,
+                        "Track already started, skipping"
+                    );
+                    None
+                }
+            };
+
         // Log pre-existing transceivers but don't start forward_tracks from them.
         // Track events from pc.recv() carry the live track instances and fire immediately,
         // so we rely on those instead. Pre-existing transceiver tracks can become stale
@@ -700,31 +757,32 @@ impl MediaBridge {
                                 if let Some(receiver) = transceiver.receiver() {
                                     let track = receiver.track();
                                     let track_id = track.id().to_string();
-                                    let track_kind = track.kind();
-                                    info!("Track event Leg A: track_id={} kind={:?}", track_id, track_kind);
-                                    if started_track_ids.insert(format!("A-{}", track_id)) {
-                                        info!("Starting track forwarder from event: Leg A track_id={}", track_id);
-                                        forwarders.push(Self::forward_track(
-                                            leg_a.clone(),
-                                            track,
-                                            pc_b.clone(),
-                                            params_b.clone(),
-                                            codec_a,
-                                            codec_b,
-                                            Leg::A,
-                                            dtmf_pt_a,
-                                            dtmf_pt_b,
-                                            None,
-                                            recorder.clone(),
-                                            call_id.clone(),
-                                            sipflow_backend.clone(),
-                                            input_gain,
-                                            output_gain,
-                                            quality.clone(),
-                                            monitor.clone(),
-                                        ));
-                                    } else {
-                                        debug!("Track event for already started Leg A track id={}, skipping", track_id);
+                                    info!(
+                                        "Track event Leg A: track_id={} kind={:?}",
+                                        track_id,
+                                        track.kind()
+                                    );
+                                    if let Some(forwarder) = start_forwarder(
+                                        leg_a.clone(),
+                                        track,
+                                        pc_b.clone(),
+                                        params_b.clone(),
+                                        codec_a,
+                                        codec_b,
+                                        Leg::A,
+                                        dtmf_pt_a,
+                                        dtmf_pt_b,
+                                        recorder.clone(),
+                                        call_id.clone(),
+                                        sipflow_backend.clone(),
+                                        input_gain,
+                                        output_gain,
+                                        quality.clone(),
+                                        monitor.clone(),
+                                        &track_id,
+                                        &mut started_track_ids,
+                                    ) {
+                                        forwarders.push(forwarder);
                                     }
                                 }
                             }
@@ -744,31 +802,32 @@ impl MediaBridge {
                                 if let Some(receiver) = transceiver.receiver() {
                                     let track = receiver.track();
                                     let track_id = track.id().to_string();
-                                    let track_kind = track.kind();
-                                    info!("Track event Leg B: track_id={} kind={:?}", track_id, track_kind);
-                                    if started_track_ids.insert(format!("B-{}", track_id)) {
-                                        info!("Starting track forwarder from event: Leg B track_id={}", track_id);
-                                        forwarders.push(Self::forward_track(
-                                            leg_b.clone(),
-                                            track,
-                                            pc_a.clone(),
-                                            params_a.clone(),
-                                            codec_b,
-                                            codec_a,
-                                            Leg::B,
-                                            dtmf_pt_b,
-                                            dtmf_pt_a,
-                                            None,
-                                            recorder.clone(),
-                                            call_id.clone(),
-                                            sipflow_backend.clone(),
-                                            input_gain,
-                                            output_gain,
-                                            quality.clone(),
-                                            monitor.clone(),
-                                        ));
-                                    } else {
-                                        debug!("Track event for already started Leg B track id={}, skipping", track_id);
+                                    info!(
+                                        "Track event Leg B: track_id={} kind={:?}",
+                                        track_id,
+                                        track.kind()
+                                    );
+                                    if let Some(forwarder) = start_forwarder(
+                                        leg_b.clone(),
+                                        track,
+                                        pc_a.clone(),
+                                        params_a.clone(),
+                                        codec_b,
+                                        codec_a,
+                                        Leg::B,
+                                        dtmf_pt_b,
+                                        dtmf_pt_a,
+                                        recorder.clone(),
+                                        call_id.clone(),
+                                        sipflow_backend.clone(),
+                                        input_gain,
+                                        output_gain,
+                                        quality.clone(),
+                                        monitor.clone(),
+                                        &track_id,
+                                        &mut started_track_ids,
+                                    ) {
+                                        forwarders.push(forwarder);
                                     }
                                 }
                             }
@@ -790,26 +849,27 @@ impl MediaBridge {
                             if let Some(receiver) = transceiver.receiver() {
                                 let track = receiver.track();
                                 let track_id = track.id().to_string();
-                                if started_track_ids.insert(format!("A-{}", track_id)) {
-                                    forwarders.push(Self::forward_track(
-                                        leg_a.clone(),
-                                        track,
-                                        pc_b.clone(),
-                                        params_b.clone(),
-                                        codec_a,
-                                        codec_b,
-                                        Leg::A,
-                                        dtmf_pt_a,
-                                        dtmf_pt_b,
-                                        None,
-                                        recorder.clone(),
-                                        call_id.clone(),
-                                        sipflow_backend.clone(),
-                                        input_gain,
-                                        output_gain,
-                                        quality.clone(),
-                                        monitor.clone(),
-                                    ));
+                                if let Some(forwarder) = start_forwarder(
+                                    leg_a.clone(),
+                                    track,
+                                    pc_b.clone(),
+                                    params_b.clone(),
+                                    codec_a,
+                                    codec_b,
+                                    Leg::A,
+                                    dtmf_pt_a,
+                                    dtmf_pt_b,
+                                    recorder.clone(),
+                                    call_id.clone(),
+                                    sipflow_backend.clone(),
+                                    input_gain,
+                                    output_gain,
+                                    quality.clone(),
+                                    monitor.clone(),
+                                    &track_id,
+                                    &mut started_track_ids,
+                                ) {
+                                    forwarders.push(forwarder);
                                 }
                             }
                         }
@@ -820,26 +880,27 @@ impl MediaBridge {
                             if let Some(receiver) = transceiver.receiver() {
                                 let track = receiver.track();
                                 let track_id = track.id().to_string();
-                                if started_track_ids.insert(format!("B-{}", track_id)) {
-                                    forwarders.push(Self::forward_track(
-                                        leg_b.clone(),
-                                        track,
-                                        pc_a.clone(),
-                                        params_a.clone(),
-                                        codec_b,
-                                        codec_a,
-                                        Leg::B,
-                                        dtmf_pt_b,
-                                        dtmf_pt_a,
-                                        None,
-                                        recorder.clone(),
-                                        call_id.clone(),
-                                        sipflow_backend.clone(),
-                                        input_gain,
-                                        output_gain,
-                                        quality.clone(),
-                                        monitor.clone(),
-                                    ));
+                                if let Some(forwarder) = start_forwarder(
+                                    leg_b.clone(),
+                                    track,
+                                    pc_a.clone(),
+                                    params_a.clone(),
+                                    codec_b,
+                                    codec_a,
+                                    Leg::B,
+                                    dtmf_pt_b,
+                                    dtmf_pt_a,
+                                    recorder.clone(),
+                                    call_id.clone(),
+                                    sipflow_backend.clone(),
+                                    input_gain,
+                                    output_gain,
+                                    quality.clone(),
+                                    monitor.clone(),
+                                    &track_id,
+                                    &mut started_track_ids,
+                                ) {
+                                    forwarders.push(forwarder);
                                 }
                             }
                         }

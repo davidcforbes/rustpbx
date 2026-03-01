@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 pub mod sipflow;
+pub mod sipflow_upload;
 pub mod storage;
 #[cfg(test)]
 mod tests;

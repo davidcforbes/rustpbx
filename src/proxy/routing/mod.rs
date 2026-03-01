@@ -81,9 +81,15 @@ pub struct TrunkConfig {
     /// Enable upstream registration (for inbound call delivery)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub register: Option<bool>,
+    /// Enable outbound REGISTER via TrunkRegistrar (preferred over `register`)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub register_enabled: Option<bool>,
     /// Registration expiry in seconds (default 3600)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub register_expires: Option<u32>,
+    /// Extra SIP headers to include in REGISTER requests
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub register_extra_headers: Option<std::collections::HashMap<String, String>>,
     #[serde(skip)]
     pub origin: ConfigOrigin,
 }
@@ -110,7 +116,9 @@ impl Default for TrunkConfig {
             country: None,
             policy: None,
             register: None,
+            register_enabled: None,
             register_expires: None,
+            register_extra_headers: None,
             origin: ConfigOrigin::embedded(),
         }
     }

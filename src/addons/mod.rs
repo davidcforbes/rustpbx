@@ -28,6 +28,7 @@ pub struct AddonInfo {
     pub restart_required: bool,
     pub license_status: Option<String>,
     pub license_expiry: Option<String>,
+    pub license_plan: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -143,6 +144,13 @@ pub trait Addon: Send + Sync {
 
 pub mod registry;
 
+#[cfg(all(feature = "addon-observability", not(feature = "addon-telemetry")))]
+pub mod observability;
+
+// Commercial: TelemetryAddon (copied from rustpbx-addons/telemetry/ by build script)
+#[cfg(feature = "addon-telemetry")]
+pub mod telemetry;
+
 #[cfg(feature = "addon-acme")]
 pub mod acme;
 #[cfg(feature = "addon-archive")]
@@ -159,3 +167,6 @@ pub mod endpoint_manager;
 
 #[cfg(feature = "addon-enterprise-auth")]
 pub mod enterprise_auth;
+
+#[cfg(feature = "addon-voicemail")]
+pub mod voicemail;

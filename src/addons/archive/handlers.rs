@@ -122,6 +122,7 @@ pub async fn update_config(
                 archive_time: payload.archive_time,
                 timezone: Some(payload.timezone),
                 retention_days: payload.retention_days,
+                archive_dir: None,
             });
             Json(serde_json::json!({"success": true}))
         }

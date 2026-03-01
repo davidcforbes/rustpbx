@@ -205,7 +205,12 @@ impl CallSession {
     pub const CALLEE_TRACK_ID: &'static str = "callee-track";
     pub const RINGBACK_TRACK_ID: &'static str = "ringback-track";
 
-    fn check_media_proxy(context: &CallContext, offer_sdp: &str, mode: &MediaProxyMode) -> bool {
+    fn check_media_proxy(
+        context: &CallContext,
+        offer_sdp: &str,
+        mode: &MediaProxyMode,
+        all_webrtc_target: bool,
+    ) -> bool {
         if context.dialplan.recording.enabled {
             return true;
         }
@@ -214,8 +219,13 @@ impl CallSession {
             MediaProxyMode::None => false,
             MediaProxyMode::Nat => false, // TODO: Implement NAT detection
             MediaProxyMode::Auto => {
-                // Check if caller is WebRTC (SAVPF profile in SDP)
-                if offer_sdp.contains("RTP/SAVPF") {
+                // If caller is WebRTC but not all targets are WebRTC, we need media proxy to transcode and bridge
+                // If caller is not WebRTC but all targets are WebRTC, we also need media proxy to transcode and bridge
+                let caller_is_webrtc = Self::is_webrtc_sdp(offer_sdp);
+                if caller_is_webrtc && !all_webrtc_target {
+                    return true;
+                }
+                if !caller_is_webrtc && all_webrtc_target {
                     return true;
                 }
                 false
@@ -2256,6 +2266,12 @@ impl CallSession {
                 DialplanFlow::Queue { plan, next } => {
                     self.execute_queue_plan(plan, Some(&**next), inbox).await
                 }
+                DialplanFlow::Application { app_name, .. } => {
+                    // TODO: Integrate with CallApp framework (call::app module).
+                    // For now, log and reject since the full integration is pending.
+                    tracing::warn!(app = %app_name, "Application flow not yet integrated with proxy session");
+                    Err(anyhow::anyhow!("Application flow '{}' not yet integrated", app_name))
+                }
             }
         }
         .boxed()
@@ -3924,10 +3940,13 @@ impl CallSession {
             }
         }
 
-        let use_media_proxy =
-            Self::check_media_proxy(&context, &offer_sdp, &server.proxy_config.media_proxy);
-
         let all_webrtc_target = context.dialplan.all_webrtc_target();
+        let use_media_proxy = Self::check_media_proxy(
+            &context,
+            &offer_sdp,
+            &server.proxy_config.media_proxy,
+            all_webrtc_target,
+        );
 
         info!(
             session_id = %context.session_id,

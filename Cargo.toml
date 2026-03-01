@@ -19,10 +19,25 @@ addon-acme = ["instant-acme"]
 addon-wholesale = ["flate2", "async-compression"]
 addon-archive = ["flate2"]
 addon-endpoint-manager = []
-addon-enterprise-auth = []
+addon-enterprise-auth = ["dep:ldap3"]
 addon-transcript = []
-commerce = ["addon-wholesale", "addon-endpoint-manager", "addon-enterprise-auth"]
-default = ["opus", "console", "addon-acme", "addon-transcript", "addon-archive", "voice-agent"]
+addon-voicemail = []
+addon-observability = ["dep:metrics-exporter-prometheus"]
+addon-telemetry = [
+    "addon-observability",
+    "dep:opentelemetry",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
+    "dep:tracing-opentelemetry",
+]
+commerce = [
+    "addon-wholesale",
+    "addon-endpoint-manager",
+    "addon-enterprise-auth",
+    "addon-voicemail",
+    "addon-telemetry",
+]
+default = ["opus", "console", "addon-acme", "addon-transcript", "addon-archive", "addon-observability", "voice-agent"]
 voice-agent = []
 offline = ["dep:symphonia", "dep:knf-rs-sys", "dep:ort", "dep:hf-hub", "dep:ndarray"]
 cross = ["aws-lc-rs/bindgen"]
@@ -133,7 +148,14 @@ hound = "3.5.1"
 minimp3 = "0.6.1"
 aws-lc-rs = { version = "1", optional = true }
 totp-rs = { version = "5.7.0", features = ["qr", "gen_secret"] }
-ldap3 = "0.12.1"
+ldap3 = { version = "0.12.1", optional = true }
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.16", optional = true }
+# OTel stack — only pulled in for the commercial `addon-telemetry` feature.
+opentelemetry = { version = "0.27", optional = true }
+opentelemetry-otlp = { version = "0.27", features = ["tonic"], optional = true }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"], optional = true }
+tracing-opentelemetry = { version = "0.28", optional = true }
 lettre = { version = "0.11", optional = true, features = ["smtp-transport", "tokio1-native-tls", "builder"] }
 
 # 4iiz ORM (Diesel + diesel-async for PostgreSQL)
@@ -177,6 +199,8 @@ mockall = "0.14.0"
 warp = { version = "0.4.1", features = ["server", "websocket"] }
 portpicker = "0.1.1"
 wiremock = "0.6"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
 
 [[bin]]
 name = "rustpbx"

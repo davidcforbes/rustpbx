@@ -17,6 +17,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub mod app;
 pub mod cookie;
 pub mod policy;
 pub mod queue_config;
@@ -32,6 +33,41 @@ pub mod command;
 pub use active_call::{ActiveCall, ActiveCallRef, ActiveCallType};
 pub use command::Command as AgentCommand;
 pub use command::{Command, CommandSender, CommandReceiver};
+
+pub struct RouteContext<'a> {
+    pub caller: rsip::Uri,
+    pub callee: rsip::Uri,
+    pub original_request: &'a rsip::Request,
+    pub captures: &'a std::collections::HashMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallFailureType {
+    NoAnswer,
+    Busy,
+    Declined,
+    Offline,
+    Timeout,
+}
+
+#[async_trait::async_trait]
+pub trait CallAppFactory: Send + Sync {
+    async fn create_app(
+        &self,
+        app_name: &str,
+        context: &RouteContext<'_>,
+        params: &serde_json::Value,
+    ) -> Option<Box<dyn app::CallApp>>;
+}
+
+#[async_trait::async_trait]
+pub trait CallFailureHandler: Send + Sync {
+    async fn on_call_failure(
+        &self,
+        context: &RouteContext<'_>,
+        failure_type: CallFailureType,
+    ) -> Option<Box<dyn app::CallApp>>;
+}
 
 /// Default hold audio that ships with config/sounds.
 pub const DEFAULT_QUEUE_HOLD_AUDIO: &str = "config/sounds/phone-calling.wav";
@@ -398,6 +434,12 @@ pub enum DialplanFlow {
         plan: QueuePlan,
         next: Box<DialplanFlow>,
     },
+    /// Route directly to a call application (voicemail, IVR, etc.)
+    Application {
+        app_name: String,
+        app_params: Option<serde_json::Value>,
+        auto_answer: bool,
+    },
 }
 
 impl DialplanFlow {
@@ -419,6 +461,7 @@ impl DialplanFlow {
                 }
             },
             DialplanFlow::Queue { .. } => false,
+            DialplanFlow::Application { .. } => false,
         }
     }
 
@@ -437,6 +480,7 @@ impl DialplanFlow {
                 }
             },
             DialplanFlow::Queue { next, .. } => next.all_webrtc_target(),
+            DialplanFlow::Application { .. } => false,
         }
     }
 
@@ -448,6 +492,7 @@ impl DialplanFlow {
                 }
             },
             DialplanFlow::Queue { next, .. } => next.find_targets(),
+            DialplanFlow::Application { .. } => None,
         }
     }
 
@@ -720,6 +765,20 @@ impl Dialplan {
     }
     pub fn with_targets(mut self, targets: DialStrategy) -> Self {
         self.set_terminal_flow(DialplanFlow::Targets(targets));
+        self
+    }
+
+    pub fn with_application(
+        mut self,
+        app_name: String,
+        app_params: Option<serde_json::Value>,
+        auto_answer: bool,
+    ) -> Self {
+        self.flow = DialplanFlow::Application {
+            app_name,
+            app_params,
+            auto_answer,
+        };
         self
     }
 
