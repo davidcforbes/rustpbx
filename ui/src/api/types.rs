@@ -808,30 +808,44 @@ pub struct NumberPoolItem {
 // Domain response types for Activities section — Call Records
 // -------------------------------------------------------------------------
 
-/// A call record returned by GET /activities/calls
+/// A call record returned by GET /activities/calls (enriched list item).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CallRecordItem {
     pub id: String,
-    pub caller_name: Option<String>,
-    pub caller_number: Option<String>,
-    pub caller_city: Option<String>,
-    pub caller_state: Option<String>,
-    pub caller_country: Option<String>,
-    pub tracking_number_id: Option<String>,
-    pub tracking_source_id: Option<String>,
-    pub receiving_number_id: Option<String>,
+    pub call_id: String,
+    pub caller_phone: Option<String>,
+    pub callee_phone: Option<String>,
     pub direction: String,
     pub status: String,
-    pub duration_secs: i32,
-    pub talk_time_secs: Option<i32>,
-    pub ring_time_secs: Option<i32>,
-    pub has_recording: bool,
-    pub has_voicemail: bool,
-    pub agent_id: Option<String>,
-    pub queue_id: Option<String>,
     pub started_at: String,
+    pub answered_at: Option<String>,
     pub ended_at: Option<String>,
-    pub created_at: String,
+    pub duration_secs: i32,
+    #[serde(default)]
+    pub ring_duration_secs: i32,
+    #[serde(default)]
+    pub hold_duration_secs: i32,
+    #[serde(default)]
+    pub has_audio: bool,
+    #[serde(default)]
+    pub is_first_time_caller: bool,
+    pub location: Option<String>,
+    pub recording_url: Option<String>,
+    // Denormalized
+    pub source_name: Option<String>,
+    pub agent_name: Option<String>,
+    pub queue_name: Option<String>,
+    // Enriched
+    pub source_type: Option<String>,
+    pub tracking_number: Option<String>,
+    pub routing_description: Option<String>,
+    pub receiving_number: Option<String>,
+    pub agent_initials: Option<String>,
+    pub agent_avatar_color: Option<String>,
+    pub annotation_category: Option<String>,
+    pub annotation_score: Option<i32>,
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 // -------------------------------------------------------------------------

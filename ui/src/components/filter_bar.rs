@@ -7,7 +7,9 @@ use super::PhoneDrawer;
 /// Matches the legacy 4iiz top bar layout with search, filter, date range,
 /// source selector, view toggles, and action buttons.
 #[component]
-pub fn FilterBar() -> impl IntoView {
+pub fn FilterBar(
+    #[prop(optional, into)] total_count: Option<Signal<Option<i64>>>,
+) -> impl IntoView {
     let show_phone = RwSignal::new(false);
     let auto_load = RwSignal::new(true);
 
@@ -40,10 +42,15 @@ pub fn FilterBar() -> impl IntoView {
                         <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsCalendar /></span>
                     </button>
                 </div>
-                // Call count
+                // Call count (dynamic from API)
                 <span class="text-sm text-gray-500 flex items-center gap-1 whitespace-nowrap">
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsBarChartFill /></span>
-                    "0 calls"
+                    {move || {
+                        total_count
+                            .and_then(|sig| sig.get())
+                            .map(|n| format!("{} calls", n))
+                            .unwrap_or_else(|| "-- calls".to_string())
+                    }}
                 </span>
                 // Auto Load toggle
                 <button

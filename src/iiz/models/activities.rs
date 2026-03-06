@@ -92,6 +92,51 @@ pub struct NewCallRecord {
 }
 
 // ---------------------------------------------------------------------------
+// CallRecordListItem — enriched response DTO for list endpoints
+// ---------------------------------------------------------------------------
+
+/// Enriched call record for list responses — includes joined data from
+/// tracking_sources, users, tracking_numbers, call_annotations, and tags.
+/// Not a Diesel model — assembled in the handler from batch queries.
+#[derive(Debug, Clone, Serialize)]
+pub struct CallRecordListItem {
+    pub id: Uuid,
+    pub call_id: String,
+    pub caller_phone: Option<String>,
+    pub callee_phone: Option<String>,
+    pub direction: CallDirection,
+    pub status: CallStatus,
+    pub started_at: DateTime<Utc>,
+    pub answered_at: Option<DateTime<Utc>>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub duration_secs: i32,
+    pub ring_duration_secs: i32,
+    pub hold_duration_secs: i32,
+    pub has_audio: bool,
+    pub is_first_time_caller: bool,
+    pub location: Option<String>,
+    pub recording_url: Option<String>,
+    // Denormalized from call_records
+    pub source_name: Option<String>,
+    pub agent_name: Option<String>,
+    pub queue_name: Option<String>,
+    // Enriched from tracking_sources (via source_id)
+    pub source_type: Option<String>,
+    // Enriched from tracking_numbers (via source_number_id)
+    pub tracking_number: Option<String>,
+    pub routing_description: Option<String>,
+    pub receiving_number: Option<String>,
+    // Enriched from users (via agent_id)
+    pub agent_initials: Option<String>,
+    pub agent_avatar_color: Option<String>,
+    // Enriched from call_annotations (via call_id)
+    pub annotation_category: Option<String>,
+    pub annotation_score: Option<i32>,
+    // Enriched from call_tags + tags (via call_id)
+    pub tags: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
 // call_flow_events (Composite PK: id, occurred_at) — READ + INSERT only
 // ---------------------------------------------------------------------------
 

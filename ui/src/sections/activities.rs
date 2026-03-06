@@ -57,48 +57,40 @@ pub struct CallRecord {
 // ---------------------------------------------------------------------------
 
 fn call_record_from_api(item: CallRecordItem) -> CallRecord {
-    let location = match (&item.caller_city, &item.caller_state) {
-        (Some(city), Some(state)) => format!("{}, {}", city, state),
-        (Some(city), None) => city.clone(),
-        (None, Some(state)) => state.clone(),
-        _ => String::new(),
-    };
-    let duration = {
-        let mins = item.duration_secs / 60;
-        let secs = item.duration_secs % 60;
-        format!("{:02}:{:02}", mins, secs)
-    };
+    let location = item.location.clone().unwrap_or_default();
+    let duration = fmt_duration(item.duration_secs);
     let date = format_friendly_date(&item.started_at);
     let time = format_friendly_time(&item.started_at);
-    let name = item.caller_name.unwrap_or_default();
+    let name = item.caller_phone.clone().unwrap_or_default();
     let contact_initials = initials_from_name(&name);
     let contact_color = color_from_string(&name);
+    let source = item.source_name.clone().unwrap_or_default();
 
     CallRecord {
         id: item.id,
         contact_initials,
         contact_color,
         name,
-        phone: item.caller_number.unwrap_or_default(),
+        phone: item.caller_phone.unwrap_or_default(),
         location,
-        source: String::new(),
-        source_number: item.tracking_number_id.clone().unwrap_or_default(),
-        source_name: String::new(),
-        source_type: String::new(),
-        has_audio: item.has_recording,
+        source: source.clone(),
+        source_number: item.tracking_number.unwrap_or_default(),
+        source_name: item.source_name.unwrap_or_default(),
+        source_type: item.source_type.unwrap_or_default(),
+        has_audio: item.has_audio,
         duration,
         date,
         time,
         status: item.status,
-        agent: String::new(),
-        agent_initials: String::new(),
-        agent_color: "#0277bd".to_string(),
+        agent: item.agent_name.unwrap_or_default(),
+        agent_initials: item.agent_initials.unwrap_or_default(),
+        agent_color: item.agent_avatar_color.unwrap_or_else(|| "#0277bd".to_string()),
         automation: String::new(),
-        tags: vec![],
-        receiving_number: item.receiving_number_id.clone().unwrap_or_default(),
-        routing_destination: String::new(),
+        tags: item.tags,
+        receiving_number: item.receiving_number.unwrap_or_default(),
+        routing_destination: item.routing_description.unwrap_or_default(),
         case_description: String::new(),
-        contact_category: String::new(),
+        contact_category: item.annotation_category.unwrap_or_default(),
         crm_contact_id: String::new(),
         crm_matter_id: String::new(),
         case_subtype: String::new(),
@@ -305,15 +297,42 @@ pub fn ActivitiesSideNav() -> impl IntoView {
 
 #[component]
 pub fn CallsPage() -> impl IntoView {
-    let data = LocalResource::new(|| async move {
-        api_get::<ListResponse<CallRecordItem>>("/activities/calls?page=1&per_page=25").await
+    let sort_field = RwSignal::new(String::from("started_at"));
+    let sort_dir = RwSignal::new(String::from("desc"));
+
+    let data = LocalResource::new(move || {
+        let field = sort_field.get();
+        let dir = sort_dir.get();
+        async move {
+            let url = format!("/activities/calls?page=1&per_page=25&sort={}:{}", field, dir);
+            api_get::<ListResponse<CallRecordItem>>(&url).await
+        }
     });
     let selected_call = RwSignal::new(Option::<CallRecord>::None);
+
+    let total_count = Signal::derive(move || {
+        data.get()
+            .and_then(|r| r.ok())
+            .map(|r| r.pagination.total_items)
+    });
+
+    let toggle_sort = move |field_name: &'static str| {
+        move |_: ev::MouseEvent| {
+            if sort_field.get() == field_name {
+                sort_dir.update(|d| {
+                    *d = if d == "desc" { "asc".to_string() } else { "desc".to_string() };
+                });
+            } else {
+                sort_field.set(field_name.to_string());
+                sort_dir.set("desc".to_string());
+            }
+        }
+    };
 
     view! {
         <div class="flex flex-col h-full relative">
             // Top filter bar
-            <FilterBar />
+            <FilterBar total_count=total_count />
 
             // Column headers (matches legacy: Actions | Contact | Source | Session Data | Score | Audio | Metrics | Routing | Actions)
             <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
@@ -321,7 +340,7 @@ pub fn CallsPage() -> impl IntoView {
                     <div class="col-header text-center">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsArrowRepeat /></span>
                     </div>
-                    <div class="col-header col-header-sortable flex items-center gap-1">
+                    <div class="col-header col-header-sortable flex items-center gap-1" on:click=toggle_sort("caller_phone")>
                         <span class="w-3 h-3 inline-flex text-iiz-cyan"><Icon icon=icondata::BsPerson /></span>
                         "Contact"
                     </div>
@@ -341,7 +360,7 @@ pub fn CallsPage() -> impl IntoView {
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsVolumeUpFill /></span>
                         "Audio"
                     </div>
-                    <div class="col-header col-header-sortable flex items-center gap-1">
+                    <div class="col-header col-header-sortable flex items-center gap-1" on:click=toggle_sort("started_at")>
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsGraphUp /></span>
                         "Metrics"
                     </div>
