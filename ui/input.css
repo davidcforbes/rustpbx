@@ -229,6 +229,41 @@
   }
 }
 
+/* Sortable column header */
+@layer components {
+  .col-header-sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+  .col-header-sortable:hover {
+    color: var(--color-iiz-cyan);
+  }
+
+  /* Source brand colors */
+  .source-google { color: #4285f4; }
+  .source-facebook { color: #1877f2; }
+  .source-tiktok { color: #010101; }
+  .source-whatsapp { color: #25d366; }
+  .source-bing { color: #008373; }
+  .source-yelp { color: #d32323; }
+  .source-default { color: #9ca3af; }
+
+  /* Contact initials avatar */
+  .contact-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: white;
+    flex-shrink: 0;
+  }
+}
+
 /* Slide-in animation for detail panel */
 @keyframes slide-in-right {
   from {
@@ -241,4 +276,30 @@
 
 .animate-slide-in-right {
   animation: slide-in-right 0.2s ease-out;
+}
+
+/* Phone ringing animation */
+@keyframes phone-ring {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  10% { transform: rotate(-15deg) scale(1.1); }
+  20% { transform: rotate(15deg) scale(1.1); }
+  30% { transform: rotate(-10deg) scale(1.05); }
+  40% { transform: rotate(10deg) scale(1.05); }
+  50%, 100% { transform: rotate(0deg) scale(1); }
+}
+
+.animate-phone-ring {
+  animation: phone-ring 1.5s ease-in-out infinite;
+  color: var(--color-iiz-green);
+}
+
+/* Active call pulse */
+@keyframes call-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+}
+
+.animate-call-pulse {
+  animation: call-pulse 2s ease-in-out infinite;
+  border-radius: 50%;
 }

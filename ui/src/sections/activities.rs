@@ -3,6 +3,8 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::use_location;
 
+use chrono::NaiveDateTime;
+
 use crate::api::api_get;
 use crate::api::types::{
     CallRecordItem, ChatRecordItem, ExportRecordItem, FaxRecordItem, FormRecordItem, ListResponse,
@@ -15,14 +17,18 @@ use crate::components::{CallDetailPanel, FilterBar};
 // ---------------------------------------------------------------------------
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct CallRecord {
     pub id: String,
     pub name: String,
     pub phone: String,
     pub location: String,
+    pub contact_initials: String,
+    pub contact_color: String,
     pub source: String,
     pub source_number: String,
     pub source_name: String,
+    pub source_type: String,
     pub has_audio: bool,
     pub duration: String,
     pub date: String,
@@ -33,6 +39,9 @@ pub struct CallRecord {
     pub agent_color: String,
     pub automation: String,
     pub tags: Vec<String>,
+    // Routing column
+    pub receiving_number: String,
+    pub routing_destination: String,
     // CRM / case metadata (visible in the real 4iiz UI)
     pub case_description: String,
     pub contact_category: String,
@@ -59,24 +68,23 @@ fn call_record_from_api(item: CallRecordItem) -> CallRecord {
         let secs = item.duration_secs % 60;
         format!("{:02}:{:02}", mins, secs)
     };
-    let date = if item.started_at.len() >= 10 {
-        item.started_at[..10].to_string()
-    } else {
-        item.started_at.clone()
-    };
-    let time = if item.started_at.len() >= 19 {
-        item.started_at[11..16].to_string()
-    } else {
-        String::new()
-    };
+    let date = format_friendly_date(&item.started_at);
+    let time = format_friendly_time(&item.started_at);
+    let name = item.caller_name.unwrap_or_default();
+    let contact_initials = initials_from_name(&name);
+    let contact_color = color_from_string(&name);
+
     CallRecord {
         id: item.id,
-        name: item.caller_name.unwrap_or_default(),
+        contact_initials,
+        contact_color,
+        name,
         phone: item.caller_number.unwrap_or_default(),
         location,
         source: String::new(),
-        source_number: String::new(),
+        source_number: item.tracking_number_id.clone().unwrap_or_default(),
         source_name: String::new(),
+        source_type: String::new(),
         has_audio: item.has_recording,
         duration,
         date,
@@ -87,6 +95,8 @@ fn call_record_from_api(item: CallRecordItem) -> CallRecord {
         agent_color: "#0277bd".to_string(),
         automation: String::new(),
         tags: vec![],
+        receiving_number: item.receiving_number_id.clone().unwrap_or_default(),
+        routing_destination: String::new(),
         case_description: String::new(),
         contact_category: String::new(),
         crm_contact_id: String::new(),
@@ -121,6 +131,82 @@ fn fmt_duration(secs: i32) -> String {
     let m = secs / 60;
     let s = secs % 60;
     format!("{m:02}:{s:02}")
+}
+
+/// Format ISO date as friendly "Thu Mar 5th" style
+fn format_friendly_date(iso: &str) -> String {
+    let trimmed = if iso.len() >= 19 { &iso[..19] } else { iso };
+    if let Ok(dt) = NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M:%S") {
+        let day = dt.format("%e").to_string(); // day of month
+        let d: u32 = dt.format("%d").to_string().trim().parse().unwrap_or(0);
+        let suffix = match d {
+            1 | 21 | 31 => "st",
+            2 | 22 => "nd",
+            3 | 23 => "rd",
+            _ => "th",
+        };
+        format!("{} {}{}", dt.format("%a %b"), day.trim(), suffix)
+    } else {
+        fmt_date(iso)
+    }
+}
+
+/// Format ISO time as "11:43 PM" style
+fn format_friendly_time(iso: &str) -> String {
+    let trimmed = if iso.len() >= 19 { &iso[..19] } else { iso };
+    if let Ok(dt) = NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M:%S") {
+        dt.format("%-I:%M %p").to_string()
+    } else {
+        fmt_time(iso)
+    }
+}
+
+/// Generate 2-letter initials from a name (e.g. "John Smith" -> "JS")
+fn initials_from_name(name: &str) -> String {
+    let parts: Vec<&str> = name.split_whitespace().collect();
+    match parts.len() {
+        0 => "?".to_string(),
+        1 => parts[0].chars().take(2).collect::<String>().to_lowercase(),
+        _ => {
+            let first = parts[0].chars().next().unwrap_or('?');
+            let last = parts[parts.len() - 1].chars().next().unwrap_or('?');
+            format!("{}{}", first, last).to_lowercase()
+        }
+    }
+}
+
+/// Deterministic color from a string (consistent per-contact)
+fn color_from_string(s: &str) -> String {
+    const COLORS: &[&str] = &[
+        "#0277bd", "#00838f", "#00695c", "#2e7d32", "#558b2f",
+        "#f9a825", "#ff8f00", "#ef6c00", "#d84315", "#6a1b9a",
+        "#ad1457", "#c62828", "#4527a0", "#283593", "#1565c0",
+    ];
+    let hash: usize = s.bytes().fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+    COLORS[hash % COLORS.len()].to_string()
+}
+
+/// Map source name text to a source type key for icon/color
+fn source_type_key(source: &str) -> &'static str {
+    let lower = source.to_lowercase();
+    if lower.contains("google") { "google" }
+    else if lower.contains("facebook") { "facebook" }
+    else if lower.contains("tiktok") { "tiktok" }
+    else if lower.contains("whatsapp") { "whatsapp" }
+    else if lower.contains("bing") { "bing" }
+    else if lower.contains("yelp") { "yelp" }
+    else { "default" }
+}
+
+/// Render a source type icon
+fn source_icon_view(source_type: &str) -> impl IntoView {
+    match source_type {
+        "google" => view! { <span class="w-3.5 h-3.5 inline-flex source-google"><Icon icon=icondata::BsGoogle /></span> }.into_any(),
+        "facebook" => view! { <span class="w-3.5 h-3.5 inline-flex source-facebook"><Icon icon=icondata::BsFacebook /></span> }.into_any(),
+        "tiktok" => view! { <span class="w-3.5 h-3.5 inline-flex source-tiktok"><Icon icon=icondata::BsTiktok /></span> }.into_any(),
+        "whatsapp" => view! { <span class="w-3.5 h-3.5 inline-flex source-whatsapp"><Icon icon=icondata::BsWhatsapp /></span> }.into_any(),
+        _ => view! { <span class="w-3.5 h-3.5 inline-flex source-default"><Icon icon=icondata::BsGlobe /></span> }.into_any(),
+    }
 }
 
 fn loading_view() -> impl IntoView {
@@ -229,15 +315,17 @@ pub fn CallsPage() -> impl IntoView {
             // Top filter bar
             <FilterBar />
 
-            // Column headers
+            // Column headers (matches legacy: Actions | Contact | Source | Session Data | Score | Audio | Metrics | Routing | Actions)
             <div class="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <div class="grid grid-cols-[24px_2.5fr_1.5fr_0.6fr_0.5fr_0.6fr_0.6fr_1.2fr_36px] gap-2 px-4 py-2 items-center">
-                    <div></div>
-                    <div class="col-header flex items-center gap-1">
+                <div class="grid grid-cols-[44px_2.5fr_1.3fr_0.5fr_0.4fr_0.5fr_0.8fr_1.3fr_36px] gap-2 px-4 py-2 items-center">
+                    <div class="col-header text-center">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsArrowRepeat /></span>
+                    </div>
+                    <div class="col-header col-header-sortable flex items-center gap-1">
                         <span class="w-3 h-3 inline-flex text-iiz-cyan"><Icon icon=icondata::BsPerson /></span>
                         "Contact"
                     </div>
-                    <div class="col-header flex items-center gap-1">
+                    <div class="col-header col-header-sortable flex items-center gap-1">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsBuilding /></span>
                         "Source"
                     </div>
@@ -245,7 +333,7 @@ pub fn CallsPage() -> impl IntoView {
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsLayoutTextSidebar /></span>
                         "Session Data"
                     </div>
-                    <div class="col-header flex items-center gap-1">
+                    <div class="col-header col-header-sortable flex items-center gap-1">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsStarFill /></span>
                         "Score"
                     </div>
@@ -253,11 +341,14 @@ pub fn CallsPage() -> impl IntoView {
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsVolumeUpFill /></span>
                         "Audio"
                     </div>
-                    <div class="col-header flex items-center gap-1">
+                    <div class="col-header col-header-sortable flex items-center gap-1">
                         <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsGraphUp /></span>
                         "Metrics"
                     </div>
-                    <div></div>
+                    <div class="col-header col-header-sortable flex items-center gap-1">
+                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsTelephoneForwardFill /></span>
+                        "Routing"
+                    </div>
                     <div></div>
                 </div>
             </div>
@@ -367,12 +458,12 @@ fn CallRow(
 ) -> impl IntoView {
     let status_color = match call.status.as_str() {
         "Answered" => "text-iiz-cyan",
-        "Hangup" => "text-red-500",
+        "Hangup" | "no answer" => "text-red-500",
         _ => "text-iiz-orange",
     };
     let status_dot_color = match call.status.as_str() {
         "Answered" => "bg-iiz-cyan",
-        "Hangup" => "bg-red-400",
+        "Hangup" | "no answer" => "bg-red-400",
         _ => "bg-orange-400",
     };
 
@@ -392,11 +483,18 @@ fn CallRow(
     let has_category = !call.contact_category.is_empty();
     let has_subtype = !call.case_subtype.is_empty();
     let has_answered_by = !call.answered_by.is_empty();
+    let has_receiving = !call.receiving_number.is_empty();
+    let has_routing_dest = !call.routing_destination.is_empty();
+
+    // Determine source type for icon
+    let src_type = source_type_key(&call.source);
 
     // Pre-compute all strings for the view
     let name = call.name.clone();
     let phone = call.phone.clone();
     let location = call.location.clone();
+    let contact_initials = call.contact_initials.clone();
+    let contact_color_style = format!("background-color:{}", &call.contact_color);
     let source = call.source.clone();
     let source_number = call.source_number.clone();
     let source_name = call.source_name.clone();
@@ -415,11 +513,13 @@ fn CallRow(
     let contact_category = format!("Contact Category: {}", &call.contact_category);
     let case_subtype = format!("Case Subtype: {}", &call.case_subtype);
     let answered_by = call.answered_by.clone();
+    let receiving_number = call.receiving_number.clone();
+    let routing_destination = call.routing_destination.clone();
 
     view! {
         <div
             class=move || {
-                let base = "activity-row grid grid-cols-[24px_2.5fr_1.5fr_0.6fr_0.5fr_0.6fr_0.6fr_1.2fr_36px] gap-2 px-4 py-2.5 items-start cursor-pointer";
+                let base = "activity-row grid grid-cols-[44px_2.5fr_1.3fr_0.5fr_0.4fr_0.5fr_0.8fr_1.3fr_36px] gap-2 px-4 py-2.5 items-start cursor-pointer";
                 if selected.get() {
                     format!("{} bg-iiz-cyan-light", base)
                 } else {
@@ -428,80 +528,91 @@ fn CallRow(
             }
             on:click=on_click
         >
-            // Call icon
-            <div class="pt-0.5">
-                <span class="w-4 h-4 inline-flex text-green-500"><Icon icon=icondata::BsTelephoneFill /></span>
+            // Caller actions column (Call + Edit, matches legacy)
+            <div class="flex flex-col items-center gap-0.5 pt-0.5">
+                <button class="text-green-500 hover:text-green-600" title="Call back">
+                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsTelephoneFill /></span>
+                </button>
+                <button class="text-gray-400 hover:text-gray-600" title="Edit">
+                    <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsPencil /></span>
+                </button>
             </div>
 
-            // Contact column -- dense multi-line card with CRM metadata
-            <div class="min-w-0">
-                <div class="flex items-start gap-1">
-                    <span class="font-semibold text-[13px] leading-tight text-gray-900">{name}</span>
-                    <button class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
-                        <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsThreeDotsVertical /></span>
-                    </button>
+            // Contact column with avatar + dense CRM metadata
+            <div class="min-w-0 flex gap-2">
+                // Contact initials avatar
+                <div class="contact-avatar flex-shrink-0" style=contact_color_style>
+                    {contact_initials}
                 </div>
-                <div class="text-[11px] text-gray-500 leading-tight">{phone}</div>
-                <div class="text-[11px] text-gray-400 leading-tight">{location}</div>
-                {if has_case {
-                    Some(view! {
-                        <div class="text-[11px] text-gray-600 leading-tight mt-0.5 font-medium">{case_description}</div>
-                    })
-                } else {
-                    None
-                }}
-                {if has_category {
-                    Some(view! {
-                        <div class="text-[10px] text-gray-400 leading-tight">{contact_category}</div>
-                    })
-                } else {
-                    None
-                }}
-                {if has_crm {
-                    Some(view! {
-                        <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_contact_id}</div>
-                        <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_matter_id}</div>
-                    })
-                } else {
-                    None
-                }}
-                {if has_subtype {
-                    Some(view! {
-                        <div class="text-[10px] text-gray-400 leading-tight">{case_subtype}</div>
-                    })
-                } else {
-                    None
-                }}
-                {if has_answered_by {
-                    Some(view! {
-                        <div class="text-[10px] text-gray-400 leading-tight">{answered_by}</div>
-                    })
-                } else {
-                    None
-                }}
-                {if has_tags {
-                    Some(
-                        view! {
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                {tags
-                                    .iter()
-                                    .map(|tag| {
-                                        let t = tag.clone();
-                                        view! { <span class="tag-badge">{t}</span> }
-                                    })
-                                    .collect::<Vec<_>>()}
-                            </div>
-                        },
-                    )
-                } else {
-                    None
-                }}
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-start gap-1">
+                        <span class="font-semibold text-[13px] leading-tight text-gray-900">{name}</span>
+                        <button class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
+                            <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsThreeDotsVertical /></span>
+                        </button>
+                    </div>
+                    <div class="text-[11px] text-iiz-blue-link leading-tight">{phone}</div>
+                    <div class="text-[11px] text-gray-400 leading-tight">{location}</div>
+                    {if has_case {
+                        Some(view! {
+                            <div class="text-[11px] text-gray-600 leading-tight mt-0.5 font-medium">{case_description}</div>
+                        })
+                    } else {
+                        None
+                    }}
+                    {if has_category {
+                        Some(view! {
+                            <div class="text-[10px] text-gray-400 leading-tight">{contact_category}</div>
+                        })
+                    } else {
+                        None
+                    }}
+                    {if has_crm {
+                        Some(view! {
+                            <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_contact_id}</div>
+                            <div class="text-[10px] text-gray-400 leading-tight font-mono">{crm_matter_id}</div>
+                        })
+                    } else {
+                        None
+                    }}
+                    {if has_subtype {
+                        Some(view! {
+                            <div class="text-[10px] text-gray-400 leading-tight">{case_subtype}</div>
+                        })
+                    } else {
+                        None
+                    }}
+                    {if has_answered_by {
+                        Some(view! {
+                            <div class="text-[10px] text-gray-400 leading-tight">{answered_by}</div>
+                        })
+                    } else {
+                        None
+                    }}
+                    {if has_tags {
+                        Some(
+                            view! {
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    {tags
+                                        .iter()
+                                        .map(|tag| {
+                                            let t = tag.clone();
+                                            view! { <span class="tag-badge">{t}</span> }
+                                        })
+                                        .collect::<Vec<_>>()}
+                                </div>
+                            },
+                        )
+                    } else {
+                        None
+                    }}
+                </div>
             </div>
 
-            // Source column
+            // Source column with brand icon
             <div class="min-w-0">
                 <div class="flex items-center gap-1">
-                    <span class="w-3 h-3 inline-flex text-red-400 flex-shrink-0"><Icon icon=icondata::BsGeoAltFill /></span>
+                    {source_icon_view(src_type)}
                     <span class="text-[12px] font-semibold text-gray-800 truncate">{source}</span>
                 </div>
                 <div class="text-[11px] text-iiz-blue-link leading-tight">{source_number}</div>
@@ -515,16 +626,13 @@ fn CallRow(
 
             // Score column
             <div class="flex justify-center pt-0.5">
-                <button class="text-gray-300 hover:text-iiz-cyan">
-                    <span class="w-4 h-4 inline-flex"><Icon icon=icondata::BsBarChartFill /></span>
-                </button>
+                <span class="text-[10px] text-gray-400">{audio_label}</span>
             </div>
 
             // Audio column
             <div>
                 <div class="flex items-center gap-1">
                     <span class={audio_icon_class}><Icon icon=icondata::BsVolumeUpFill /></span>
-                    <span class="text-[10px] text-gray-500">{audio_label}</span>
                 </div>
                 <div class="text-[10px] text-gray-500 flex items-center gap-0.5 mt-0.5">
                     <span class="w-2.5 h-2.5 inline-flex"><Icon icon=icondata::BsPlayFill /></span>
@@ -532,39 +640,14 @@ fn CallRow(
                 </div>
             </div>
 
-            // Metrics + Agent combined column (stacked right side like real app)
-            <div class="text-right">
-                // Agent row at top
-                <div class="flex items-center justify-end gap-1.5 mb-1">
-                    {if has_agent {
-                        view! {
-                            <span class="text-[11px] text-gray-600 truncate">{agent_name.clone()}</span>
-                            <div
-                                class="w-6 h-6 rounded-full text-white text-[9px] flex items-center justify-center flex-shrink-0"
-                                style=agent_color_style.clone()
-                            >
-                                <span>{agent_initials.clone()}</span>
-                            </div>
-                        }
-                        .into_any()
-                    } else {
-                        view! {
-                            <a class="text-[11px] text-iiz-cyan hover:underline cursor-pointer">"+ set agent"</a>
-                            <div
-                                class="w-6 h-6 rounded-full text-white text-[9px] flex items-center justify-center flex-shrink-0"
-                                style=agent_color_style.clone()
-                            >
-                                <span>{agent_initials.clone()}</span>
-                            </div>
-                        }
-                        .into_any()
-                    }}
+            // Metrics column (date/time/status)
+            <div>
+                <div class="text-[11px] text-gray-500 leading-tight flex items-center gap-1">
+                    <span class="w-3 h-3 inline-flex text-gray-400"><Icon icon=icondata::BsCalendar /></span>
+                    {date}
                 </div>
-                // Date & time
-                <div class="text-[11px] text-gray-500 leading-tight">{date}</div>
-                <div class="text-[11px] text-gray-500 leading-tight">{time}</div>
-                // Status with colored dot
-                <div class="flex items-center justify-end gap-1 mt-0.5">
+                <div class="text-[11px] text-gray-500 leading-tight ml-4">{time}</div>
+                <div class="flex items-center gap-1 mt-0.5">
                     <span class={format!("w-1.5 h-1.5 rounded-full inline-block {}", status_dot_color)}></span>
                     <span class={format!("text-[11px] font-medium {}", status_color)}>{status_text}</span>
                 </div>
@@ -577,12 +660,52 @@ fn CallRow(
                 }}
             </div>
 
-            // Actions column
+            // Routing column (agent + receiving number + destination)
+            <div>
+                <div class="flex items-center gap-1.5 mb-1">
+                    {if has_agent {
+                        view! {
+                            <div
+                                class="w-6 h-6 rounded-full text-white text-[9px] flex items-center justify-center flex-shrink-0"
+                                style=agent_color_style.clone()
+                            >
+                                <span>{agent_initials.clone()}</span>
+                            </div>
+                            <span class="text-[11px] text-gray-600 truncate">{agent_name.clone()}</span>
+                        }
+                        .into_any()
+                    } else {
+                        view! {
+                            <a class="text-[11px] text-iiz-cyan hover:underline cursor-pointer flex items-center gap-0.5">
+                                <span class="w-3 h-3 inline-flex"><Icon icon=icondata::BsPlus /></span>
+                                "set agent"
+                            </a>
+                        }
+                        .into_any()
+                    }}
+                </div>
+                {if has_receiving {
+                    Some(view! {
+                        <div class="text-[11px] text-iiz-blue-link leading-tight">{receiving_number}</div>
+                    })
+                } else {
+                    None
+                }}
+                {if has_routing_dest {
+                    Some(view! {
+                        <div class="text-[10px] text-gray-500 leading-tight truncate">{routing_destination}</div>
+                    })
+                } else {
+                    None
+                }}
+            </div>
+
+            // Actions column (Email + Flag, matches legacy)
             <div class="flex flex-col items-center gap-1 pt-0.5">
-                <button class="text-gray-300 hover:text-gray-500">
+                <button class="text-gray-300 hover:text-gray-500" title="Email">
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsEnvelope /></span>
                 </button>
-                <button class="text-gray-300 hover:text-red-400">
+                <button class="text-gray-300 hover:text-red-400" title="Flag">
                     <span class="w-3.5 h-3.5 inline-flex"><Icon icon=icondata::BsFlag /></span>
                 </button>
             </div>
